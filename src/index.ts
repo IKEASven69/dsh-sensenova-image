@@ -18,6 +18,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
+import { readFileSync } from 'node:fs'
 import z from 'zod'
 
 export const name = 'dsh-sensenova-image'
@@ -71,21 +72,25 @@ async function callImagesGenerations(opts: {
   size?: string
   n?: number
   watermark?: boolean
+  image?: string
 }): Promise<any> {
   const url = `${opts.baseUrl.replace(/\/$/, '')}/images/generations`
+  const body: Record<string, unknown> = {
+    model: opts.model,
+    prompt: opts.prompt,
+    size: opts.size ?? '2048x2048',
+    n: opts.n ?? 1,
+    watermark: opts.watermark ?? false,
+  }
+  // 参考图生图（U1 图生图模式）：传入 image 字段时，生成跟随参考图的风格与构图
+  if (opts.image) body.image = opts.image
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${opts.apiKey}`,
     },
-    body: JSON.stringify({
-      model: opts.model,
-      prompt: opts.prompt,
-      size: opts.size ?? '2048x2048',
-      n: opts.n ?? 1,
-      watermark: opts.watermark ?? false,
-    }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(opts.timeoutMs),
   })
   if (!res.ok) {
@@ -222,18 +227,26 @@ export function apply(ctx: Context, rawConfig: Config) {
     ctx.tools.register(
       defineTool({
         name: 'sensenova_generate_image',
-        description: '商汤 U1 文生图：prompt → 4K 图像。走 /v1/images/generations，适合无参考图的全新生成。',
+        description: '商汤 U1 文生图/图生图：prompt → 4K 图像。走 /v1/images/generations。传 reference（本地路径/URL/base64）时走图生图，风格与构图跟随参考图。',
         parameters: {
           prompt: { type: 'string', required: true, description: '生成提示词（支持中英文）' },
+          reference: { type: 'string', description: '参考图：本地文件路径 / https URL / data URL / 裸 base64。传入后风格与构图跟随参考图（图生图）' },
           size: { type: 'string', description: '分辨率，如 2048x2048 / 2752x1536，默认 2048x2048' },
           model: { type: 'string', description: '覆盖默认模型' },
         },
         output: { schema: { type: 'string' }, render: (a, v) => [{ type: 'text', text: String(v) }] },
-        async execute(args: { prompt: string; size?: string; model?: string }) {
+        async execute(args: { prompt: string; reference?: string; size?: string; model?: string }) {
           const key = resolveKey(config)
           if (!key) return missingKeyHint()
           const model = args.model || config.model
           try {
+            let image: string | undefined
+            if (args.reference) {
+              // 本地路径 → base64 data URL；http(s)/data: 原样传
+              image = args.reference.startsWith('data:') || args.reference.startsWith('http')
+                ? args.reference
+                : toDataUrl(readFileSync(args.reference).toString('base64'))
+            }
             const data: any = await callImagesGenerations({
               baseUrl: config.baseUrl,
               apiKey: key,
@@ -242,6 +255,7 @@ export function apply(ctx: Context, rawConfig: Config) {
               prompt: args.prompt,
               size: args.size,
               n: 1,
+              image,
             })
             return JSON.stringify({ prompt: args.prompt, model, data }, null, 2)
           } catch (e) {

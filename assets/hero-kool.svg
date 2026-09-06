@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="t d">
+<title id="t">KOOL — graffiti asset system</title>
+<desc id="d">Black torn-poster hero: jagged torn edges revealing purple underlayer, curled corner, tape strips, spray splatter, neon bubble graffiti KOOL with lightning bolt</desc>
+<defs>
+  <radialGradient id="mist" cx="50%" cy="52%" r="62%">
+    <stop offset="0%" stop-color="#4B0082" stop-opacity="0.9"/>
+    <stop offset="55%" stop-color="#2A0A4A" stop-opacity="0.5"/>
+    <stop offset="100%" stop-color="#0A0A0F" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="neon" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#FF2BD6"/>
+    <stop offset="100%" stop-color="#00E5FF"/>
+  </linearGradient>
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0"/>
+    <feComposite operator="over" in2="SourceGraphic"/>
+  </filter>
+</defs>
+
+<!-- purple underlayer (revealed by torn edges) -->
+<rect width="1200" height="360" fill="#3D1160"/>
+
+<!-- black poster with aggressive jagged torn edges -->
+<path d="M18,8 L120,4 L210,10 L305,5 L400,11 L505,6 L610,10 L720,5 L815,11 L920,6 L1020,10 L1115,5 L1184,12 L1188,60 L1182,120 L1190,180 L1183,240 L1189,300 L1182,348 L1090,352 L990,347 L890,353 L790,348 L690,353 L590,348 L490,353 L390,348 L290,353 L190,348 L90,353 L16,348 L12,290 L18,230 L11,170 L17,110 L12,60 Z" fill="#0A0A0F"/>
+<rect x="16" y="10" width="1168" height="340" fill="url(#mist)" opacity="0.9"/>
+
+<!-- paper-fiber edge: second jagged stroke just inside -->
+<path d="M26,16 L120,12 L215,18 L310,13 L405,19 L510,14 L615,18 L725,13 L820,19 L925,14 L1025,18 L1120,13 L1174,20 L1178,62 L1172,122 L1180,182 L1173,242 L1179,302 L1172,340 L1088,344 L988,339 L888,345 L788,340 L688,345 L588,340 L488,345 L388,340 L288,345 L188,340 L88,345 L24,340 L20,288 L26,228 L19,168 L25,108 L20,66 Z" fill="none" stroke="#8A8AA0" stroke-width="1.2" opacity="0.55"/>
+
+<!-- curled bottom-right corner: shadow + paper back -->
+<ellipse cx="1108" cy="318" rx="72" ry="20" fill="#000000" opacity="0.55"/>
+<path d="M1172,340 L1080,344 L1102,300 L1140,272 L1178,262 L1172,340 Z" fill="#D8D4C8"/>
+<path d="M1172,340 L1080,344 L1102,300 L1140,272 L1178,262" fill="none" stroke="#A9A499" stroke-width="1.5"/>
+<path d="M1102,300 L1140,272 L1132,296 L1112,312 Z" fill="#B8B4A8" opacity="0.8"/>
+
+<!-- tape strips (toggle: delete this group for no-tape version) -->
+<g opacity="0.88">
+  <g transform="rotate(-38 90 40)">
+    <rect x="30" y="22" width="120" height="36" fill="#D9CFB8" opacity="0.92"/>
+    <rect x="30" y="22" width="120" height="36" fill="none" stroke="#8A8272" stroke-width="1"/>
+    <text x="90" y="45" text-anchor="middle" font-family="monospace" font-size="13" fill="#4A4438" letter-spacing="2">KOOL</text>
+  </g>
+  <g transform="rotate(-38 1090 320)">
+    <rect x="1030" y="302" width="120" height="36" fill="#D9CFB8" opacity="0.92"/>
+    <rect x="1030" y="302" width="120" height="36" fill="none" stroke="#8A8272" stroke-width="1"/>
+    <text x="1090" y="325" text-anchor="middle" font-family="monospace" font-size="13" fill="#4A4438" letter-spacing="2">KOOL</text>
+  </g>
+</g>
+
+<!-- grunge grain -->
+<rect x="16" y="10" width="1168" height="340" filter="url(#grain)" opacity="0.10"/>
+
+<!-- dense spray splatter clusters -->
+<g>
+  <circle cx="150" cy="268" r="8" fill="#FF2BD6"/>
+  <circle cx="178" cy="246" r="4" fill="#FF2BD6" opacity="0.75"/>
+  <circle cx="205" cy="278" r="3" fill="#00E5FF" opacity="0.85"/>
+  <circle cx="128" cy="240" r="2.5" fill="#FF2BD6" opacity="0.6"/>
+  <circle cx="196" cy="222" r="2" fill="#00E5FF" opacity="0.7"/>
+  <circle cx="1020" cy="100" r="7" fill="#7A2BF5"/>
+  <circle cx="1048" cy="122" r="3.5" fill="#00E5FF" opacity="0.85"/>
+  <circle cx="998" cy="132" r="2.5" fill="#FF2BD6" opacity="0.7"/>
+  <circle cx="880" cy="290" r="4.5" fill="#7A2BF5" opacity="0.8"/>
+  <circle cx="905" cy="272" r="2.5" fill="#00E5FF" opacity="0.7"/>
+  <circle cx="320" cy="80" r="3" fill="#00E5FF" opacity="0.7"/>
+  <circle cx="110" cy="150" r="2.5" fill="#FF2BD6" opacity="0.6"/>
+  <circle cx="1090" cy="210" r="3.5" fill="#FF2BD6" opacity="0.7"/>
+  <circle cx="500" cy="300" r="2.5" fill="#7A2BF5" opacity="0.7"/>
+  <circle cx="660" cy="60" r="2.5" fill="#00E5FF" opacity="0.6"/>
+</g>
+<!-- scratches -->
+<g stroke="#FFFFFF" opacity="0.09">
+  <path d="M70,320 L520,296" stroke-width="1.2"/>
+  <path d="M680,50 L1150,72" stroke-width="1.2"/>
+  <path d="M240,30 L320,330" stroke-width="1"/>
+  <path d="M900,120 L960,330" stroke-width="1"/>
+</g>
+
+<!-- lightning bolt under title -->
+<path d="M230,282 L540,244 L488,282 L680,260 L430,322 L486,282 L300,300 Z" fill="#00E5FF" opacity="0.92"/>
+<path d="M230,282 L540,244 L488,282 L680,260 L430,322 L486,282 L300,300 Z" fill="none" stroke="#FF2BD6" stroke-width="4"/>
+
+<!-- star sparkles -->
+<g fill="#FFFFFF">
+  <path d="M880,96 l5,15 15,5 -15,5 -5,15 -5,-15 -15,-5 15,-5 Z"/>
+  <path d="M310,196 l4,10 10,4 -10,4 -4,10 -4,-10 -10,-4 10,-4 Z" opacity="0.95"/>
+  <circle cx="800" cy="80" r="6" fill="#00E5FF"/>
+  <circle cx="420" cy="90" r="4" fill="#FF2BD6"/>
+</g>
+
+<!-- bubble graffiti title -->
+<g transform="rotate(-4 600 180)" font-family="'Arial Black', Impact, 'PingFang SC', sans-serif" font-weight="900" text-anchor="middle">
+  <text x="600" y="218" font-size="185" fill="none" stroke="#00E5FF" stroke-width="17" opacity="0.9">KOOL</text>
+  <text x="600" y="218" font-size="185" fill="none" stroke="#FF2BD6" stroke-width="8">KOOL</text>
+  <text x="600" y="218" font-size="185" fill="#FFFFFF">KOOL</text>
+</g>
+
+<text x="600" y="272" text-anchor="middle" font-family="Verdana, 'PingFang SC', sans-serif" font-size="21" letter-spacing="5" fill="#B9B9D0">GRAFFITI HEADERS · MASCOTS · README ASSETS</text>
+
+<!-- sign chip -->
+<g font-family="Verdana, sans-serif">
+  <rect x="150" y="312" width="76" height="26" rx="13" fill="#0A0A0F" stroke="url(#neon)" stroke-width="1.5"/>
+  <text x="188" y="330" text-anchor="middle" font-size="13" font-weight="bold" letter-spacing="2" fill="#FFFFFF">KOOL</text>
+</g>
+</svg>
