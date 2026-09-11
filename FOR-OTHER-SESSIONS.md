@@ -31,3 +31,11 @@
 
 - 个人涂鸦 skill：`~/.config/opencode/skills/my-kool-beautify/`（`--palette kool/cold/cuez/custom`，`watermark: false` 铁律）依赖此插件生图，插件恢复前 skill 的出图步骤走不通。
 - 测试头图：`D:\coding\dsh-opencli\assets\header-kool.png`（炸街紫）、`header-cold.png`（冷峻版）已出；`assets/header.svg` 为干净三卡片版，未定稿，均未提交。
+
+## 恢复完成 + 新能力（2026-09-08）
+
+- 插件已挂回 web/headless 两个 profile（headless 由本会话补挂，web 按上方检查清单恢复）
+- **新增 `reference` 参数**（generate_image）：传参考图（本地路径/URL/base64）走图生图，风格锚定——零漂移出品牌图实测通过
+- **新增设置区块**：内联 `settings.register`（0.1.2 删除了 installSettingsSection 包装，照 dshmarket settings.js 的内联模式），web 设置页出现 apiKey/baseUrl/model 表单；apiKey 为空不覆盖 env
+- 构建：tsup 崩溃换 **esbuild**（package.json build 脚本）；schemastery 3.18.2 显式依赖（拷自 dsh 0.1.2 bundle）
+- 兼容性：dsh 0.1.2-rc.1 实测通过（headless 出片 + web 设置区块）
