@@ -82,3 +82,33 @@ curl https://token.sensenova.cn/v1/models -H \"Authorization: Bearer \$SENSENOVA
 - 平台：https://platform.sensenova.cn/docs
 - U1.5 预览：https://github.com/OpenSenseNova/SenseNova-U1/blob/main/docs/u1.5_preview_CN.md
 - BaseUrl 必须是 `https://token.sensenova.cn/v1`（不是 `api.sensenova.cn/compatible-mode/v1`，会 403）
+
+
+## 配置 API Key（两种方式）
+
+### 方式一：环境变量（最简单，推荐个人使用）
+
+```powershell
+# 用户级设置一次，永久生效（控制台 platform.sensenova.cn → API-Key 管理 → 创建）
+setx SENSENOVA_API_KEY "sk-你的key"
+# 重启 dsh web 后生效
+```
+
+### 方式二：profile 配置注入（多实例/精细控制）
+
+编辑 `~/.dsh/profiles/web/cordis.patch.yml`，在 inserts 里加：
+
+```yaml
+- insert:
+    - id: sensenova-image
+      match: { name: dsh-sensenova-image }
+      config:
+        apiKey: sk-你的key
+        # baseUrl: https://token.sensenova.cn/v1
+        # model: sensenova-u1-fast
+```
+
+重启 dsh web 生效。`config: {}` 里的字段会覆盖环境变量。
+
+> web 设置页的 sensenova-image 配置卡片（表单方式）在开发中——注册已实现，
+> 卡片渲染与 settings-controller 的对接待验证。
