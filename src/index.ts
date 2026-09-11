@@ -20,6 +20,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { readFileSync } from 'node:fs'
 import z from 'zod'
+import schemastery from '@deepseek-ai/schemastery'
 
 export const name = 'dsh-sensenova-image'
 export const inject = ['tools']
@@ -132,6 +133,46 @@ function toDataUrl(maybeUrl: string): string {
 // ——— 插件 ———
 export function apply(ctx: Context, rawConfig: Config) {
   const config = Config.parse(rawConfig)
+
+  // ——— 设置区块（dsh 0.1.2 内联模式，参照 dshmarket settings.js）———
+  // 0.1.2-alpha.1 删除了 installSettingsSection/settingsNamespace 两个包装，
+  // 但 settings.register(ns, schema, { base }) 服务本身从未变——这里内联同样的
+  // inject + register + watch + unload。namespace 规则：小写连字符。
+  const SETTINGS_NS = 'dsh-sensenova-image'
+  const SettingsSchema = schemastery.object({
+    apiKey: schemastery.string(),
+    baseUrl: schemastery.string(),
+    model: schemastery.string(),
+    timeoutMs: schemastery.number(),
+  })
+
+  function installSettings(ctx: Context, resolved: Config): void {
+    const entry = {
+      apiKey: resolved.apiKey ?? '',
+      baseUrl: resolved.baseUrl, model: resolved.model, timeoutMs: resolved.timeoutMs,
+    }
+    let source = () => entry
+    // 命名空间只写自己拥有的字段；apiKey 为空不覆盖（保留 env/入口配置的 key）
+    const applySettings = (): void => {
+      if (source().apiKey) resolved.apiKey = source().apiKey
+      resolved.baseUrl = source().baseUrl
+      resolved.model = source().model
+      resolved.timeoutMs = source().timeoutMs
+    }
+    // inject 是优雅降级边界：宿主没有 settings 服务（0.1.0-rc.7 之前的所有 dsh）
+    // 时回调不运行，入口配置原样生效——无需版本检查
+    ctx.inject(['settings'], (scopedCtx: {
+      settings: { register: (ns: string, schema: unknown, opts?: { base?: unknown }) => { get: () => Record<string, unknown>; watch: (cb: () => void) => void } }
+      effect: (fn: () => void) => void
+    }) => {
+      const scope = scopedCtx.settings.register(SETTINGS_NS, SettingsSchema, { base: entry })
+      source = () => scope.get() as Record<string, unknown>
+      scopedCtx.effect(() => () => { source = () => entry; applySettings() })
+      applySettings()
+      scope.watch(applySettings)
+    })
+  }
+  installSettings(ctx, config)
 
   // 工具1：图像增强（清晰化 + 去水印）— 你的 Kool 案例主入口
   ctx.effect(() =>

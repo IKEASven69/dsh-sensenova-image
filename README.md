@@ -1,5 +1,7 @@
 # dsh-sensenova-image
 
+![dsh-sensenova-image hero](assets/hero-kool.svg)
+
 商汤 **SenseNova U1.5** 生图插件 for DeepSeek Harness (dsh)。
 
 > 一键清晰化 + 去水印：把豆包水印的 Kool 海报这类图，变清晰并去掉右下角 `豆包`。
