@@ -11,12 +11,14 @@
       "import": "./dist/index.js"
     },
     "./package.json": "./package.json",
-    "./cordis.patch.yml": "./cordis.patch.yml"
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./client": "./client/client.js"
   },
   "files": [
-    "dist",
+    "README.md",
+    "client",
     "cordis.patch.yml",
-    "README.md"
+    "dist"
   ],
   "license": "MIT",
   "engines": {
@@ -49,6 +51,12 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ],
+      "platform": "web"
     }
   }
 }

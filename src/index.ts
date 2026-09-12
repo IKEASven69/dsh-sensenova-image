@@ -23,7 +23,7 @@ import z from 'zod'
 import schemastery from '@deepseek-ai/schemastery'
 
 export const name = 'dsh-sensenova-image'
-export const inject = ['tools']
+export const inject = ['tools', 'webServer']
 
 export const Config = z.object({
   apiKey: z.string().optional().describe('SenseNova API Key（platform.sensenova.cn → 控制台 → 管理中心 → API-Key 管理 → 创建，sk-...）'),
@@ -161,11 +161,14 @@ export function apply(ctx: Context, rawConfig: Config) {
     }
     // inject 是优雅降级边界：宿主没有 settings 服务（0.1.0-rc.7 之前的所有 dsh）
     // 时回调不运行，入口配置原样生效——无需版本检查
+    console.log('[sensenova-image] settings wiring: inject entered')
     ctx.inject(['settings'], (scopedCtx: {
       settings: { register: (ns: string, schema: unknown, opts?: { base?: unknown }) => { get: () => Record<string, unknown>; watch: (cb: () => void) => void } }
       effect: (fn: () => void) => void
     }) => {
+      console.log('[sensenova-image] settings service visible, registering namespace')
       const scope = scopedCtx.settings.register(SETTINGS_NS, SettingsSchema, { base: entry })
+      console.log('[sensenova-image] namespace registered OK')
       source = () => scope.get() as Record<string, unknown>
       scopedCtx.effect(() => () => { source = () => entry; applySettings() })
       applySettings()
@@ -173,6 +176,53 @@ export function apply(ctx: Context, rawConfig: Config) {
     })
   }
   installSettings(ctx, config)
+
+  // ——— HTTP 路由：用户可见的生图面板（web 客户端模块调用）———
+  const sendJson = (res: { writeHead: (c: number, h?: Record<string, string>) => void; end: (b?: string) => void }, code: number, payload: unknown): void => {
+    res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' })
+    res.end(JSON.stringify(payload))
+  }
+  const readBody = (req: { on: (ev: string, cb: (c: string) => void) => void }): Promise<string> =>
+    new Promise((resolve) => {
+      let b = ''
+      req.on('data', (c: string) => { b += c })
+      req.on('end', () => resolve(b))
+    })
+
+  const reg = (path: string, handler: (req: { headers: Record<string, string | undefined>; method?: string; on: (ev: string, cb: (c: string) => void) => void }, res: { writeHead: (c: number, h?: Record<string, string>) => void; end: (b?: string) => void }) => void | Promise<void>): void => {
+    ctx.effect(() => (ctx as { webServer?: { register?: (r: { kind: string; path: string; handler: unknown }) => void } }).webServer?.register?.({ kind: 'exact', path, handler }), `dsh-sensenova-image: ${path}`)
+  }
+
+  reg('/api/sensenova/generate', async (req, res) => {
+    if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
+    // 同源校验：带 Origin 的跨源请求拒绝（无 Origin 的同源 fetch 放行）
+    const origin = String(req.headers?.origin ?? '')
+    if (origin) {
+      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
+    }
+    const key = resolveKey(config)
+    if (!key) { sendJson(res, 400, { ok: false, error: 'SENSENOVA_API_KEY 未配置（设置页填 apiKey 或设 SENSENOVA_API_KEY 环境变量）' }); return }
+    try {
+      const body = JSON.parse((await readBody(req)) || '{}')
+      const prompt = String(body.prompt ?? '').trim()
+      if (!prompt) { sendJson(res, 400, { ok: false, error: 'prompt required' }); return }
+      const ref = body.reference ? String(body.reference) : ''
+      const image = ref
+        ? toDataUrl(ref.startsWith('data:') || ref.startsWith('http') ? ref : readFileSync(ref).toString('base64'))
+        : undefined
+      const data: any = await callImagesGenerations({
+        baseUrl: config.baseUrl, apiKey: key, model: config.model,
+        timeoutMs: config.timeoutMs, prompt,
+        size: String(body.size || '2560x720'), n: 1, image,
+      })
+      const item = data?.data?.[0] ?? {}
+      const kind = item.url ? 'url' : item.b64_json ? 'base64' : ''
+      if (!kind) { sendJson(res, 502, { ok: false, error: 'response had no image' }); return }
+      sendJson(res, 200, { ok: true, image: { kind, value: item.url ?? item.b64_json } })
+    } catch (e) {
+      sendJson(res, 502, { ok: false, error: e instanceof Error ? e.message : String(e) })
+    }
+  })
 
   // 工具1：图像增强（清晰化 + 去水印）— 你的 Kool 案例主入口
   ctx.effect(() =>
