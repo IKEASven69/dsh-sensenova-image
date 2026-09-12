@@ -84,6 +84,13 @@ curl https://token.sensenova.cn/v1/models -H \"Authorization: Bearer \$SENSENOVA
 - BaseUrl 必须是 `https://token.sensenova.cn/v1`（不是 `api.sensenova.cn/compatible-mode/v1`，会 403）
 
 
+## 用户可见生图面板（web）
+
+dsh web 侧栏左缘有"生图"悬浮按钮：点开 → 提示词 + 参考图路径（选填）+ 尺寸 → 生成 → 内嵌预览 + 下载。
+走同源 `/api/sensenova/generate` 路由（同源校验），无需任何额外配置。
+
+聊天里的自然语言调用同样可用（agent 会调 `sensenova_generate_image` 工具，支持 `reference` 参考图）。
+
 ## 配置 API Key（两种方式）
 
 ### 方式一：环境变量（最简单，推荐个人使用）
