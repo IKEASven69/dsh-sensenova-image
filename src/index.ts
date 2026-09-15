@@ -18,7 +18,8 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import z from 'zod'
 import schemastery from '@deepseek-ai/schemastery'
 
@@ -139,6 +140,7 @@ export function apply(ctx: Context, rawConfig: Config) {
   // 但 settings.register(ns, schema, { base }) 服务本身从未变——这里内联同样的
   // inject + register + watch + unload。namespace 规则：小写连字符。
   const SETTINGS_NS = 'dsh-sensenova-image'
+  let settingsScope: { update: (patch: unknown) => void } | null = null
   const SettingsSchema = schemastery.object({
     apiKey: schemastery.string(),
     baseUrl: schemastery.string(),
@@ -163,12 +165,13 @@ export function apply(ctx: Context, rawConfig: Config) {
     // 时回调不运行，入口配置原样生效——无需版本检查
     console.log('[sensenova-image] settings wiring: inject entered')
     ctx.inject(['settings'], (scopedCtx: {
-      settings: { register: (ns: string, schema: unknown, opts?: { base?: unknown }) => { get: () => Record<string, unknown>; watch: (cb: () => void) => void } }
+      settings: { register: (ns: string, schema: unknown, opts?: { base?: unknown }) => { get: () => Record<string, unknown>; update: (patch: unknown) => void; watch: (cb: () => void) => void } }
       effect: (fn: () => void) => void
     }) => {
       console.log('[sensenova-image] settings service visible, registering namespace')
       const scope = scopedCtx.settings.register(SETTINGS_NS, SettingsSchema, { base: entry })
       console.log('[sensenova-image] namespace registered OK')
+      settingsScope = scope
       source = () => scope.get() as Record<string, unknown>
       scopedCtx.effect(() => () => { source = () => entry; applySettings() })
       applySettings()
@@ -192,6 +195,27 @@ export function apply(ctx: Context, rawConfig: Config) {
   const reg = (path: string, handler: (req: { headers: Record<string, string | undefined>; method?: string; on: (ev: string, cb: (c: string) => void) => void }, res: { writeHead: (c: number, h?: Record<string, string>) => void; end: (b?: string) => void }) => void | Promise<void>): void => {
     ctx.effect(() => (ctx as { webServer?: { register?: (r: { kind: string; path: string; handler: unknown }) => void } }).webServer?.register?.({ kind: 'exact', path, handler }), `dsh-sensenova-image: ${path}`)
   }
+
+  reg('/api/sensenova/config', (req, res) => {
+    void (async () => {
+      if (req.method === 'GET') {
+        sendJson(res, 200, { ok: true, config: { apiKey: config.apiKey ?? '', baseUrl: config.baseUrl, model: config.model } })
+        return
+      }
+      if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
+      try {
+        const body = JSON.parse((await readBody(req)) || '{}')
+        const patch: Record<string, unknown> = {}
+        if (typeof body.apiKey === 'string' && body.apiKey.trim()) { config.apiKey = body.apiKey.trim(); patch.apiKey = body.apiKey.trim() }
+        if (typeof body.baseUrl === 'string' && body.baseUrl.trim()) { config.baseUrl = body.baseUrl.trim(); patch.baseUrl = body.baseUrl.trim() }
+        if (typeof body.model === 'string' && body.model.trim()) { config.model = body.model.trim(); patch.model = body.model.trim() }
+        if (settingsScope) { try { settingsScope.update(patch) } catch { } }
+        sendJson(res, 200, { ok: true, persisted: Boolean(settingsScope) })
+      } catch (e) {
+        sendJson(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) })
+      }
+    })()
+  })
 
   reg('/api/sensenova/generate', async (req, res) => {
     if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
@@ -222,6 +246,55 @@ export function apply(ctx: Context, rawConfig: Config) {
     } catch (e) {
       sendJson(res, 502, { ok: false, error: e instanceof Error ? e.message : String(e) })
     }
+  })
+
+  // ——— 历史记录存储（cap 12 条防膨胀）———
+  type HistoryItem = { id: string; ts: string; prompt: string; reference: string; kind: string; value: string }
+  const HISTORY_CAP = 12
+  const histPath = (): string => join(process.env.USERPROFILE || process.env.HOME || '', '.dsh', 'storages', 'dsh-sensenova-image.json')
+  const loadHistory = (): HistoryItem[] => {
+    try { return JSON.parse(readFileSync(histPath(), 'utf8')) as HistoryItem[] } catch { return [] }
+  }
+  const saveHistory = (items: HistoryItem[]): void => {
+    try { mkdirSync(dirname(histPath()), { recursive: true }); writeFileSync(histPath(), JSON.stringify(items, null, 1)) } catch { }
+  }
+
+  reg('/api/sensenova/history', (req, res) => {
+    if (req.method === 'GET') { sendJson(res, 200, { ok: true, items: loadHistory() }); return }
+    if (req.method === 'DELETE') {
+      // ?id=<id> 删单条；无 id 清空
+      let delId = ''
+      try { delId = new URL(req.url ?? '/', 'http://x').searchParams.get('id') ?? '' } catch { }
+      if (delId) saveHistory(loadHistory().filter((it) => it.id !== delId))
+      else saveHistory([])
+      sendJson(res, 200, { ok: true })
+      return
+    }
+    if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'method' }); return }
+    void (async () => {
+      try {
+        const body = JSON.parse((await readBody(req)) || '{}')
+        const item: HistoryItem = {
+          id: Date.now().toString(36),
+          ts: new Date().toISOString(),
+          prompt: String(body.prompt ?? '').slice(0, 300),
+          reference: String(body.reference ?? ''),
+          kind: String(body.kind ?? 'url'),
+          value: String(body.value ?? ''),
+        }
+        if (!item.value) { sendJson(res, 400, { ok: false, error: 'value required' }); return }
+        const items = loadHistory()
+        items.unshift(item)
+        saveHistory(items.slice(0, HISTORY_CAP))
+        sendJson(res, 200, { ok: true, id: item.id })
+      } catch (e) {
+        sendJson(res, 500, { ok: false, error: e instanceof Error ? e.message : String(e) })
+      }
+    })()
+  })
+
+  reg('/api/sensenova/status', (_req, res) => {
+    sendJson(res, 200, { ok: true, keyConfigured: Boolean(resolveKey(config)) })
   })
 
   // 工具1：图像增强（清晰化 + 去水印）— 你的 Kool 案例主入口
