@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>SenseNova 生图</title>
+<style>
+:root{--bg:#0e0e11;--card:#1a1a22;--border:#2a2a36;--text:#e4e4ea;--dim:#8a8a98;--acc:#6c9ef8;--ok:#5ccb8f;--err:#e06060;--mono:"JetBrains Mono",Consolas,monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI","Microsoft YaHei",sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border)}
+.top .logo{font-weight:800;font-size:14px;letter-spacing:.08em;color:var(--acc)}
+.top .ver{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.top .sp{flex:1}
+.top .st{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:10px}
+.top .st.ok{color:var(--ok);border:1px solid var(--ok)}
+.top .st.no{color:var(--err);border:1px solid var(--err)}
+.wrap{flex:1;display:flex;min-height:0}
+.left{width:300px;border-right:1px solid var(--border);padding:16px;overflow-y:auto;flex-shrink:0}
+.right{flex:1;padding:16px;overflow-y:auto}
+.sec{margin-bottom:20px}
+.sec h3{font-size:12px;letter-spacing:.1em;color:var(--dim);margin-bottom:10px;text-transform:uppercase}
+.sec label{display:block;font-size:11.5px;color:var(--dim);margin:10px 0 4px}
+.sec textarea,.sec input{width:100%;box-sizing:border-box;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical}
+.sec textarea{min-height:60px}
+.sec textarea:focus,.sec input:focus{outline:none;border-color:var(--acc)}
+.sec select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 9px;font-size:13px}
+.genbtn{width:100%;margin-top:14px;padding:10px;border:none;border-radius:7px;cursor:pointer;background:var(--acc);color:#0e0e11;font-size:14px;font-weight:700}
+.genbtn:hover{filter:brightness(1.15)}
+.genbtn:disabled{opacity:.4;cursor:wait}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:16px}
+.gitem{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;transition:border-color .15s}
+.gitem:hover{border-color:var(--acc)}
+.gitem img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.gitem .meta{padding:8px 10px;font-size:11px;color:var(--dim);font-family:var(--mono)}
+.gitem .meta .p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:100}
+.modal.open{display:flex}
+.modal .box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;max-width:720px;max-height:90vh;overflow:auto}
+.modal .box img{max-width:100%;border-radius:6px}
+.modal .box .m-meta{margin-top:12px;font-size:12px;color:var(--dim);font-family:var(--mono)}
+.modal .box .m-close{float:right;background:none;border:none;color:var(--dim);cursor:pointer;font-size:18px}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="logo">⬡ SenseNova</span>
+  <span class="ver" id="ver"></span>
+  <span class="sp"></span>
+  <span class="st" id="keystat">…</span>
+</div>
+<div class="wrap">
+  <div class="left">
+    <div class="sec">
+      <h3>Generate</h3>
+      <label>Prompt</label>
+      <textarea id="prompt" placeholder="描述要生成的图…"></textarea>
+      <label>参考图（选填）</label>
+      <input id="reference" placeholder="路径或 URL">
+      <div class="row">
+        <div><label>尺寸</label>
+        <select id="size">
+          <option>2560x720</option><option>2048x2048</option><option selected>2560x720</option>
+          <option>1536x2752</option><option>2752x1536</option><option>3072x864</option>
+        </select></div>
+      </div>
+      <button class="genbtn" id="go" onclick="doGen()">⚡ Generate</button>
+    </div>
+  </div>
+  <div class="right">
+    <div class="sec"><h3>Gallery</h3><div class="gallery" id="gal"></div></div>
+  </div>
+</div>
+<div class="modal" id="modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="box">
+    <button class="m-close" onclick="this.closest('.modal').classList.remove('open')">✕</button>
+    <img id="m-img" src="">
+    <div class="m-meta" id="m-meta"></div>
+  </div>
+</div>
+
+<script>
+// —— config ——
+let CFG = {}
+async function loadConfig() {
+  const r = await fetch('/api/sensenova/config')
+  const d = await r.json()
+  CFG = d.config || {}
+  document.getElementById('ver').textContent = 'v' + (d.version || '0.1') + ' · ' + (CFG.model || '')
+}
+// —— status ——
+async function loadStatus() {
+  const r = await fetch('/api/sensenova/status')
+  const d = await r.json()
+  const el = document.getElementById('keystat')
+  el.textContent = d.keyConfigured ? 'API Key ✓' : 'Key 未配置'
+  el.className = 'st ' + (d.keyConfigured ? 'ok' : 'no')
+}
+// —— gallery ——
+async function loadGallery() {
+  const r = await fetch(HISTORY_ROUTE)
+  const d = await r.json()
+  const gal = document.getElementById('gal')
+  gal.innerHTML = ''
+  const items = d.items || []
+  if (!items.length) { gal.innerHTML = '<div style="color:var(--dim);grid-column:1/-1;padding:30px;text-align:center">还没有生成记录，先 Generate 一张。</div>'; return }
+  items.forEach(it => {
+    const div = document.createElement('div')
+    div.className = 'gitem'
+    const src = it.kind === 'base64' ? 'data:image/png;base64,' + it.value : it.value
+    div.innerHTML = `<img src="${src}" loading="lazy"><div class="meta"><div class="p">${esc(it.prompt)}</div><div>${it.ts?.slice(5,16)||''}</div></div>`
+    div.onclick = () => openPreview(src, it)
+    gal.appendChild(div)
+  })
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function openPreview(src, it) {
+  document.getElementById('m-img').src = src
+  document.getElementById('m-meta').textContent = 'prompt: ' + (it?.prompt || '') + ' · ' + (it?.ts || '')
+  document.getElementById('modal').classList.add('open')
+}
+// —— init ——
+const HISTORY_ROUTE = '/api/sensenova/history'
+loadConfig(); loadStatus(); loadGallery()
+</script>
+</body>
+</html>

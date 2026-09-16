@@ -20,6 +20,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import z from 'zod'
 import schemastery from '@deepseek-ai/schemastery'
 
@@ -291,6 +292,13 @@ export function apply(ctx: Context, rawConfig: Config) {
         sendJson(res, 500, { ok: false, error: e instanceof Error ? e.message : String(e) })
       }
     })()
+  })
+
+  // 静态页面：生图工具页
+  reg('/sensenova', (req, res) => {
+    const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'client', 'app.html'), 'utf8')
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+    res.end(html)
   })
 
   reg('/api/sensenova/status', (_req, res) => {

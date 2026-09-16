@@ -15,7 +15,7 @@ window.__ModuleLoader__.load({
   factory: (require) => {
     const module = { exports: {} }
     // 客户端服务声明：slots（shell.overlay / sidebar.footer.action 两个槽位）
-    const inject = ['slots']
+    const inject = ['slots', 'sessions', 'conversation']
     const React = require('react')
     const { useState, useEffect, createElement: h } = React
 
@@ -32,65 +32,68 @@ window.__ModuleLoader__.load({
     const HISTORY_ROUTE = '/api/sensenova/history'
     const CONFIG_ROUTE = '/api/sensenova/config'
 
-    // ——— 开关状态（模块级 + listeners，deck 同款）———
+    // ——— 开关状态（localStorage + window 事件；跨模块实例共享）———
+    // deck 的 listeners Set 模式在本加载器下会被实例化两份（侧栏按钮/overlay
+    // 各持一份，互不通告）。改用 window CustomEvent：同页面所有实例都收到。
     const LS_OPEN = 'dsh-sensenova-open'
-    let openState = null
-    const listeners = new Set()
+    const EVT = 'snx-open-changed'
+    // 状态唯一事实源 = localStorage，每次直读不缓存（模块可能被加载器实例化多份，
+    // 模块级缓存会造成按钮/面板状态不同步——实测踩坑）
     function isOpen() {
-      if (openState === null) { try { openState = localStorage.getItem(LS_OPEN) === '1' } catch { openState = false } }
-      return openState === true
+      try { return localStorage.getItem(LS_OPEN) === '1' } catch { return false }
     }
     function setOpen(v) {
-      openState = v
       try { localStorage.setItem(LS_OPEN, v ? '1' : '0') } catch { }
-      listeners.forEach((fn) => fn())
+      try { window.dispatchEvent(new CustomEvent(EVT)) } catch { }
     }
     function notify() { listeners.forEach((fn) => fn()) }
 
     // ——— 样式：全部走 shell 的 CSS 变量（跟随主题）———
     const css = `
-.snx-shell{position:fixed;inset:0;z-index:80;display:flex;background:var(--color-bg,#16161c);
-  color:var(--color-text,#e8e8ea);font-family:inherit}
-.snx-rail{width:150px;border-right:1px solid var(--color-divider,rgba(255,255,255,.1));
-  display:flex;flex-direction:column;padding:16px 10px;gap:4px}
-.snx-rail .brand{font-size:12px;letter-spacing:.18em;color:var(--color-text-secondary,#9a9aa8);
-  padding:0 10px 14px}
-.snx-rail button{display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--color-text,#e8e8ea);
-  padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13.5px;text-align:left;font-family:inherit}
-.snx-rail button:hover{background:rgba(255,255,255,.06)}
-.snx-rail button.on{background:rgba(255,255,255,.09);font-weight:700}
-.snx-main{flex:1;padding:26px 32px;overflow:auto}
-.snx-title{font-size:19px;font-weight:800;margin-bottom:18px;letter-spacing:.04em}
-.snx-key{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:10px;margin-left:10px;vertical-align:2px}
-.snx-key.ok{color:var(--color-primary,#6ea8ff);border:1px solid currentColor}
-.snx-key.no{color:#ff8080;border:1px solid currentColor}
-.snx-form{max-width:660px}
-.snx-form label{display:block;font-size:12px;color:var(--color-text-secondary,#9a9aa8);margin:13px 0 4px}
-.snx-form textarea,.snx-form input{width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);
-  border:1px solid var(--color-divider,rgba(255,255,255,.14));border-radius:7px;color:inherit;
-  padding:8px 10px;font-size:13.5px;font-family:inherit;resize:vertical}
-.snx-form textarea{min-height:68px}
-.snx-form .row{display:flex;gap:10px}
-.snx-form .row > *{flex:1}
-.snx-form .go{margin-top:16px;padding:9px 26px;border:none;border-radius:7px;cursor:pointer;
-  background:var(--color-primary,#6ea8ff);color:#10131a;font-size:13.5px;font-weight:700}
-.snx-form .go:hover:not(:disabled){filter:brightness(1.1)}
-.snx-form .go:disabled{opacity:.5;cursor:wait}
-.snx-err{margin-top:10px;color:#ff8080;font-size:12.5px;white-space:pre-wrap}
-.snx-preview{margin-top:18px;max-width:720px}
-.snx-preview img{width:100%;border-radius:8px;display:block;box-shadow:0 12px 34px rgba(0,0,0,.45)}
-.snx-preview a{display:inline-block;margin-top:8px;font-size:12.5px;color:var(--color-primary,#6ea8ff)}
-.snx-hist{max-width:860px;display:flex;flex-direction:column;gap:10px}
-.snx-hist .hi{display:flex;gap:14px;align-items:center;background:rgba(255,255,255,.04);
-  border:1px solid var(--color-divider,rgba(255,255,255,.1));border-radius:8px;padding:10px 14px;cursor:pointer}
-.snx-hist .hi:hover{background:rgba(255,255,255,.08)}
-.snx-hist .hi img{width:86px;height:48px;object-fit:cover;border-radius:4px}
-.snx-hist .hi .hp{flex:1;min-width:0}
-.snx-hist .hi .hp .p1{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.snx-hist .hi .hp .p2{font-size:11.5px;color:var(--color-text-secondary,#9a9aa8);margin-top:2px}
-.snx-hist .hi .del{background:none;border:none;color:var(--color-text-secondary,#9a9aa8);cursor:pointer;font-size:14px}
-.snx-hist .hi .del:hover{color:#ff8080}
-.snx-empty{color:var(--color-text-secondary,#9a9aa8);font-size:13px;padding:30px 0}
+.snx-fab{position:fixed;left:0;top:170px;z-index:60;background:linear-gradient(135deg,#D94AE8,#793791);
+  color:#fff;border:none;border-radius:0 8px 8px 0;padding:12px 7px;cursor:pointer;
+  writing-mode:vertical-rl;letter-spacing:.3em;font-size:12.5px;font-weight:700;font-family:inherit;
+  box-shadow:2px 2px 0 #16081C, 0 6px 18px rgba(137,77,174,.45);transition:transform .15s}
+.snx-fab:hover{transform:translateX(3px)}
+.snx-fab::first-letter{color:var(--snx-cyan,#3EE8F0)}
+.snx-panel{position:fixed;left:56px;top:110px;z-index:70;width:390px;
+  background:#120816;border:1px solid rgba(217,74,232,.35);border-radius:12px;
+  box-shadow:0 24px 60px rgba(10,4,20,.65), 0 0 0 1px rgba(62,232,240,.12);
+  padding:18px 18px 16px;font-family:inherit;color:#F2EDF8;display:none}
+.snx-panel.open{display:block;animation:snx-pop .18s ease-out}
+@keyframes snx-pop{from{transform:scale(.96) translateY(-6px);opacity:0}to{transform:none;opacity:1}}
+.snx-panel h3{margin:0 0 4px;font-family:"Arial Black","Microsoft YaHei",sans-serif;font-weight:900;
+  font-size:16px;letter-spacing:.06em;color:#fff;
+  text-shadow:2px 2px 0 #D94AE8}
+.snx-panel .sub{font-size:11px;color:#B9A6CC;margin-bottom:6px;letter-spacing:.08em}
+.snx-panel label{display:block;font-size:11px;color:#B9A6CC;margin:12px 0 4px;letter-spacing:.12em}
+.snx-panel textarea,.snx-panel input{width:100%;box-sizing:border-box;background:#0C0611;
+  border:1px solid rgba(217,74,232,.3);border-radius:7px;color:#F2EDF8;
+  padding:8px 10px;font-size:13px;font-family:var(--snx-mono,"JetBrains Mono",Consolas,monospace);resize:vertical;
+  transition:border-color .15s, box-shadow .15s}
+.snx-panel textarea{min-height:64px}
+.snx-panel textarea:focus,.snx-panel input:focus{outline:none;border-color:#3EE8F0;
+  box-shadow:0 0 0 2px rgba(62,232,240,.25)}
+.snx-panel .row{display:flex;gap:10px}
+.snx-panel .row > *{flex:1}
+.snx-panel .go{margin-top:16px;width:100%;padding:10px 0;border:none;border-radius:8px;cursor:pointer;
+  background:linear-gradient(135deg,#D94AE8,#3EE8F0);color:#16081C;
+  font-size:14px;font-weight:900;letter-spacing:.2em;font-family:inherit;
+  box-shadow:0 4px 18px rgba(217,74,232,.4);transition:filter .15s, transform .1s}
+.snx-panel .go:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px)}
+.snx-panel .go:disabled{opacity:.5;cursor:wait;transform:none}
+.snx-status{margin-top:9px;font-size:12px;color:#B9A6CC;min-height:16px;font-family:var(--snx-mono,Consolas,monospace)}
+.snx-result{margin-top:14px;border:1px solid rgba(217,74,232,.35);border-radius:10px;padding:10px;
+  background:#0C0611}
+.snx-result img{width:100%;border-radius:6px;display:block}
+.snx-result .snx-dl{display:flex;gap:10px;margin-top:9px}
+.snx-result a{font-size:12px;color:#3EE8F0;text-decoration:none;font-family:var(--snx-mono,Consolas,monospace)}
+.snx-result a:hover{text-decoration:underline}
+.snx-close{position:absolute;top:8px;right:10px;background:none;border:none;color:#B9A6CC;
+  cursor:pointer;font-size:15px;padding:2px}
+.snx-close:hover{color:#3EE8F0}
+.snx-tag{display:inline-block;font-size:10px;letter-spacing:.22em;color:#3EE8F0;
+  border:1px solid rgba(62,232,240,.4);border-radius:3px;padding:2px 8px;margin-bottom:8px}
 `
 
     // ——— 生成页组件 ———
@@ -169,9 +172,10 @@ window.__ModuleLoader__.load({
       const [, force] = useState(0)
       useEffect(() => {
         const fn = () => force((n) => n + 1)
-        listeners.add(fn)
+        window.addEventListener(EVT, fn)
         api.status().then((s) => setKeyOk(!!s.keyConfigured))
-        return () => { listeners.delete(fn) }
+        const poll = setInterval(fn, 1200)   // 兜底：事件丢失时靠轮询自愈
+        return () => { window.removeEventListener(EVT, fn); clearInterval(poll) }
       }, [])
       if (!isOpen()) return null                  // 关闭时由侧栏按钮承担入口
 
@@ -227,9 +231,54 @@ window.__ModuleLoader__.load({
       )
     }
 
+    // ——— 会话内"生图"视图（native conversation.view 槽位）———
+    // 在会话内容区以原生 tab 呈现（对话/轨迹 旁边），复用宿主的样式变量。
+    function GenView() {
+      const [prompt, setPrompt] = useState('')
+      const [ref, setRef] = useState('')
+      const [busy, setBusy] = useState(false)
+      const [err, setErr] = useState('')
+      const [img, setImg] = useState(null)
+      const go = async () => {
+        if (!prompt.trim() || busy) return
+        setBusy(true); setErr(''); setImg(null)
+        try {
+          const r = await api.generate({ prompt: prompt.trim(), reference: ref.trim() || undefined, size: '2560x720' })
+          if (!r.ok) throw new Error(r.error || 'HTTP 失败')
+          const kind = r.image.kind, value = r.image.value
+          setImg({ src: kind === 'url' ? value : 'data:image/png;base64,' + value })
+          await api.historyAdd({ prompt: prompt.trim(), reference: ref.trim(), kind, value })
+        } catch (e) { setErr(e && e.message ? e.message : String(e)) }
+        finally { setBusy(false) }
+      }
+      const field = { width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,.05)',
+        border: '1px solid var(--color-divider,rgba(255,255,255,.16))', borderRadius: 8, color: 'inherit',
+        padding: '10px 12px', fontSize: 13.5, fontFamily: 'inherit' }
+      return h('div', { style: { maxWidth: 720, margin: '0 auto', padding: '8px 0' } },
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+          h('div', null, h('label', { style: { display: 'block', fontSize: 12, color: 'var(--color-text-secondary,#9a9aa8)', marginBottom: 4 } }, '提示词'),
+            h('textarea', { value: prompt, onChange: (e) => setPrompt(e.target.value), rows: 3, style: { ...field, resize: 'vertical' }, placeholder: '描述要生成的图…' })),
+          h('div', null, h('label', { style: { display: 'block', fontSize: 12, color: 'var(--color-text-secondary,#9a9aa8)', marginBottom: 4 } }, '参考图路径 / URL（选填，风格锚定）'),
+            h('input', { value: ref, onChange: (e) => setRef(e.target.value), style: field, placeholder: '留空 = 纯文生图' })),
+          h('button', { onClick: go, disabled: busy || !prompt.trim(), style: { alignSelf: 'flex-start', padding: '9px 26px', border: 'none', borderRadius: 8, cursor: busy ? 'wait' : 'pointer', background: 'linear-gradient(135deg,#D94AE8,#3EE8F0)', color: '#16081C', fontWeight: 800, fontSize: 13.5, letterSpacing: '.1em', opacity: busy ? .5 : 1 } }, busy ? '生成中…' : '生成'),
+          err ? h('div', { style: { color: '#ff8080', fontSize: 12.5, marginTop: 8 } }, err) : null,
+          img ? h('div', { style: { marginTop: 10 } }, h('img', { src: img.src, style: { maxWidth: '100%', borderRadius: 8, display: 'block' } })) : null,
+        ),
+      )
+    }
+
     // ——— 客户端生命周期：宿主调用 apply(ctx)，ctx.slots 可用 ———
     function apply(ctx) {
       injectStyle()
+      ctx.slots.inject('conversation.view', () => {
+        const disposeView = ctx.slots.register({
+          name: 'conversation.view',
+          id: 'sensenova-gen',
+          order: 30,
+          label: () => '生图',
+        }, GenView)
+        return disposeView
+      })
       ctx.slots.inject('settings.section', () =>
         ctx.slots.register({ name: 'settings.section', id: 'sensenova-image', order: 45, label: 'SenseNova 生图' }, ConfigCard))
       ctx.slots.inject('shell.overlay', () =>

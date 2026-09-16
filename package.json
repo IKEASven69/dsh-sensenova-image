@@ -12,7 +12,7 @@
     },
     "./package.json": "./package.json",
     "./cordis.patch.yml": "./cordis.patch.yml",
-    "./client": "./client/client.js"
+    "./client": "./client/client-v3.js"
   },
   "files": [
     "README.md",
