@@ -12,7 +12,7 @@
     },
     "./package.json": "./package.json",
     "./cordis.patch.yml": "./cordis.patch.yml",
-    "./client": "./client/client-v3.js"
+    "./client": "./client/client-v4.js"
   },
   "files": [
     "README.md",
@@ -34,8 +34,9 @@
     "@deepseek-ai/dsh-scope": "0.1.1-rc.2",
     "@deepseek-ai/dsh-session": "0.1.1-rc.2",
     "@deepseek-ai/dsh-timeout": "^0.1.1-rc.2",
-    "zod": "^3.25.0",
-    "@deepseek-ai/schemastery": "^3.18.2"
+    "@deepseek-ai/schemastery": "^3.18.2",
+    "konva": "^9.3.22",
+    "zod": "^3.25.0"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "4.0.1",

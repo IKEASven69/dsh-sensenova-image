@@ -18,7 +18,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import z from 'zod'
@@ -132,6 +132,28 @@ function toDataUrl(maybeUrl: string): string {
   return `data:image/png;base64,${maybeUrl}`
 }
 
+// 从 chat/completions 响应里提取生成图 URL（string / array / data 字段多种形态）
+function extractImageFromChat(data: any): string | undefined {
+  const choice = data?.choices?.[0]?.message
+  const content = choice?.content
+  let out: string | undefined
+  if (typeof content === 'string') {
+    const m = content.match(/https?:\/\/[^\s"')]+/)
+    if (m) out = m[0]
+  } else if (Array.isArray(content)) {
+    for (const p of content) {
+      if (p?.type === 'image_url' && p.image_url?.url) out = p.image_url.url
+      if (p?.type === 'text' && typeof p.text === 'string' && !out) {
+        const m = p.text.match(/https?:\/\/[^\s"')]+/)
+        if (m) out = m[0]
+      }
+    }
+  }
+  if (!out && Array.isArray(data?.data)) out = data.data[0]?.url
+  if (!out && typeof data?.url === 'string') out = data.url
+  return out
+}
+
 // ——— 插件 ———
 export function apply(ctx: Context, rawConfig: Config) {
   const config = Config.parse(rawConfig)
@@ -232,21 +254,69 @@ export function apply(ctx: Context, rawConfig: Config) {
       const prompt = String(body.prompt ?? '').trim()
       if (!prompt) { sendJson(res, 400, { ok: false, error: 'prompt required' }); return }
       const ref = body.reference ? String(body.reference) : ''
-      const image = ref
-        ? toDataUrl(ref.startsWith('data:') || ref.startsWith('http') ? ref : readFileSync(ref).toString('base64'))
-        : undefined
+      const image = ref ? resolveRefToImageInput(ref) : undefined
+      const model = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : config.model
       const data: any = await callImagesGenerations({
-        baseUrl: config.baseUrl, apiKey: key, model: config.model,
+        baseUrl: config.baseUrl, apiKey: key, model,
         timeoutMs: config.timeoutMs, prompt,
         size: String(body.size || '2560x720'), n: 1, image,
       })
       const item = data?.data?.[0] ?? {}
       const kind = item.url ? 'url' : item.b64_json ? 'base64' : ''
       if (!kind) { sendJson(res, 502, { ok: false, error: 'response had no image' }); return }
-      sendJson(res, 200, { ok: true, image: { kind, value: item.url ?? item.b64_json } })
+      // v4：默认落盘持久化（persist:false 保留旧行为），持久化成功则入历史并返回文件 URL
+      let out: { kind: string; value: string; id?: string } = { kind, value: item.url ?? item.b64_json }
+      if (body.persist !== false) {
+        const saved = await persistImage(kind, out.value)
+        if (saved) {
+          out = { kind: 'url', value: saved.url, id: saved.id }
+          const items = loadHistory()
+          items.unshift({ id: saved.id, ts: new Date().toISOString(), prompt: prompt.slice(0, 300), reference: ref, kind: 'url', value: saved.url })
+          saveHistory(items.slice(0, HISTORY_CAP))
+        }
+      }
+      sendJson(res, 200, { ok: true, image: out })
     } catch (e) {
       sendJson(res, 502, { ok: false, error: e instanceof Error ? e.message : String(e) })
     }
+  })
+
+  // 增强放大：U1.5 chat/completions 清晰化（画布操作条入口），结果同样落盘
+  reg('/api/sensenova/enhance', (req, res) => {
+    if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
+    const origin = String(req.headers?.origin ?? '')
+    if (origin) {
+      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
+    }
+    const key = resolveKey(config)
+    if (!key) { sendJson(res, 400, { ok: false, error: 'SENSENOVA_API_KEY 未配置' }); return }
+    void (async () => {
+      try {
+        const body = JSON.parse((await readBody(req)) || '{}')
+        const image = body.image ? String(body.image) : ''
+        if (!image) { sendJson(res, 400, { ok: false, error: 'image required' }); return }
+        const prompt = String(body.prompt || '').trim() ||
+          'Enhance this image to ultra-clear 4K quality, increase sharpness and detail, remove any watermark text without leaving artifacts, keep all original elements, composition, colors, lighting and style exactly unchanged.'
+        const model = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : config.model
+        const data: any = await callChatCompletions({
+          baseUrl: config.baseUrl, apiKey: key, model, timeoutMs: config.timeoutMs,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: resolveRefToImageInput(image) } },
+              { type: 'text', text: prompt },
+            ],
+          }],
+        })
+        const imageOut = extractImageFromChat(data)
+        if (!imageOut) { sendJson(res, 502, { ok: false, error: 'response had no image（确认模型支持图像编辑，或换 sensenova-u1-fast）' }); return }
+        const saved = await persistImage(imageOut.startsWith('http') ? 'url' : 'base64', imageOut)
+        if (saved) { sendJson(res, 200, { ok: true, image: { kind: 'url', value: saved.url, id: saved.id } }); return }
+        sendJson(res, 200, { ok: true, image: { kind: imageOut.startsWith('http') ? 'url' : 'base64', value: imageOut } })
+      } catch (e) {
+        sendJson(res, 502, { ok: false, error: e instanceof Error ? e.message : String(e) })
+      }
+    })()
   })
 
   // ——— 历史记录存储（cap 12 条防膨胀）———
@@ -292,6 +362,196 @@ export function apply(ctx: Context, rawConfig: Config) {
         sendJson(res, 500, { ok: false, error: e instanceof Error ? e.message : String(e) })
       }
     })()
+  })
+
+  // ——— v4：图片落盘 + 画布文档持久化 + konva vendor ———
+  const storDir = (): string => join(process.env.USERPROFILE || process.env.HOME || '', '.dsh', 'storages')
+  const imgDir = (): string => join(storDir(), 'sensenova-images')
+  const canvasFile = (): string => join(storDir(), 'dsh-sensenova-image-canvas.json')
+  const IMAGE_MIME: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' }
+
+  // 画布端会传回自家文件 URL（/api/sensenova/image/<id>），统一解析成可发往 SenseNova 的形态
+  function resolveRefToImageInput(ref: string): string {
+    const m = ref.match(/^\/api\/sensenova\/image\/([A-Za-z0-9]+\.(?:png|jpe?g|webp))$/)
+    if (m) return toDataUrl(readFileSync(join(imgDir(), m[1])).toString('base64'))
+    return toDataUrl(ref)
+  }
+
+  // 画布文档读取/追加（agent 工具与 toolview 按钮共用）
+  function readCanvasDoc(): any {
+    try { return JSON.parse(readFileSync(canvasFile(), 'utf8')) } catch { return null }
+  }
+  function appendCanvasNode(node: Record<string, unknown>): boolean {
+    const doc = readCanvasDoc()
+    if (!doc || !Array.isArray(doc.nodes)) return false
+    doc.nodes.push(node)
+    if (doc.nodes.length > 300) doc.nodes = doc.nodes.slice(-300)
+    atomicWriteFile(canvasFile(), JSON.stringify(doc))
+    return true
+  }
+
+  // ——— Phase 2：SSE 事件总线（agent ↔ 画布实时通道；第三方插件进不了官方事件白名单）———
+  const sseClients = new Set<{ write: (s: string) => void }>()
+  const sseBuffer: string[] = []
+  function emitCanvasEvent(evt: Record<string, unknown>): void {
+    const line = `data: ${JSON.stringify({ ...evt, ts: Date.now() })}\n\n`
+    sseBuffer.push(line)
+    if (sseBuffer.length > 10) sseBuffer.shift()
+    for (const res of sseClients) { try { res.write(line) } catch { sseClients.delete(res) } }
+  }
+  reg('/api/sensenova/events', (req, res) => {
+    if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: 'GET only' }); return }
+    const origin = String(req.headers?.origin ?? '')
+    if (origin) {
+      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
+    }
+    res.writeHead(200, {
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'no-cache, no-transform',
+      connection: 'keep-alive',
+    })
+    res.write('retry: 3000\n\n')
+    for (const b of sseBuffer) res.write(b)
+    res.write(`data: ${JSON.stringify({ type: 'hello', ts: Date.now() })}\n\n`)
+    const client = { write: (s: string) => res.write(s) }
+    sseClients.add(client)
+    const hb = setInterval(() => { try { res.write(`: hb ${Date.now()}\n\n`) } catch { } }, 25000)
+    ;(req as unknown as { on: (ev: string, cb: () => void) => void }).on('close', () => {
+      clearInterval(hb)
+      sseClients.delete(client)
+    })
+  })
+
+  // agent / 聊天卡片把图追加到画布（打开中的画布经 SSE canvas:update 实时刷新）
+  reg('/api/sensenova/canvas/nodes', (req, res) => {
+    if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
+    const origin = String(req.headers?.origin ?? '')
+    if (origin) {
+      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
+    }
+    void (async () => {
+      try {
+        const body = JSON.parse((await readBody(req)) || '{}')
+        const rawSrc = body.src ? String(body.src) : ''
+        if (!rawSrc) { sendJson(res, 400, { ok: false, error: 'src required' }); return }
+        // 已是画布自有文件引用就直接用；否则落盘（dataURL / http URL / 本地路径）
+        let src = rawSrc
+        if (!/^\/api\/sensenova\/image\//.test(rawSrc)) {
+          const kind = rawSrc.startsWith('data:') ? 'base64' : rawSrc.startsWith('http') ? 'url' : 'path'
+          const saved = await persistImage(kind, rawSrc)
+          if (!saved) { sendJson(res, 502, { ok: false, error: '图片获取失败（本地路径不存在？）' }); return }
+          src = saved.url
+        }
+        const doc = readCanvasDoc()
+        let x = Number.isFinite(body.x) ? Math.round(body.x) : null as unknown as number
+        let y = Number.isFinite(body.y) ? Math.round(body.y) : 0
+        if (x === null) {
+          x = 0
+          if (doc && Array.isArray(doc.nodes) && doc.nodes.length) {
+            x = Math.max(...doc.nodes.map((n: { x: number; w: number }) => (n.x || 0) + (n.w || 480))) + 60
+          }
+        }
+        const node = {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+          type: 'image', status: 'done', src, parentId: undefined,
+          x, y, w: Number.isFinite(body.w) ? Math.round(body.w) : 480, h: Number.isFinite(body.h) ? Math.round(body.h) : 480,
+          prompt: String(body.prompt || '📌 插入'), params: {}, ts: Date.now(),
+        }
+        if (!appendCanvasNode(node)) { sendJson(res, 500, { ok: false, error: '画布文档不存在（先在工作台生成一次以初始化）' }); return }
+        emitCanvasEvent({ type: 'canvas:update' })
+        sendJson(res, 200, { ok: true, id: node.id, src })
+      } catch (e) {
+        sendJson(res, 500, { ok: false, error: e instanceof Error ? e.message : String(e) })
+      }
+    })()
+  })
+
+  function atomicWriteFile(file: string, data: string | Buffer): void {
+    mkdirSync(dirname(file), { recursive: true })
+    const tmp = `${file}.${Date.now()}.tmp`
+    writeFileSync(tmp, data)
+    renameSync(tmp, file)
+  }
+
+  // 生成结果落盘为本地文件，返回 /api/sensenova/image/<id><ext> 引用；远程 url 下载失败则回退原样返回
+  async function persistImage(kind: string, value: string): Promise<{ id: string; url: string } | null> {
+    try {
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+      let buf: Buffer | null = null
+      let ext = '.png'
+      if (kind === 'base64') {
+        const m = value.match(/^data:image\/(png|jpeg|jpg|webp)/)
+        if (m) ext = '.' + (m[1] === 'jpeg' ? 'jpg' : m[1])
+        buf = Buffer.from(value.includes(',') ? value.slice(value.indexOf(',') + 1) : value, 'base64')
+      } else if (kind === 'path') {
+        const m = value.match(/\.(png|jpe?g|webp)$/i)
+        if (!m) return null
+        ext = '.' + (m[1].toLowerCase() === 'jpeg' ? 'jpg' : m[1].toLowerCase())
+        buf = readFileSync(value)
+      } else {
+        const r = await fetch(value, { signal: AbortSignal.timeout(30000) })
+        if (!r.ok) return null
+        const ct = r.headers.get('content-type') || ''
+        if (ct.includes('jpeg')) ext = '.jpg'
+        else if (ct.includes('webp')) ext = '.webp'
+        buf = Buffer.from(await r.arrayBuffer())
+      }
+      if (!buf || buf.length < 64) return null
+      atomicWriteFile(join(imgDir(), `${id}${ext}`), buf)
+      return { id, url: `/api/sensenova/image/${id}${ext}` }
+    } catch { return null }
+  }
+
+  // 画布文档 GET/PUT（整文档 JSON，原子写；8MB 上限）
+  reg('/api/sensenova/canvas', (req, res) => {
+    void (async () => {
+      if (req.method === 'GET') {
+        try { sendJson(res, 200, { ok: true, doc: JSON.parse(readFileSync(canvasFile(), 'utf8')) }) }
+        catch { sendJson(res, 200, { ok: true, doc: null }) }
+        return
+      }
+      if (req.method === 'PUT') {
+        try {
+          const body = JSON.parse((await readBody(req)) || '{}')
+          const doc = body?.doc
+          if (!doc || typeof doc !== 'object' || !Array.isArray(doc.nodes)) { sendJson(res, 400, { ok: false, error: 'doc{nodes[]} required' }); return }
+          const json = JSON.stringify(doc)
+          if (json.length > 8 * 1024 * 1024) { sendJson(res, 413, { ok: false, error: 'doc too large (>8MB)' }); return }
+          atomicWriteFile(canvasFile(), json)
+          sendJson(res, 200, { ok: true })
+        } catch (e) { sendJson(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) }) }
+        return
+      }
+      sendJson(res, 405, { ok: false, error: 'GET/PUT only' })
+    })()
+  })
+
+  // 图片文件服务：id 白名单校验，长缓存（id 唯一）
+  // 注意 path 不带尾斜杠：webserver 的前缀匹配是 pathname.startsWith(path + '/')，
+  // 注册成 ".../image/" 会变成双斜杠永不命中，静默掉进 fallback 的 401 栅栏
+  ctx.effect(() => (ctx as { webServer?: { register?: (r: { kind: string; path: string; handler: unknown }) => void } }).webServer?.register?.({
+    kind: 'prefix',
+    path: '/api/sensenova/image',
+    handler: (req: { url?: string }, res: { writeHead: (c: number, h?: Record<string, string>) => void; end: (b?: Buffer | string) => void }) => {
+      const raw = decodeURIComponent(String(req.url ?? '')).split('?')[0]
+      const cut = raw.indexOf('/image/')
+      const id = (cut >= 0 ? raw.slice(cut + 7) : raw).replace(/^\/+/, '')
+      if (!/^[A-Za-z0-9]+\.(png|jpe?g|webp)$/.test(id)) { sendJson(res, 400, { ok: false, error: 'bad image id' }); return }
+      try {
+        const buf = readFileSync(join(imgDir(), id))
+        res.writeHead(200, { 'content-type': IMAGE_MIME[id.slice(id.lastIndexOf('.'))] || 'application/octet-stream', 'cache-control': 'public, max-age=31536000, immutable' })
+        res.end(buf)
+      } catch { sendJson(res, 404, { ok: false, error: 'image not found' }) }
+    },
+  }), 'dsh-sensenova-image: /api/sensenova/image/')
+
+  // konva 本体（本地 vendor，避免 CDN 依赖）
+  reg('/sensenova/vendor/konva.js', (_req, res) => {
+    try {
+      const p = join(dirname(fileURLToPath(import.meta.url)), '..', 'node_modules', 'konva', 'konva.min.js')
+      res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'public, max-age=86400' })
+      res.end(readFileSync(p))
+    } catch { sendJson(res, 500, { ok: false, error: 'konva 未安装：插件目录 npm i konva 后重启' }) }
   })
 
   // 静态页面：生图工具页
@@ -399,10 +659,10 @@ export function apply(ctx: Context, rawConfig: Config) {
     ctx.tools.register(
       defineTool({
         name: 'sensenova_generate_image',
-        description: '商汤 U1 文生图/图生图：prompt → 4K 图像。走 /v1/images/generations。传 reference（本地路径/URL/base64）时走图生图，风格与构图跟随参考图。',
+        description: '商汤 U1 文生图/图生图：prompt → 4K 图像。生成的图会自动落盘并实时出现在用户打开的"生图工作台"画布上。传 reference（本地路径/URL/dataURL）时走图生图。',
         parameters: {
           prompt: { type: 'string', required: true, description: '生成提示词（支持中英文）' },
-          reference: { type: 'string', description: '参考图：本地文件路径 / https URL / data URL / 裸 base64。传入后风格与构图跟随参考图（图生图）' },
+          reference: { type: 'string', description: '参考图：本地文件路径 / https URL / data URL。传入后风格与构图跟随参考图（图生图）' },
           size: { type: 'string', description: '分辨率，如 2048x2048 / 2752x1536，默认 2048x2048' },
           model: { type: 'string', description: '覆盖默认模型' },
         },
@@ -412,13 +672,7 @@ export function apply(ctx: Context, rawConfig: Config) {
           if (!key) return missingKeyHint()
           const model = args.model || config.model
           try {
-            let image: string | undefined
-            if (args.reference) {
-              // 本地路径 → base64 data URL；http(s)/data: 原样传
-              image = args.reference.startsWith('data:') || args.reference.startsWith('http')
-                ? args.reference
-                : toDataUrl(readFileSync(args.reference).toString('base64'))
-            }
+            const image = args.reference ? resolveRefToImageInput(args.reference) : undefined
             const data: any = await callImagesGenerations({
               baseUrl: config.baseUrl,
               apiKey: key,
@@ -429,10 +683,46 @@ export function apply(ctx: Context, rawConfig: Config) {
               n: 1,
               image,
             })
-            return JSON.stringify({ prompt: args.prompt, model, data }, null, 2)
+            const item = data?.data?.[0] ?? {}
+            let resultImage: string | null = null
+            if (item.url || item.b64_json) {
+              const saved = await persistImage(item.url ? 'url' : 'base64', item.url ?? item.b64_json)
+              resultImage = saved ? saved.url : (item.url ?? null)
+            }
+            if (resultImage) {
+              // 直接写进画布文档（关着也不丢），SSE 只通知打开中的画布刷新
+              const doc = readCanvasDoc()
+              let x = 0
+              let y = 0
+              if (doc && Array.isArray(doc.nodes) && doc.nodes.length) {
+                x = Math.max(...doc.nodes.map((n: any) => (n.x || 0) + (n.w || 480))) + 60
+                y = doc.nodes[doc.nodes.length - 1].y || 0
+              }
+              appendCanvasNode({
+                id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+                type: 'image', status: 'done', src: resultImage, parentId: undefined,
+                x, y, w: 480, h: 480, prompt: '💬 ' + String(args.prompt || '').slice(0, 120),
+                params: { fromChat: true }, ts: Date.now(),
+              })
+              emitCanvasEvent({ type: 'canvas:update' })
+            }
+            return JSON.stringify(
+              {
+                ok: Boolean(resultImage),
+                prompt: args.prompt,
+                model,
+                size: args.size || '2048x2048',
+                result_image: resultImage,
+                hint: resultImage
+                  ? '生成成功，result_image 为图片 URL（已落盘，若用户开着画布则已实时出现在画布上）'
+                  : '未返回图片，查看 SenseNova 响应或确认模型权限',
+              },
+              null,
+              2,
+            )
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)
-            return JSON.stringify({ error: msg, hint: '确认 model 是否为 sensenova-u1-fast 且已开通' }, null, 2)
+            return JSON.stringify({ ok: false, error: msg, hint: '确认 model 是否为 sensenova-u1-fast 且已开通' }, null, 2)
           }
         },
       }),
@@ -479,4 +769,97 @@ export function apply(ctx: Context, rawConfig: Config) {
       }),
     ),
   )
+
+  // ——— Phase 2：画布感知/操控工具 ———
+  ctx.effect(() =>
+    ctx.tools.register(
+      defineTool({
+        name: 'sensenova_canvas_get_state',
+        description: '读取用户"生图工作台"画布当前状态：全部图片节点的 id/坐标/尺寸/来源提示词 + 相机。用户说"画布上那张/左边那张/刚才那张"等指代时先调它定位。',
+        parameters: {},
+        output: { schema: { type: 'string' }, render: (a, v) => [{ type: 'text', text: String(v) }] },
+        async execute() {
+          const doc = readCanvasDoc()
+          if (!doc || !Array.isArray(doc.nodes) || !doc.nodes.length) {
+            return JSON.stringify({ empty: true, hint: '画布为空或尚未初始化' }, null, 2)
+          }
+          const nodes = doc.nodes.map((n: any) => ({
+            id: n.id, x: n.x, y: n.y, w: n.w, h: n.h, status: n.status,
+            prompt: n.prompt, src: n.src, parentId: n.parentId,
+          }))
+          return JSON.stringify({ nodeCount: nodes.length, camera: doc.camera, nodes }, null, 2)
+        },
+      }),
+    ),
+  )
+
+  ctx.effect(() =>
+    ctx.tools.register(
+      defineTool({
+        name: 'sensenova_canvas_place_image',
+        description: '把一张图摆到用户的生图画布上（用户开着画布时实时出现）。适合批量出图排版、拼贴素材。省略坐标时自动排到现有内容右侧。图片自动落盘为画布文件。',
+        parameters: {
+          src: { type: 'string', required: true, description: '图片来源：本地文件路径 / https URL / dataURL' },
+          x: { type: 'number', description: '画布 x 坐标（省略则自动右移排版）' },
+          y: { type: 'number', description: '画布 y 坐标（默认 0）' },
+          w: { type: 'number', description: '显示宽度（默认 480，建议按图片比例给）' },
+          h: { type: 'number', description: '显示高度（默认 480）' },
+          prompt: { type: 'string', description: '这张图的说明/来源提示词' },
+        },
+        output: { schema: { type: 'string' }, render: (a, v) => [{ type: 'text', text: String(v) }] },
+        async execute(args: { src: string; x?: number; y?: number; w?: number; h?: number; prompt?: string }) {
+          const kind = args.src.startsWith('data:') ? 'base64' : args.src.startsWith('http') ? 'url' : 'path'
+          const saved = await persistImage(kind, args.src)
+          const src = saved ? saved.url : (args.src.startsWith('http') ? args.src : '')
+          if (!src) return JSON.stringify({ ok: false, error: '图片获取失败（路径/URL 无效）' }, null, 2)
+          const doc = readCanvasDoc()
+          let x = Number.isFinite(args.x) ? Math.round(args.x as number) : 0
+          if (!Number.isFinite(args.x) && doc && Array.isArray(doc.nodes) && doc.nodes.length) {
+            x = Math.max(...doc.nodes.map((n: any) => (n.x || 0) + (n.w || 480))) + 60
+          }
+          const node = {
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+            type: 'image', status: 'done', src, parentId: undefined,
+            x, y: Number.isFinite(args.y) ? Math.round(args.y as number) : 0,
+            w: Number.isFinite(args.w) ? Math.round(args.w as number) : 480,
+            h: Number.isFinite(args.h) ? Math.round(args.h as number) : 480,
+            prompt: args.prompt || '🤖 agent 摆放', params: {}, ts: Date.now(),
+          }
+          if (!appendCanvasNode(node)) {
+            return JSON.stringify({ ok: false, error: '画布文档不存在（先在工作台生成一次以初始化）' }, null, 2)
+          }
+          emitCanvasEvent({ type: 'canvas:update' })
+          return JSON.stringify({ ok: true, id: node.id, src, note: '已放置，若用户开着画布则实时可见' }, null, 2)
+        },
+      }),
+    ),
+  )
+
+  // 画布协议写入系统提示；text 用函数 → 每次组装提示时携带画布实时快照
+  ctx.inject(['systemPrompt'], (sp: {
+    systemPrompt: { section: (s: { name: string; order: number; text: () => string }) => void }
+  }) => {
+    sp.systemPrompt.section({
+      name: 'sensenova-canvas',
+      order: 50,
+      text: () => {
+        const doc = readCanvasDoc()
+        let summary = '画布为空或尚未初始化（用户在工作台生成过一次即初始化）。'
+        if (doc && Array.isArray(doc.nodes) && doc.nodes.length) {
+          const rows = doc.nodes.slice(-20).map((n: any) =>
+            `[${n.id}] (${n.x || 0},${n.y || 0}) ${n.w || 0}x${n.h || 0} ${n.status || '?'} "${String(n.prompt || '').slice(0, 40)}"`)
+          summary = `当前 ${doc.nodes.length} 个节点（最多列最近 20）：\n${rows.join('\n')}`
+        }
+        return [
+          '## SenseNova 生图画布',
+          '用户可在浏览器打开"SenseNova 生图工作台"（无限画布）。约定：',
+          '- sensenova_generate_image 生成的图自动落盘，并实时出现在打开的画布上（无需额外步骤）',
+          '- 用户说"画布上那张/左边那张/刚才那张"等指代时，先用 sensenova_canvas_get_state 读节点清单定位',
+          '- sensenova_canvas_place_image 可把本地图片/URL 摆到画布指定位置，适合批量排版、拼贴素材',
+          '- 带【来自生图画布】前缀的消息 = 用户从画布发来的上下文，可能附画布选中图',
+          '- 画布实时快照：' + summary,
+        ].join('\n')
+      }
+    })
+  })
 }
