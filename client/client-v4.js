@@ -24,6 +24,7 @@ window.__ModuleLoader__.load({
     const inject = ['slots', 'sessions', 'conversation']
     const React = require('react')
     const { useState, useEffect, useRef, createElement: h } = React
+    const ReactDOMClient = require('react-dom/client')
 
     // ——— 数据访问（同源 fetch）———
     function post(url, body) {
@@ -111,24 +112,42 @@ window.__ModuleLoader__.load({
 
     // ——— 样式 ———
     const css = `
-.snx-cv{position:fixed;inset:0;z-index:200;background:#0A0A10;color:#EAEAF2;display:flex;flex-direction:column;
-  font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+/* v4.1：内嵌侧边栏模式（不再是全屏遮挡，也不是右侧抽屉）
+   思路：找到 dsh 的 sidebarCol，把工作台作为它的直接子节点渲染（替换 sessions 视图）。
+   兼容：
+   - 默认 dsh 侧边栏：[class*="sidebarCol"] 定位，DOM 操作
+   - dsh-better-sidebar（若安装）：用 window.dshBetterSidebar.registerPanel(slot, render) 走其原生面板机制 */
+.snx-cv{position:relative;display:flex;flex-direction:column;width:100%;height:100%;
+  background:#0A0A10;color:#EAEAF2;
+  font-family:"Segoe UI","Microsoft YaHei",sans-serif;overflow:hidden}
 .snx-cv-top{height:44px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 16px;
-  border-bottom:1px solid #1E1E2A}
-.snx-cv-top .brand{font-weight:900;font-size:14px;letter-spacing:.06em}
+  border-bottom:1px solid #1E1E2A;background:#0F0F18}
+.snx-cv-top .brand{font-weight:900;font-size:14px;letter-spacing:.06em;color:#EAEAF2}
 .snx-cv-top .brand b{color:#3EE8F0}
 .snx-cv-top .key{font-size:11px;padding:2px 9px;border-radius:9px;border:1px solid #2a2a36;color:#888}
 .snx-cv-top .key.ok{color:#3EE8F0;border-color:rgba(62,232,240,.4)}
 .snx-cv-top .key.no{color:#FF6070;border-color:rgba(255,96,112,.4)}
 .snx-cv-top .sp{flex:1}
-.snx-cv-top button{background:none;border:1px solid #2a2a36;color:#999;border-radius:6px;
-  padding:4px 12px;cursor:pointer;font-size:12px;font-family:inherit}
-.snx-cv-top button:hover{border-color:#3EE8F0;color:#3EE8F0}
-.snx-cv-main{flex:1;display:flex;min-height:0}
+.snx-cv-top button{background:none;border:1px solid #2a2a36;color:#CCC;padding:4px 10px;border-radius:6px;
+  cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s}
+.snx-cv-top button:hover{border-color:#E050D0;color:#fff;background:rgba(224,80,208,.1)}
+.snx-cv-top button.close:hover{border-color:#FF6070;color:#FF6070;background:rgba(255,96,112,.08)}
+.snx-cv-main{flex:1;display:flex;flex-direction:row;min-height:0;min-width:0}
 .snx-cv-wrap{flex:1;position:relative;overflow:hidden;background-color:#0A0A10;
-  background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px)}
+  background-image:radial-gradient(rgba(255,255,255,.06) 1px,transparent 1px);min-width:0}
 .snx-cv-stage{position:absolute;inset:0}
-.snx-cv-right{width:320px;flex-shrink:0;border-left:1px solid #1E1E2A;display:flex;flex-direction:column;min-height:0}
+.snx-cv-right{width:280px;flex-shrink:0;border-left:1px solid #1E1E2A;display:flex;flex-direction:column;min-height:0;
+  min-width:0;overflow:hidden}
+/* 窄宽模式（host 实际宽 < ~520px，由 JS 加 .narrow 切换）：右侧面板折到顶部，主画布吃满剩余高度 */
+.snx-cv.narrow{flex-direction:column}
+.snx-cv.narrow .snx-cv-main{flex-direction:column}
+.snx-cv.narrow .snx-cv-right{width:100%;max-height:46%;border-left:none;border-top:1px solid #1E1E2A}
+.snx-cv.narrow .snx-cv-top{height:38px;padding:0 10px;gap:8px;font-size:12px}
+.snx-cv.narrow .snx-cv-top .brand{font-size:12px}
+.snx-cv.narrow .snx-cv-top .key{display:none}
+.snx-cv.narrow .snx-cv-top button.fit{display:none}
+.snx-cv.narrow .snx-cv-top button{padding:3px 8px;font-size:11px}
+.snx-cv.narrow .snx-cv-body{padding:10px}
 .snx-cv-tabs{display:flex;border-bottom:1px solid #1E1E2A;flex-shrink:0}
 .snx-cv-tabs button{flex:1;background:none;border:none;color:#888;padding:10px 0;cursor:pointer;font-size:12.5px;
   border-bottom:2px solid transparent;font-family:inherit}
@@ -179,6 +198,48 @@ window.__ModuleLoader__.load({
 .snx-form .go{margin-top:14px;padding:9px 22px;border:none;border-radius:8px;cursor:pointer;
   background:linear-gradient(135deg,#D94AE8,#793791);color:#fff;font-size:13px;font-weight:700;font-family:inherit}
 .snx-empty{font-size:12px;color:#777;padding:12px 0}
+/* 设置卡片（v4.1 重排版：强样式覆盖，避开宿主 settings 页的影响） */
+.snx-cfg{padding:4px 0;color:#EAEAF2}
+.snx-cfg-row{margin-bottom:20px}
+.snx-cfg-row>label.snx-cfg-lb{display:block;font-size:13px;color:#EAEAF2!important;font-weight:600;
+  margin:0 0 4px;letter-spacing:.02em}
+.snx-cfg-hint{display:block;font-size:11.5px;color:#7A7490;margin:0 0 8px;line-height:1.5}
+.snx-cfg-row>input.snx-cfg-in,.snx-cfg-row>select.snx-cfg-sel{display:block;width:100%;box-sizing:border-box;
+  background:#111118!important;border:1px solid #2A2A38;border-radius:7px;color:#EAEAF2!important;
+  padding:9px 12px;font-size:13px;font-family:inherit;outline:none;line-height:1.4;min-height:36px}
+.snx-cfg-row>input.snx-cfg-in:focus,.snx-cfg-row>select.snx-cfg-sel:focus{border-color:#E050D0;background:#181822!important}
+.snx-cfg-row>select.snx-cfg-sel{appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A7490' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>")!important;
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;cursor:pointer}
+.snx-cfg-in-wrap{position:relative}
+.snx-cfg-in-wrap input.snx-cfg-in{padding-right:42px}
+.snx-cfg-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:#7A7490;cursor:pointer;font-size:14px;padding:6px 10px;border-radius:4px}
+.snx-cfg-eye:hover{color:#EAEAF2;background:rgba(255,255,255,.04)}
+.snx-cfg-help{display:block;font-size:11.5px;color:#7A7490;margin:8px 0 0;line-height:1.5;font-style:italic}
+.snx-cfg-help b{color:#3EE8F0;font-style:normal;font-weight:600}
+.snx-cfg-actions{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+.snx-cfg-go{padding:9px 22px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;
+  background:linear-gradient(135deg,#D94AE8,#793791)!important;color:#fff!important;font-family:inherit;
+  transition:filter .15s}
+.snx-cfg-go:hover{filter:brightness(1.15)}
+.snx-cfg-test{padding:9px 18px;border:1px solid #2A2A38;border-radius:8px;cursor:pointer;
+  background:transparent!important;color:#EAEAF2!important;font-size:13px;font-weight:600;font-family:inherit;
+  transition:all .15s}
+.snx-cfg-test:hover:not(:disabled){border-color:#3EE8F0;color:#3EE8F0!important}
+.snx-cfg-test:disabled{opacity:.5;cursor:default}
+.snx-cfg-msg{margin-top:14px;padding:10px 14px;border-radius:7px;font-size:12px;
+  background:#181822;color:#7A7490;border:1px solid #2A2A38;line-height:1.5}
+.snx-cfg-msg.ok{color:#3EE8F0;border-color:rgba(62,232,240,.35);background:rgba(62,232,240,.07)}
+.snx-cfg-msg.err{color:#FF6070;border-color:rgba(255,96,112,.35);background:rgba(255,96,112,.07)}
+/* 侧栏按钮（自包含样式 + 兼容 dsh-better-sidebar） */
+.snx-sidebtn{display:inline-flex;align-items:center;gap:6px;
+  padding:5px 11px;border-radius:8px;border:1px solid rgba(224,80,208,.25);
+  background:rgba(224,80,208,.08);color:#EAEAF2;font-size:12px;
+  font-weight:600;cursor:pointer;transition:all .15s;line-height:1;font-family:inherit}
+.snx-sidebtn:hover{background:rgba(224,80,208,.22);border-color:#E050D0;color:#fff;box-shadow:0 0 12px rgba(224,80,208,.25)}
+.snx-sidebtn.on{background:linear-gradient(135deg,#D94AE8,#793791);border-color:transparent;color:#fff}
+.snx-sidebtn svg{width:13px;height:13px;flex-shrink:0}
 /* Phase 1：浮动操作条 / 悬浮 prompt bar / 蒙版工具条 / 比例弹层 */
 .snx-ab{position:absolute;z-index:6;display:flex;gap:1px;background:rgba(22,18,30,.96);border:1px solid #2a2a36;
   border-radius:8px;padding:3px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
@@ -1058,7 +1119,7 @@ window.__ModuleLoader__.load({
     }
 
     // ——— 全屏工作台 ———
-    function Workbench() {
+    function Workbench({ onClose } = {}) {
       const [open, setOpenState] = useState(isOpen())
       const [ready, setReady] = useState(false)
       const [loadErr, setLoadErr] = useState('')
@@ -1365,10 +1426,10 @@ window.__ModuleLoader__.load({
         h('div', { className: 'snx-cv-top' },
           h('div', { className: 'brand' }, '⚡ SENSENOVA ', h('b', null, '生图工作台')),
           h('span', { className: 'key ' + (keyOk === false ? 'no' : 'ok') },
-            keyOk === null ? '' : keyOk ? 'API Key 已配置' : 'API Key 未配置'),
+            keyOk === null ? '' : keyOk ? 'Key ✓' : 'Key ✗'),
           h('div', { className: 'sp' }),
-          h('button', { onClick: () => engineRef.current && engineRef.current.fit(), title: '快捷键 F' }, '适应画面'),
-          h('button', { onClick: () => setOpen(false) }, '✕ 关闭'),
+          h('button', { className: 'fit', onClick: () => engineRef.current && engineRef.current.fit(), title: '快捷键 F' }, '适应'),
+          h('button', { className: 'close', onClick: () => onClose && onClose(), title: '回到会话视图' }, '← 返回'),
         ),
         h('div', { className: 'snx-cv-main' },
           h('div', { className: 'snx-cv-wrap', ref: wrapRef },
@@ -1378,6 +1439,19 @@ window.__ModuleLoader__.load({
                 justifyContent: 'center', color: '#FF6070', fontSize: 14,
               },
             }, loadErr) : null,
+            // 空画布提示（只在画布已就绪、空、无蒙版时显示）
+            ready && !loadErr && store.doc.nodes.length === 0 && !maskId ? h('div', {
+              className: 'snx-cv-empty',
+              style: {
+                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+                gap: 8, userSelect: 'none', zIndex: 1,
+              },
+            },
+              h('div', { style: { fontSize: 48, opacity: .35, lineHeight: 1 } }, '✦'),
+              h('div', { style: { fontSize: 13, color: '#888', fontWeight: 500 } }, '画布为空'),
+              h('div', { style: { fontSize: 11, color: '#555' } }, '在下方输入提示词，或粘贴/拖入图像素材'),
+            ) : null,
             // 悬浮 prompt bar（蒙版模式让位给工具条）
             !maskId && ready && !loadErr ? h(GenBar, { engineRef, busy, setBusy }) : null,
             // 蒙版工具条
@@ -1456,36 +1530,205 @@ window.__ModuleLoader__.load({
       )
     }
 
-    // ——— 设置卡片（插件配置页）———
+    // ——— 设置卡片（插件配置页，v4.1：模型下拉 + 描述 + 测试连接）———
+    const MODEL_PRESETS = [
+      { id: '__keep__', label: '— 保留当前 —', desc: '不修改此项（保存时不发送）' },
+      { id: 'sensenova-u1-fast', label: 'sensenova-u1-fast（默认·文生图快档）', desc: '走 images/generations，速度最快，适合批量出草图。' },
+      { id: 'sensenova-U1', label: 'sensenova-U1（高质量文生图）', desc: '控制台开通 U1 后可用，质感更好但较慢。' },
+      { id: 'sensenova-U1.5', label: 'sensenova-U1.5（U1.5 多模态）', desc: '走 chat/completions，支持图像编辑/增强/扩图（画布"增强"入口专用）。' },
+      { id: '__custom__', label: '自定义…', desc: '手动填入控制台模型广场实际可见的 id。' },
+    ]
     function ConfigCard() {
       const [apiKey, setApiKey] = useState('')
+      const [showKey, setShowKey] = useState(false)
       const [baseUrl, setBaseUrl] = useState('')
       const [model, setModel] = useState('')
+      const [modelPreset, setModelPreset] = useState('__keep__')
       const [msg, setMsg] = useState('')
+      const [testMsg, setTestMsg] = useState('')
+      const [testing, setTesting] = useState(false)
+      const [presetsInited, setPresetsInited] = useState(false)
       useEffect(() => {
         get(CONFIG_ROUTE).then((r) => {
-          setBaseUrl((r.config && r.config.baseUrl) || '')
-          setModel((r.config && r.config.model) || '')
+          const m = (r.config && r.config.model) || ''
+          const b = (r.config && r.config.baseUrl) || ''
+          setBaseUrl(b)
+          setModel(m)
+          const matched = MODEL_PRESETS.find((p) => p.id === m)
+          setModelPreset(matched ? matched.id : (m ? '__custom__' : '__keep__'))
+          setPresetsInited(true)
         })
       }, [])
       const save = async () => {
-        setMsg('保存中…')
-        const r = await post(CONFIG_ROUTE, { apiKey: apiKey.trim(), baseUrl: baseUrl.trim(), model: model.trim() })
-        setMsg(r.ok ? '已保存 ✓（立即生效）' : '保存失败：' + (r.error || '未知错误'))
+        setMsg('保存中…'); setTestMsg('')
+        const finalModel = modelPreset === '__custom__' ? model.trim()
+          : modelPreset === '__keep__' ? '' : modelPreset
+        const payload = { apiKey: apiKey.trim(), baseUrl: baseUrl.trim() }
+        if (finalModel) payload.model = finalModel
+        const r = await post(CONFIG_ROUTE, payload)
+        setMsg(r.ok ? '✓ 已保存（立即生效）' : '✗ 保存失败：' + (r.error || '未知错误'))
       }
-      return h('div', { className: 'snx-form', style: { maxWidth: '560px' } },
-        h('label', null, 'API Key（sk-...，留空 = 保留现有/环境变量）'),
-        h('input', { type: 'password', value: apiKey, onChange: (e) => setApiKey(e.target.value), placeholder: '不修改则留空' }),
-        h('label', null, 'baseUrl'),
-        h('input', { value: baseUrl, onChange: (e) => setBaseUrl(e.target.value) }),
-        h('label', null, '模型 id'),
-        h('input', { value: model, onChange: (e) => setModel(e.target.value) }),
-        h('div', null, h('button', { className: 'go', onClick: save }, '保存设置')),
-        msg ? h('div', { className: 'snx-empty' }, msg) : null,
+      const test = async () => {
+        setTesting(true); setTestMsg('测试中…')
+        try {
+          const r = await post('/api/sensenova/test', {})
+          if (r.ok) {
+            const ms = Array.isArray(r.models) && r.models.length
+              ? `（共 ${r.models.length} 个模型可见：${r.models.slice(0, 6).join(', ')}${r.models.length > 6 ? '…' : ''}）`
+              : ''
+            setTestMsg('✓ 连接成功 ' + ms)
+          } else {
+            setTestMsg('✗ ' + (r.error || '连接失败'))
+          }
+        } catch (e) {
+          setTestMsg('✗ ' + (e instanceof Error ? e.message : String(e)))
+        }
+        setTesting(false)
+      }
+      const presetDesc = (MODEL_PRESETS.find((p) => p.id === modelPreset) || {}).desc || ''
+      return h('div', { className: 'snx-cfg', style: { maxWidth: '640px' } },
+        // ——— API Key ———
+        h('div', { className: 'snx-cfg-row' },
+          h('label', { className: 'snx-cfg-lb' }, '🔑 API Key'),
+          h('span', { className: 'snx-cfg-hint' }, ' 商汤 SenseNova 控制台 → API Key 管理。留空 = 不修改（保留现有/环境变量）'),
+          h('div', { className: 'snx-cfg-in-wrap' },
+            h('input', {
+              className: 'snx-cfg-in',
+              type: showKey ? 'text' : 'password',
+              value: apiKey,
+              onChange: (e) => setApiKey(e.target.value),
+              placeholder: 'sk-...（不修改则留空）',
+              autoComplete: 'off',
+              spellCheck: false,
+            }),
+            h('button', {
+              className: 'snx-cfg-eye', type: 'button',
+              onClick: () => setShowKey(!showKey),
+              title: showKey ? '隐藏' : '显示',
+            }, showKey ? '🙈' : '👁'),
+          ),
+        ),
+        // ——— baseUrl ———
+        h('div', { className: 'snx-cfg-row' },
+          h('label', { className: 'snx-cfg-lb' }, '🌐 baseUrl'),
+          h('span', { className: 'snx-cfg-hint' }, ' 一般无需改。默认 https://token.sensenova.cn/v1'),
+          h('input', {
+            className: 'snx-cfg-in', value: baseUrl,
+            onChange: (e) => setBaseUrl(e.target.value),
+            spellCheck: false,
+          }),
+        ),
+        // ——— 模型 ———
+        h('div', { className: 'snx-cfg-row' },
+          h('label', { className: 'snx-cfg-lb' }, '🎛️ 模型'),
+          h('span', { className: 'snx-cfg-hint' }, ' 选预设或自定义。控制台「模型广场」可查实际 id。'),
+          h('select', {
+            className: 'snx-cfg-sel',
+            value: presetsInited ? modelPreset : '__keep__',
+            onChange: (e) => {
+              const v = e.target.value
+              setModelPreset(v)
+              if (v !== '__keep__' && v !== '__custom__') setModel(v)
+            },
+          }, MODEL_PRESETS.map((p) => h('option', { value: p.id }, p.label))),
+          modelPreset === '__custom__'
+            ? h('input', {
+              className: 'snx-cfg-in', style: { marginTop: '8px', fontFamily: 'var(--mono, monospace)' },
+              value: model,
+              onChange: (e) => setModel(e.target.value),
+              placeholder: '自定义模型 id（控制台模型广场可见的实际 id）',
+              spellCheck: false,
+            })
+            : null,
+          presetDesc ? h('span', { className: 'snx-cfg-help' }, presetDesc) : null,
+        ),
+        // ——— 按钮组 ———
+        h('div', { className: 'snx-cfg-actions' },
+          h('button', { className: 'snx-cfg-go', onClick: save }, '💾 保存设置'),
+          h('button', { className: 'snx-cfg-test', onClick: test, disabled: testing },
+            testing ? '⏳ 测试中…' : '🔌 测试连接'),
+        ),
+        msg ? h('div', { className: 'snx-cfg-msg ' + (msg.startsWith('✓') ? 'ok' : 'err') }, msg) : null,
+        testMsg ? h('div', { className: 'snx-cfg-msg ' + (testMsg.startsWith('✓') ? 'ok' : 'err') }, testMsg) : null,
       )
     }
 
     // ——— 客户端生命周期 ———
+    // v4.1：不再用 shell.overlay（会遮挡聊天）。改为：点击侧栏按钮时把工作台
+    // 直接挂到 dsh 的 sidebarCol 元素里（替换 sessions 视图），聊天始终可见。
+    // 兼容策略：
+    //   1) 优先看 window.dshBetterSidebar.registerPanel — 若 dsh-better-sidebar
+    //      提供了原生面板 API，走它
+    //   2) 回退到 [class*="sidebarCol"] DOM 定位（默认 dsh 侧栏）
+    //   3) 都没有就 console.warn，不阻塞其它功能
+    let wbRoot = null
+    let wbHost = null
+    let wbObserver = null
+    let wbOriginalDisplays = []
+    function findSidebarEl() {
+      // 1) 优先：dsh-better-sidebar 提供的根元素
+      if (window.dshBetterSidebar && typeof window.dshBetterSidebar.getSidebar === 'function') {
+        const el = window.dshBetterSidebar.getSidebar()
+        if (el) return el
+      }
+      // 2) 默认 dsh 侧栏（class 含 sidebarCol，CSS Module 哈希后缀每次构建会变）
+      const sel = document.querySelector('[class*="sidebarCol"]')
+      if (sel) return sel
+      return null
+    }
+    function openWorkbench() {
+      if (wbRoot) return
+      const sidebar = findSidebarEl()
+      if (!sidebar) { console.warn('[sensenova-image] no sidebar element found'); return }
+      // 1) 隐藏所有原 children
+      wbOriginalDisplays = []
+      Array.from(sidebar.children).forEach((c) => {
+        wbOriginalDisplays.push(c.style.display)
+        c.style.display = 'none'
+      })
+      // 2) 创建 host，挂到 sidebar 末尾
+      wbHost = document.createElement('div')
+      wbHost.className = 'snx-wb-host'
+      wbHost.setAttribute('data-snx-wb', '1')
+      wbHost.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;min-height:0;'
+      sidebar.appendChild(wbHost)
+      // 3) ReactDOM 渲染
+      wbRoot = ReactDOMClient.createRoot(wbHost)
+      wbRoot.render(h(Workbench, { onClose: closeWorkbench }))
+      // 4) ResizeObserver：根据 host 实际宽度切换 .narrow
+      const applyNarrow = () => {
+        const w = wbHost ? wbHost.getBoundingClientRect().width : 999
+        // 第一个 .snx-cv 是 Workbench 根
+        const cv = wbHost && wbHost.firstElementChild
+        if (cv) cv.classList.toggle('narrow', w < 520)
+      }
+      try {
+        wbObserver = new ResizeObserver(applyNarrow)
+        wbObserver.observe(wbHost)
+        applyNarrow()
+      } catch { }
+      setOpen(true)
+      try { window.dispatchEvent(new CustomEvent('snx:workbench-opened')) } catch { }
+    }
+    function closeWorkbench() {
+      if (!wbRoot) return
+      if (wbObserver) { try { wbObserver.disconnect() } catch { }; wbObserver = null }
+      try { wbRoot.unmount() } catch { }
+      wbRoot = null
+      if (wbHost && wbHost.parentNode) wbHost.parentNode.removeChild(wbHost)
+      wbHost = null
+      // 恢复原 children 的 display
+      const sidebar = findSidebarEl()
+      if (sidebar) {
+        Array.from(sidebar.children).forEach((c, i) => {
+          c.style.display = wbOriginalDisplays[i] || ''
+        })
+      }
+      wbOriginalDisplays = []
+      setOpen(false)
+      try { window.dispatchEvent(new CustomEvent('snx:workbench-closed')) } catch { }
+    }
+
     function apply(ctx) {
       const style = document.createElement('style')
       style.textContent = css
@@ -1493,16 +1736,27 @@ window.__ModuleLoader__.load({
       initBridge(ctx)
       ctx.slots.inject('settings.section', () =>
         ctx.slots.register({ name: 'settings.section', id: 'sensenova-image', order: 45, label: 'SenseNova 生图' }, ConfigCard))
-      ctx.slots.inject('shell.overlay', () =>
-        ctx.slots.register({ name: 'shell.overlay', id: 'dsh-sensenova-image', order: 85, label: '生图工作台' }, Workbench))
-      ctx.slots.inject('sidebar.footer.action', () =>
-        ctx.slots.register({ name: 'sidebar.footer.action', id: 'dsh-sensenova-image', order: 25 },
+      // ——— 侧栏按钮：点击触发工作台挂到 sidebar DOM 里 ———
+      ctx.slots.inject('sidebar.footer.action', () => {
+        const betterSidebar = !!(window.dshBetterSidebar || document.querySelector('[data-dsh-better-sidebar]'))
+        const Icon = h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
+          h('rect', { x: 3, y: 3, width: 18, height: 18, rx: 3 }),
+          h('circle', { cx: 8.5, cy: 8.5, r: 1.5, fill: 'currentColor', stroke: 'none' }),
+          h('path', { d: 'M21 15l-5-5L5 21' }),
+        )
+        return ctx.slots.register({ name: 'sidebar.footer.action', id: 'dsh-sensenova-image', order: 25 },
           () => h('button', {
-            className: 'dk-sidebtn', title: 'SenseNova 生图工作台',
-            onClick: () => setOpen(!isOpen()),
-          }, '生图')))
+            className: 'snx-sidebtn' + (betterSidebar ? ' bside-btn' : ' dk-sidebtn'),
+            title: 'SenseNova 生图工作台（点开后位于侧栏，可与聊天并排多任务）',
+            onClick: () => wbRoot ? closeWorkbench() : openWorkbench(),
+          }, Icon, '生图'))
+      })
       ctx.slots.inject('tool.call.toolview', () =>
         ctx.slots.register({ name: 'tool.call.toolview', key: 'sensenova_generate_image', id: 'dsh-sensenova-image', order: 10 }, GenToolView))
+      // ESC 关工作台（与原来 shell.overlay 行为一致）
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isOpen() && !isTyping(e)) closeWorkbench()
+      })
     }
 
     module.exports.apply = apply

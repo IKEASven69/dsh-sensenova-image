@@ -554,15 +554,46 @@ export function apply(ctx: Context, rawConfig: Config) {
     } catch { sendJson(res, 500, { ok: false, error: 'konva 未安装：插件目录 npm i konva 后重启' }) }
   })
 
-  // 静态页面：生图工具页
-  reg('/sensenova', (req, res) => {
-    const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'client', 'app.html'), 'utf8')
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
-    res.end(html)
-  })
+  // （v4 不再单独挂静态页面：工作台直接在 dsh 侧栏里打开）
 
   reg('/api/sensenova/status', (_req, res) => {
     sendJson(res, 200, { ok: true, keyConfigured: Boolean(resolveKey(config)) })
+  })
+
+  // 测试连接：调 sensenova /v1/models 验证 key（不消耗配额）
+  reg('/api/sensenova/test', async (req, res) => {
+    if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
+    const origin = String(req.headers?.origin ?? '')
+    if (origin) {
+      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
+    }
+    const key = resolveKey(config)
+    if (!key) { sendJson(res, 400, { ok: false, error: 'API Key 未配置（先在「保存设置」里填 key，或设置 SENSENOVA_API_KEY 环境变量）' }); return }
+    try {
+      const base = String(config.baseUrl || '').replace(/\/+$/, '')
+      const ac = new AbortController()
+      const timer = setTimeout(() => ac.abort(), config.timeoutMs)
+      const r = await fetch(`${base}/models`, {
+        headers: { authorization: `Bearer ${key}` },
+        signal: ac.signal,
+      })
+      clearTimeout(timer)
+      const body = await r.text().catch(() => '')
+      if (r.ok) {
+        let models: string[] = []
+        try {
+          const j = JSON.parse(body)
+          if (Array.isArray(j?.data)) models = j.data.map((m: any) => m?.id).filter(Boolean)
+          else if (Array.isArray(j?.models)) models = j.models.map((m: any) => (typeof m === 'string' ? m : m?.id)).filter(Boolean)
+        } catch { /* 解析失败也按 200 处理，只是不返回模型列表 */ }
+        sendJson(res, 200, { ok: true, base, models, model: config.model })
+        return
+      }
+      sendJson(res, r.status, { ok: false, error: `SenseNova ${r.status} ${r.statusText}：${body.slice(0, 240)}` })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      sendJson(res, 502, { ok: false, error: msg.includes('aborted') ? `请求超时（${config.timeoutMs}ms），检查 baseUrl 是否可达` : msg })
+    }
   })
 
   // 工具1：图像增强（清晰化 + 去水印）— 你的 Kool 案例主入口
