@@ -76,6 +76,7 @@ async function callImagesGenerations(opts: {
   n?: number
   watermark?: boolean
   image?: string
+  images?: string[]   // 多参考图（v8）：按 role 排序的 base64/dataURL 数组
 }): Promise<any> {
   const url = `${opts.baseUrl.replace(/\/$/, '')}/images/generations`
   const body: Record<string, unknown> = {
@@ -85,8 +86,13 @@ async function callImagesGenerations(opts: {
     n: opts.n ?? 1,
     watermark: opts.watermark ?? false,
   }
-  // 参考图生图（U1 图生图模式）：传入 image 字段时，生成跟随参考图的风格与构图
-  if (opts.image) body.image = opts.image
+  // 参考图生图：优先用 images 数组，否则回退单 image 字段
+  if (opts.images && opts.images.length) {
+    body.images = opts.images
+    body.image = opts.images[0]   // 兼容老接口
+  } else if (opts.image) {
+    body.image = opts.image
+  }
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -254,12 +260,28 @@ export function apply(ctx: Context, rawConfig: Config) {
       const prompt = String(body.prompt ?? '').trim()
       if (!prompt) { sendJson(res, 400, { ok: false, error: 'prompt required' }); return }
       const ref = body.reference ? String(body.reference) : ''
-      const image = ref ? resolveRefToImageInput(ref) : undefined
+      // v8 多参考图：refs = [{src, role, strength}]，合并到 images 数组
+      const refs: Array<{ src: string; role?: string; strength?: number }> =
+        Array.isArray(body.refs) ? body.refs : []
+      const images: string[] = []
+      if (ref) {
+        try { images.push(resolveRefToImageInput(ref)) } catch { /* skip */ }
+      }
+      for (const r of refs) {
+        if (r && r.src) {
+          try { images.push(resolveRefToImageInput(String(r.src))) } catch { /* skip */ }
+        }
+      }
+      const image = images.length ? images[0] : undefined
       const model = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : config.model
+      // 根据 refs 角色增强 prompt
+      let enrichedPrompt = prompt
+      if (refs.some((r) => r.role === 'style')) enrichedPrompt += ', 风格：参考所附图像'
+      if (refs.some((r) => r.role === 'character')) enrichedPrompt += ', 主体：参考所附角色'
       const data: any = await callImagesGenerations({
         baseUrl: config.baseUrl, apiKey: key, model,
-        timeoutMs: config.timeoutMs, prompt,
-        size: String(body.size || '2560x720'), n: 1, image,
+        timeoutMs: config.timeoutMs, prompt: enrichedPrompt,
+        size: String(body.size || '2560x720'), n: 1, image, images: images.length ? images : undefined,
       })
       const item = data?.data?.[0] ?? {}
       const kind = item.url ? 'url' : item.b64_json ? 'base64' : ''
@@ -382,8 +404,11 @@ export function apply(ctx: Context, rawConfig: Config) {
     try { return JSON.parse(readFileSync(canvasFile(), 'utf8')) } catch { return null }
   }
   function appendCanvasNode(node: Record<string, unknown>): boolean {
-    const doc = readCanvasDoc()
-    if (!doc || !Array.isArray(doc.nodes)) return false
+    let doc = readCanvasDoc()
+    if (!doc || !Array.isArray(doc.nodes)) {
+      // 画布文档不存在（用户还没开过工作台），先初始化再追加
+      doc = { nodes: [], camera: { x: 0, y: 0, scale: 1 } }
+    }
     doc.nodes.push(node)
     if (doc.nodes.length > 300) doc.nodes = doc.nodes.slice(-300)
     atomicWriteFile(canvasFile(), JSON.stringify(doc))
@@ -690,29 +715,62 @@ export function apply(ctx: Context, rawConfig: Config) {
     ctx.tools.register(
       defineTool({
         name: 'sensenova_generate_image',
-        description: '商汤 U1 文生图/图生图：prompt → 4K 图像。生成的图会自动落盘并实时出现在用户打开的"生图工作台"画布上。传 reference（本地路径/URL/dataURL）时走图生图。',
+        description: '商汤 U1 文生图/图生图：prompt → 4K 图像。生成的图会自动落盘并实时出现在用户打开的"生图工作台"画布上。传 reference（本地路径/URL/dataURL）时走图生图；v8 起支持 refs 多参考图数组，每个 ref 含 src/role(strength)。',
         parameters: {
           prompt: { type: 'string', required: true, description: '生成提示词（支持中英文）' },
-          reference: { type: 'string', description: '参考图：本地文件路径 / https URL / data URL。传入后风格与构图跟随参考图（图生图）' },
+          reference: { type: 'string', description: '参考图（兼容旧接口）：本地文件路径 / https URL / data URL。' },
+          refs: {
+            type: 'array',
+            description: 'v8 多参考图：[{src, role: "style"|"character"|"composition"|"reference", strength: 0~1}, ...]',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                src: { type: 'string', description: '本地路径/URL/dataURL' },
+                role: { type: 'string', description: 'style / character / composition / reference' },
+                strength: { type: 'number', description: '0~1' },
+              },
+            },
+          },
           size: { type: 'string', description: '分辨率，如 2048x2048 / 2752x1536，默认 2048x2048' },
           model: { type: 'string', description: '覆盖默认模型' },
         },
         output: { schema: { type: 'string' }, render: (a, v) => [{ type: 'text', text: String(v) }] },
-        async execute(args: { prompt: string; reference?: string; size?: string; model?: string }) {
+        async execute(args: { prompt: string; reference?: string; refs?: Array<{ src: string; role?: string; strength?: number }>; size?: string; model?: string }) {
           const key = resolveKey(config)
           if (!key) return missingKeyHint()
           const model = args.model || config.model
           try {
-            const image = args.reference ? resolveRefToImageInput(args.reference) : undefined
+            // 合并 reference + refs 为 images 数组
+            const images: string[] = []
+            if (args.reference) images.push(resolveRefToImageInput(args.reference))
+            if (args.refs && args.refs.length) {
+              for (const r of args.refs) {
+                if (r && r.src) {
+                  try { images.push(resolveRefToImageInput(r.src)) } catch { /* 跳过无效 ref */ }
+                }
+              }
+            }
+            // 按 role 排序：character > style > composition > reference
+            const roleOrder: Record<string, number> = { character: 0, style: 1, composition: 2, reference: 3 }
+            // prompt 加角色前缀
+            let enrichedPrompt = args.prompt
+            if (args.refs && args.refs.length) {
+              const styleRefs = args.refs.filter((r) => r.role === 'style')
+              const charRefs = args.refs.filter((r) => r.role === 'character')
+              if (styleRefs.length) enrichedPrompt += ', 风格：参考所附图像'
+              if (charRefs.length) enrichedPrompt += ', 主体：参考所附角色'
+            }
             const data: any = await callImagesGenerations({
               baseUrl: config.baseUrl,
               apiKey: key,
               model,
               timeoutMs: config.timeoutMs,
-              prompt: args.prompt,
+              prompt: enrichedPrompt,
               size: args.size,
               n: 1,
-              image,
+              images: images.length ? images : undefined,
+              image: args.reference,
             })
             const item = data?.data?.[0] ?? {}
             let resultImage: string | null = null
@@ -721,7 +779,6 @@ export function apply(ctx: Context, rawConfig: Config) {
               resultImage = saved ? saved.url : (item.url ?? null)
             }
             if (resultImage) {
-              // 直接写进画布文档（关着也不丢），SSE 只通知打开中的画布刷新
               const doc = readCanvasDoc()
               let x = 0
               let y = 0
@@ -733,7 +790,11 @@ export function apply(ctx: Context, rawConfig: Config) {
                 id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
                 type: 'image', status: 'done', src: resultImage, parentId: undefined,
                 x, y, w: 480, h: 480, prompt: '💬 ' + String(args.prompt || '').slice(0, 120),
-                params: { fromChat: true }, ts: Date.now(),
+                params: {
+                  fromChat: true,
+                  refs: (args.refs || []).map((r) => ({ role: r.role || 'reference', strength: r.strength ?? 0.7 })),
+                },
+                ts: Date.now(),
               })
               emitCanvasEvent({ type: 'canvas:update' })
             }
@@ -744,8 +805,9 @@ export function apply(ctx: Context, rawConfig: Config) {
                 model,
                 size: args.size || '2048x2048',
                 result_image: resultImage,
+                refs: args.refs || [],
                 hint: resultImage
-                  ? '生成成功，result_image 为图片 URL（已落盘，若用户开着画布则已实时出现在画布上）'
+                  ? `生成成功（${args.refs && args.refs.length ? `使用了 ${args.refs.length} 张参考图` : '纯文生图'}），result_image 为图片 URL（已落盘）`
                   : '未返回图片，查看 SenseNova 响应或确认模型权限',
               },
               null,
