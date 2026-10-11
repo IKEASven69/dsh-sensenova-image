@@ -30,7 +30,7 @@ export const inject = ['tools', 'webServer']
 export const Config = z.object({
   apiKey: z.string().optional().describe('SenseNova API Key（platform.sensenova.cn → 控制台 → 管理中心 → API-Key 管理 → 创建，sk-...）'),
   baseUrl: z.string().default('https://token.sensenova.cn/v1').describe('OpenAI-compatible baseUrl（固定 https://token.sensenova.cn/v1）'),
-  model: z.string().default('sensenova-u1-fast').describe('模型 id（控制台模型广场确认，U1.5 可填 sensenova-u1.5 / sensenova-u1-fast）'),
+  model: z.string().default('sensenova-u1.5-lite').describe('模型 id（控制台模型广场确认，U1.5 可填 sensenova-u1.5 / sensenova-u1.5-lite）'),
   timeoutMs: z.number().min(3000).max(120000).default(60000).describe('单次请求超时 ms'),
 })
 
@@ -77,6 +77,8 @@ async function callImagesGenerations(opts: {
   watermark?: boolean
   image?: string
   images?: string[]   // 多参考图（v8）：按 role 排序的 base64/dataURL 数组
+  negativePrompt?: string   // 负面提示词（web 面板透传）
+  seed?: number             // 固定种子（web 面板透传）
 }): Promise<any> {
   const url = `${opts.baseUrl.replace(/\/$/, '')}/images/generations`
   const body: Record<string, unknown> = {
@@ -86,6 +88,9 @@ async function callImagesGenerations(opts: {
     n: opts.n ?? 1,
     watermark: opts.watermark ?? false,
   }
+  // SenseNova 扩展字段（与 watermark 同族）：负面提示词 / 种子
+  if (opts.negativePrompt && opts.negativePrompt.trim()) body.negative_prompt = opts.negativePrompt.trim()
+  if (typeof opts.seed === 'number' && Number.isFinite(opts.seed)) body.seed = Math.floor(opts.seed)
   // 参考图生图：优先用 images 数组，否则回退单 image 字段
   if (opts.images && opts.images.length) {
     body.images = opts.images
@@ -93,20 +98,37 @@ async function callImagesGenerations(opts: {
   } else if (opts.image) {
     body.image = opts.image
   }
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${opts.apiKey}`,
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(opts.timeoutMs),
-  })
-  if (!res.ok) {
-    const body = await res.text().then((t) => t.slice(0, 800)).catch(() => '')
-    throw new Error(`SenseNova images ${res.status} ${url}: ${body}`)
+  const once = async (): Promise<{ ok: boolean; status: number; text: string; json: any }> => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${opts.apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(opts.timeoutMs),
+    })
+    const text = await res.text().then((t) => t).catch(() => '')
+    let json: any = null
+    try { json = JSON.parse(text) } catch { }
+    return { ok: res.ok, status: res.status, text, json }
   }
-  return res.json()
+  // 网络层失败（代理掐断大上传等）与 code 18 间歇风控都自动重试：共 3 次机会，退避 2.5s/5s
+  let r: { ok: boolean; status: number; text: string; json: any } | null = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, attempt === 1 ? 2500 : 5000))
+    try {
+      r = await once()
+    } catch (e) {
+      if (attempt === 2) throw new Error(`SenseNova images 网络失败（${e instanceof Error ? e.message : String(e)}；若本机走代理，建议把 token.sensenova.cn 加入直连规则）`)
+      continue
+    }
+    if (r.ok) return r.json
+    if (r.json?.error?.code !== 18) break
+  }
+  if (!r) throw new Error('SenseNova images 请求未发出')
+  const keyFp = opts.apiKey ? `key=${opts.apiKey.slice(0, 6)}…${opts.apiKey.slice(-4)}` : 'key=none'
+  throw new Error(`SenseNova images ${r.status} ${url}: ${r.text.slice(0, 800)} [${keyFp}]`)
 }
 
 function resolveKey(config: Config): string {
@@ -122,7 +144,7 @@ function missingKeyHint(): string {
         '2. 二选一配置：',
         '   a) 插件配置：dsh 配置页填 apiKey',
         '   b) 环境变量：export SENSENOVA_API_KEY=sk-...',
-        '3. baseUrl 保持 https://token.sensenova.cn/v1，model 用 sensenova-u1-fast 或 sensenova-u1.5',
+        '3. baseUrl 保持 https://token.sensenova.cn/v1，model 用 sensenova-u1.5-lite 或 sensenova-u1.5',
       ],
       docs: 'https://platform.sensenova.cn/docs',
     },
@@ -158,6 +180,26 @@ function extractImageFromChat(data: any): string | undefined {
   if (!out && Array.isArray(data?.data)) out = data.data[0]?.url
   if (!out && typeof data?.url === 'string') out = data.url
   return out
+}
+
+// 参考图 role + 强度 → 语言化提示词（API 无数值权重参数，用措辞档位表达 0~1 强度）。
+// metas 与 images 数组按位对齐：null = 裸锚点图（不描述，保持 i2i 编辑语义）
+function describeRefs(metas: Array<{ role?: string; strength?: number } | null>): string {
+  const roleLabel: Record<string, string> = { style: '风格', character: '主体/角色', composition: '构图', reference: '内容' }
+  const strengthWord = (s: unknown): string => {
+    const v = typeof s === 'number' && Number.isFinite(s) ? Math.max(0, Math.min(1, s)) : 0.7
+    if (v >= 0.85) return '严格遵循'
+    if (v >= 0.6) return '重点遵循'
+    if (v >= 0.35) return '适度参考'
+    return '仅作轻微灵感'
+  }
+  const parts: string[] = []
+  metas.forEach((m, i) => {
+    if (!m) return
+    const label = roleLabel[m.role || 'reference'] || '内容'
+    parts.push(`第${i + 1}张图为${label}参考，${strengthWord(m.strength)}其${label}`)
+  })
+  return parts.length ? `。参考图说明：${parts.join('；')}。` : ''
 }
 
 // ——— 插件 ———
@@ -264,25 +306,47 @@ export function apply(ctx: Context, rawConfig: Config) {
       const refs: Array<{ src: string; role?: string; strength?: number }> =
         Array.isArray(body.refs) ? body.refs : []
       const images: string[] = []
+      const imageMeta: Array<{ role?: string; strength?: number } | null> = []
       if (ref) {
-        try { images.push(resolveRefToImageInput(ref)) } catch { /* skip */ }
+        try { images.push(resolveRefToImageInput(ref)); imageMeta.push(null) } catch { /* skip */ }
       }
       for (const r of refs) {
         if (r && r.src) {
-          try { images.push(resolveRefToImageInput(String(r.src))) } catch { /* skip */ }
+          try { images.push(resolveRefToImageInput(String(r.src))); imageMeta.push({ role: r.role, strength: r.strength }) } catch { /* skip */ }
         }
       }
       const image = images.length ? images[0] : undefined
       const model = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : config.model
-      // 根据 refs 角色增强 prompt
-      let enrichedPrompt = prompt
-      if (refs.some((r) => r.role === 'style')) enrichedPrompt += ', 风格：参考所附图像'
-      if (refs.some((r) => r.role === 'character')) enrichedPrompt += ', 主体：参考所附角色'
-      const data: any = await callImagesGenerations({
+      // 负面提示词 / 种子（web 面板透传；客户端字段名 negative，兼容 negative_prompt）
+      const negativePrompt = typeof (body.negative_prompt ?? body.negative) === 'string' ? String(body.negative_prompt ?? body.negative).trim() : ''
+      const seedNum = Number(body.seed)
+      const extraOpts = {
+        negativePrompt: negativePrompt || undefined,
+        seed: Number.isFinite(seedNum) && seedNum >= 0 ? Math.floor(seedNum) : undefined,
+      }
+      // 根据 refs 角色 + 强度增强 prompt（strength 滑块 0~1 → 语言化权重档位；裸锚点图不描述）
+      let enrichedPrompt = prompt + describeRefs(imageMeta)
+      const baseCall = {
         baseUrl: config.baseUrl, apiKey: key, model,
         timeoutMs: config.timeoutMs, prompt: enrichedPrompt,
         size: String(body.size || '2560x720'), n: 1, image, images: images.length ? images : undefined,
-      })
+      }
+      let data: any
+      let degraded = false
+      try {
+        data = await callImagesGenerations({ ...baseCall, ...extraOpts })
+      } catch (e) {
+        // 上游若不认 negative_prompt/seed 扩展字段（400/422），去掉后重试一次，不让控件把生成弄挂
+        const msg = e instanceof Error ? e.message : String(e)
+        const rejected = /\b(400|422)\b/.test(msg)
+        if (rejected && (extraOpts.negativePrompt !== undefined || extraOpts.seed !== undefined)) {
+          console.warn('[sensenova-image] upstream rejected negative_prompt/seed, retrying without them:', msg.slice(0, 200))
+          data = await callImagesGenerations(baseCall)
+          degraded = true
+        } else {
+          throw e
+        }
+      }
       const item = data?.data?.[0] ?? {}
       const kind = item.url ? 'url' : item.b64_json ? 'base64' : ''
       if (!kind) { sendJson(res, 502, { ok: false, error: 'response had no image' }); return }
@@ -293,11 +357,13 @@ export function apply(ctx: Context, rawConfig: Config) {
         if (saved) {
           out = { kind: 'url', value: saved.url, id: saved.id }
           const items = loadHistory()
-          items.unshift({ id: saved.id, ts: new Date().toISOString(), prompt: prompt.slice(0, 300), reference: ref, kind: 'url', value: saved.url })
+          // reference 只存短引用（http/文件路径）；蒙版/扩图的 dataURL 标注板可达数 MB，丢弃防存储膨胀
+          const refShort = ref && !ref.startsWith('data:') ? ref.slice(0, 500) : undefined
+          items.unshift({ id: saved.id, ts: new Date().toISOString(), prompt: prompt.slice(0, 300), reference: refShort, kind: 'url', value: saved.url })
           saveHistory(items.slice(0, HISTORY_CAP))
         }
       }
-      sendJson(res, 200, { ok: true, image: out })
+      sendJson(res, 200, degraded ? { ok: true, image: out, degraded: ['negative_prompt/seed'] } : { ok: true, image: out })
     } catch (e) {
       sendJson(res, 502, { ok: false, error: e instanceof Error ? e.message : String(e) })
     }
@@ -331,7 +397,7 @@ export function apply(ctx: Context, rawConfig: Config) {
           }],
         })
         const imageOut = extractImageFromChat(data)
-        if (!imageOut) { sendJson(res, 502, { ok: false, error: 'response had no image（确认模型支持图像编辑，或换 sensenova-u1-fast）' }); return }
+        if (!imageOut) { sendJson(res, 502, { ok: false, error: 'response had no image（确认模型支持图像编辑，或换 sensenova-u1.5-lite）' }); return }
         const saved = await persistImage(imageOut.startsWith('http') ? 'url' : 'base64', imageOut)
         if (saved) { sendJson(res, 200, { ok: true, image: { kind: 'url', value: saved.url, id: saved.id } }); return }
         sendJson(res, 200, { ok: true, image: { kind: imageOut.startsWith('http') ? 'url' : 'base64', value: imageOut } })
@@ -585,6 +651,28 @@ export function apply(ctx: Context, rawConfig: Config) {
     sendJson(res, 200, { ok: true, keyConfigured: Boolean(resolveKey(config)) })
   })
 
+  // 真连接测试：实际访问 SenseNova /models，返回可用模型清单（工作台设置页"测试连接"用）
+  reg('/api/sensenova/ping', (req, res) => {
+    if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: 'GET only' }); return }
+    const origin = String(req.headers?.origin ?? '')
+    if (origin) {
+      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
+    }
+    const key = resolveKey(config)
+    if (!key) { sendJson(res, 200, { ok: false, error: '未配置 API Key（先保存或设置 SENSENOVA_API_KEY）' }); return }
+    fetch(`${config.baseUrl.replace(/\/$/, '')}/models`, {
+      headers: { Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(15000),
+    })
+      .then(async (r) => {
+        if (!r.ok) { sendJson(res, 200, { ok: false, error: `HTTP ${r.status}（Key 无效或 baseUrl 不对）` }); return }
+        const j: any = await r.json().catch(() => ({}))
+        const models: string[] = (j?.data || []).map((m: any) => m?.id).filter((s: unknown): s is string => typeof s === 'string')
+        sendJson(res, 200, { ok: true, models, hasImageModel: models.some((m) => m.includes('u1')) })
+      })
+      .catch((e) => sendJson(res, 200, { ok: false, error: e instanceof Error ? e.message : String(e) }))
+  })
+
   // 测试连接：调 sensenova /v1/models 验证 key（不消耗配额）
   reg('/api/sensenova/test', async (req, res) => {
     if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
@@ -703,7 +791,7 @@ export function apply(ctx: Context, rawConfig: Config) {
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)
             // 回退：若 chat/completions 不支持图像，提示改用 images/generations 或检查 model
-            return JSON.stringify({ error: msg, prompt, model, hint: '若 404/不支持图像，尝试 model=sensenova-u1-fast 或确认控制台已开通 U1.5 权限' }, null, 2)
+            return JSON.stringify({ error: msg, prompt, model, hint: '若 404/不支持图像，尝试 model=sensenova-u1.5-lite 或确认控制台已开通 U1.5 权限' }, null, 2)
           }
         },
       }),
@@ -741,26 +829,19 @@ export function apply(ctx: Context, rawConfig: Config) {
           if (!key) return missingKeyHint()
           const model = args.model || config.model
           try {
-            // 合并 reference + refs 为 images 数组
+            // 合并 reference + refs 为 images 数组（meta 与位置对齐：null=裸 reference 不描述）
             const images: string[] = []
-            if (args.reference) images.push(resolveRefToImageInput(args.reference))
+            const imageMeta: Array<{ role?: string; strength?: number } | null> = []
+            if (args.reference) { images.push(resolveRefToImageInput(args.reference)); imageMeta.push(null) }
             if (args.refs && args.refs.length) {
               for (const r of args.refs) {
                 if (r && r.src) {
-                  try { images.push(resolveRefToImageInput(r.src)) } catch { /* 跳过无效 ref */ }
+                  try { images.push(resolveRefToImageInput(r.src)); imageMeta.push({ role: r.role, strength: r.strength }) } catch { /* 跳过无效 ref */ }
                 }
               }
             }
-            // 按 role 排序：character > style > composition > reference
-            const roleOrder: Record<string, number> = { character: 0, style: 1, composition: 2, reference: 3 }
-            // prompt 加角色前缀
-            let enrichedPrompt = args.prompt
-            if (args.refs && args.refs.length) {
-              const styleRefs = args.refs.filter((r) => r.role === 'style')
-              const charRefs = args.refs.filter((r) => r.role === 'character')
-              if (styleRefs.length) enrichedPrompt += ', 风格：参考所附图像'
-              if (charRefs.length) enrichedPrompt += ', 主体：参考所附角色'
-            }
+            // prompt 拼参考图说明（角色 + 强度滑块 0~1 → 语言化权重；取代原死变量 roleOrder 与模糊角色前缀）
+            const enrichedPrompt = args.prompt + describeRefs(imageMeta)
             const data: any = await callImagesGenerations({
               baseUrl: config.baseUrl,
               apiKey: key,
@@ -815,7 +896,7 @@ export function apply(ctx: Context, rawConfig: Config) {
             )
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)
-            return JSON.stringify({ ok: false, error: msg, hint: '确认 model 是否为 sensenova-u1-fast 且已开通' }, null, 2)
+            return JSON.stringify({ ok: false, error: msg, hint: '确认 model 是否为 sensenova-u1.5-lite 且已开通' }, null, 2)
           }
         },
       }),
@@ -827,7 +908,7 @@ export function apply(ctx: Context, rawConfig: Config) {
     ctx.tools.register(
       defineTool({
         name: 'sensenova_edit_image',
-        description: '商汤 U1.5 通用图像编辑：传入 1 张或多张图 + 编辑指令，模型理解后重绘。适合换色、改字、增删元素等。',
+        description: '商汤 U1.5 通用图像编辑：传入 1 张或多张图 + 编辑指令，模型理解后重绘。适合换色、改字、增删元素等。结果自动落盘，并实时出现在用户打开的"生图工作台"画布上。',
         parameters: {
           images: {
             type: 'array',
@@ -854,9 +935,48 @@ export function apply(ctx: Context, rawConfig: Config) {
               timeoutMs: config.timeoutMs,
               messages: [{ role: 'user', content }],
             })
-            return JSON.stringify({ prompt: args.prompt, model, data }, null, 2)
+            // 提取结果图 → persistImage 落盘 → appendCanvasNode 落画布（与 generate/enhance 管线对齐）
+            const imageOut = extractImageFromChat(data)
+            let resultImage: string | null = null
+            if (imageOut) {
+              const isUrl = imageOut.startsWith('http')
+              const saved = await persistImage(isUrl ? 'url' : 'base64', imageOut)
+              // 落盘成功用本地文件 URL；落盘失败时 http 图仍可直接用，data URL 则不回传（太大）
+              resultImage = saved ? saved.url : (isUrl ? imageOut : null)
+            }
+            if (resultImage) {
+              const doc = readCanvasDoc()
+              let x = 0
+              let y = 0
+              if (doc && Array.isArray(doc.nodes) && doc.nodes.length) {
+                x = Math.max(...doc.nodes.map((n: any) => (n.x || 0) + (n.w || 480))) + 60
+                y = doc.nodes[doc.nodes.length - 1].y || 0
+              }
+              appendCanvasNode({
+                id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+                type: 'image', status: 'done', src: resultImage, parentId: undefined,
+                x, y, w: 480, h: 480, prompt: '✏️ ' + String(args.prompt || '').slice(0, 120),
+                params: { fromChat: true, editedImages: (args.images || []).length },
+                ts: Date.now(),
+              })
+              emitCanvasEvent({ type: 'canvas:update' })
+            }
+            return JSON.stringify(
+              {
+                ok: Boolean(resultImage),
+                prompt: args.prompt,
+                model,
+                result_image: resultImage,
+                raw: data,
+                hint: resultImage
+                  ? '编辑成功，result_image 为图片 URL（已落盘，用户开着画布则实时可见）'
+                  : '未提取到结果图，查看 raw.choices[0].message.content 或确认模型返回形态',
+              },
+              null,
+              2,
+            )
           } catch (e) {
-            return JSON.stringify({ error: e instanceof Error ? e.message : String(e) }, null, 2)
+            return JSON.stringify({ ok: false, error: e instanceof Error ? e.message : String(e), hint: '确认 model 是否为 sensenova-u1.5-lite 且已开通' }, null, 2)
           }
         },
       }),
