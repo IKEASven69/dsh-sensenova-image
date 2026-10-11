@@ -1749,6 +1749,81 @@ window.__ModuleLoader__.load({
     }
 
     // ——— 多选对齐 / 等距分布 / 成组（tldraw 基线）———
+    // ── PNG 参数读回（拖入/上传带 sensenova tEXt 的 PNG → 还原 prompt/model/size/seed）──
+    async function parsePngParams(file) {
+      try {
+        const isPng = /png/i.test(file.type || '') || /\.png$/i.test(file.name || '')
+        if (!file || !isPng) return null
+        const bytes = new Uint8Array(await file.arrayBuffer())
+        const dv = new DataView(bytes.buffer)
+        let off = 8
+        while (off + 12 <= bytes.length) {
+          const len = dv.getUint32(off)
+          const type = String.fromCharCode(bytes[off + 4], bytes[off + 5], bytes[off + 6], bytes[off + 7])
+          if (type === 'IDAT' || type === 'IEND') break
+          if (type === 'tEXt' || type === 'iTXt') {
+            const data = bytes.subarray(off + 8, off + 8 + len)
+            const z = data.indexOf(0)
+            if (z > 0) {
+              const kw = new TextDecoder().decode(data.subarray(0, z))
+              if (kw === 'sensenova') {
+                let tb = data.subarray(z + 1)
+                if (type === 'iTXt') {   // iTXt: 压缩标志+方法、语言标签、翻译关键字三个 \0 分段后才进正文
+                  let p = z + 3, nulls = 0
+                  while (p < data.length && nulls < 2) { if (data[p] === 0) nulls++; p++ }
+                  tb = data.subarray(p)
+                }
+                const parts = new TextDecoder().decode(tb).split('|').map((s) => s.trim())
+                const kv = {}
+                parts.slice(1).forEach((s) => { const i = s.indexOf('='); if (i > 0) kv[s.slice(0, i).trim()] = s.slice(i + 1).trim() })
+                return {
+                  prompt: parts[0] || '',
+                  model: kv.model || '',
+                  size: kv.size || '',
+                  seed: kv.seed !== undefined && kv.seed !== '' && !isNaN(Number(kv.seed)) ? Number(kv.seed) : undefined,
+                }
+              }
+            }
+          }
+          off += 12 + len
+        }
+      } catch { }
+      return null
+    }
+
+    // ── 按生成链整理布局：parentId 链分层（列=代数），同代按原 y 排序，列内垂直居中 ──
+    function arrangeByChain() {
+      const nodes = store.doc.nodes.filter((n) => n.type === 'image' && n.status === 'done')
+      if (!nodes.length) return
+      store.pushUndo()
+      const byId = new Map(nodes.map((n) => [n.id, n]))
+      const depth = new Map()
+      const getDepth = (n) => {
+        if (depth.has(n.id)) return depth.get(n.id)
+        let d = 0
+        if (n.parentId && byId.has(n.parentId) && n.parentId !== n.id) d = getDepth(byId.get(n.parentId)) + 1
+        depth.set(n.id, d)
+        return d
+      }
+      nodes.forEach(getDepth)
+      const cols = new Map()
+      nodes.slice().sort((a, b) => a.y - b.y).forEach((n) => {
+        const d = depth.get(n.id)
+        if (!cols.has(d)) cols.set(d, [])
+        cols.get(d).push(n)
+      })
+      const CW = 560, CH = 560
+      let maxRows = 1
+      cols.forEach((a) => { maxRows = Math.max(maxRows, a.length) })
+      for (const [d, col] of [...cols.entries()].sort((a, b) => a[0] - b[0])) {
+        col.forEach((n, i) => {
+          Object.assign(n, { x: Math.round(d * CW), y: Math.round(((maxRows - col.length) * CH) / 2 + i * CH) })
+        })
+      }
+      store.emit(); autosave()
+      try { if (activeEngine) activeEngine.fit() } catch { }
+    }
+
     function selNodes() {
       const arr = []
       for (const id of store.sel) { const n = store.node(id); if (n) arr.push(n) }
@@ -2953,14 +3028,24 @@ window.__ModuleLoader__.load({
           const wy = (e.clientY - rect.top - c.y) / c.scale
           files.forEach((f, idx) => {
             const r = new window.FileReader()
-            r.onload = () => {
+            r.onload = async () => {
+              const pp = await parsePngParams(f)
               loadImg(String(r.result)).then((im) => {
                 const fit = nodeFit(im, 480)
                 store.addNode({
                   id: nid(), type: 'image', status: 'done', src: String(r.result),
                   x: Math.round(wx - fit.w / 2 + idx * 24), y: Math.round(wy - fit.h / 2 + idx * 24),
-                  w: fit.w, h: fit.h, prompt: '', params: {}, ts: Date.now(),
+                  w: fit.w, h: fit.h,
+                  prompt: pp ? pp.prompt : '', params: pp ? { model: pp.model, size: pp.size, seed: pp.seed } : {},
+                  ts: Date.now(),
                 }, true)
+                if (pp) {
+                  genPrefs.prompt = pp.prompt
+                  if (pp.model) genPrefs.model = pp.model
+                  if (pp.size) genPrefs.size = pp.size
+                  if (typeof pp.seed === 'number') genPrefs.seed = pp.seed
+                  notify && notify('✓ 已从 PNG 读回生成参数（生图表单已填入）')
+                }
               }).catch(() => { })
             }
             r.readAsDataURL(f)
@@ -2976,15 +3061,25 @@ window.__ModuleLoader__.load({
           if (!f) return
           e.preventDefault()
           const r = new window.FileReader()
-          r.onload = () => {
+          r.onload = async () => {
+            const pp = await parsePngParams(f)
             loadImg(String(r.result)).then((im) => {
               const fit = nodeFit(im, 480)
               const cc = engineRef.current ? engineRef.current.centerWorld() : { x: 0, y: 0 }
               store.addNode({
                 id: nid(), type: 'image', status: 'done', src: String(r.result),
                 x: Math.round(cc.x - fit.w / 2), y: Math.round(cc.y - fit.h / 2),
-                w: fit.w, h: fit.h, prompt: '', params: {}, ts: Date.now(),
+                w: fit.w, h: fit.h,
+                prompt: pp ? pp.prompt : '', params: pp ? { model: pp.model, size: pp.size, seed: pp.seed } : {},
+                ts: Date.now(),
               }, true)
+              if (pp) {
+                genPrefs.prompt = pp.prompt
+                if (pp.model) genPrefs.model = pp.model
+                if (pp.size) genPrefs.size = pp.size
+                if (typeof pp.seed === 'number') genPrefs.seed = pp.seed
+                notify && notify('✓ 已从 PNG 读回生成参数（生图表单已填入）')
+              }
             }).catch(() => { })
           }
           r.readAsDataURL(f)
@@ -3536,6 +3631,7 @@ window.__ModuleLoader__.load({
               h('div', { className: 'pct' }, Math.round(((store.doc.camera && store.doc.camera.scale) || 1) * 100) + '%'),
               h('button', { onClick: () => engineRef.current && engineRef.current.zoomBy(1.25), title: '放大' }, '+'),
               h('button', { onClick: () => engineRef.current && engineRef.current.fit(), title: '适应', style: { width: 'auto', padding: '0 8px' } }, '⛶'),
+              h('button', { onClick: () => { arrangeByChain(); notify && notify('✓ 已按生成链整理布局') }, title: '整理布局：按生成链分层排列', style: { width: 'auto', padding: '0 8px' } }, '⌗'),
             ),
           ) : null,
         )
@@ -3911,6 +4007,7 @@ window.__ModuleLoader__.load({
                   h('div', { className: 'pct' }, Math.round(((store.doc.camera && store.doc.camera.scale) || 1) * 100) + '%'),
                   h('button', { onClick: () => engineRef.current && engineRef.current.zoomBy(1.25), title: '放大' }, '+'),
                   h('button', { onClick: () => engineRef.current && engineRef.current.fit(), title: '适应', style: { width: 'auto', padding: '0 8px' } }, '⛶'),
+                  h('button', { onClick: () => { arrangeByChain(); notify && notify('✓ 已按生成链整理布局') }, title: '整理布局：按生成链分层排列', style: { width: 'auto', padding: '0 8px' } }, '⌗'),
                 ),
               ),
             ),
@@ -4154,7 +4251,9 @@ window.__ModuleLoader__.load({
               h('div', null, h('span', { className: 'k' }, '+ / - / 0'), h('span', { className: 'v' }, 'lightbox 缩放')),
               h('div', null, h('span', { className: 'k' }, 'F'), h('span', { className: 'v' }, '画布适应画面')),
               h('div', null, h('span', { className: 'k' }, 'Del'), h('span', { className: 'v' }, '删除选中节点')),
-              h('div', null, h('span', { className: 'k' }, 'Ctrl + V'), h('span', { className: 'v' }, '粘贴图片为节点')),
+              h('div', null, h('span', { className: 'k' }, 'Ctrl + Z / Shift+Z'), h('span', { className: 'v' }, '画布撤销 / 重做')),
+              h('div', null, h('span', { className: 'k' }, 'Ctrl + D'), h('span', { className: 'v' }, '复制选中节点')),
+              h('div', null, h('span', { className: 'k' }, 'Ctrl + V / 拖入 PNG'), h('span', { className: 'v' }, '成节点，带参数自动读回')),
               h('div', null, h('span', { className: 'k' }, '?'), h('span', { className: 'v' }, '打开快捷键速查')),
             ),
           ),
@@ -4323,14 +4422,23 @@ window.__ModuleLoader__.load({
         setRefs([...refs, { src: node.src, role: 'reference', strength: 0.7, fromId: node.id }])
         setPickerOpen(false)
       }
-      // 本地文件 → dataURL 参考图（改图入口：任意图都能传进来编辑）
+      // 本地文件 → dataURL 参考图（改图入口：任意图都能传进来编辑；带 sensenova tEXt 的 PNG 顺带读回参数）
       const uploadRef = (e) => {
         const f = e.target.files && e.target.files[0]
         e.target.value = ''
         if (!f) return
         const r = new window.FileReader()
-        r.onload = () => {
-          setRefs((prev) => (prev.length >= 4 ? prev : [...prev, { src: String(r.result), role: 'reference', strength: 0.7 }]))
+        r.onload = async () => {
+          const src = String(r.result)
+          setRefs((prev) => (prev.length >= 4 ? prev : [...prev, { src, role: 'reference', strength: 0.7 }]))
+          const pp = await parsePngParams(f)
+          if (pp) {
+            if (!genPrefs.prompt) { setPrompt(pp.prompt); genPrefs.prompt = pp.prompt }
+            if (pp.model) genPrefs.model = pp.model
+            if (pp.size) genPrefs.size = pp.size
+            if (typeof pp.seed === 'number') genPrefs.seed = pp.seed
+            notify && notify('✓ 已从 PNG 读回生成参数' + (genPrefs.prompt ? '' : '，提示词已填入'))
+          }
         }
         r.readAsDataURL(f)
       }
@@ -4792,7 +4900,10 @@ window.__ModuleLoader__.load({
           ['Space + 拖动', '平移画布'],
           ['F', '适应画面'],
           ['Del', '删除选中节点'],
-          ['Ctrl + V', '粘贴图片为节点'],
+          ['Ctrl + Z / Shift + Z', '撤销 / 重做'],
+          ['Ctrl + D', '复制选中节点'],
+          ['Ctrl + V / 拖入 PNG', '成节点，带 sensenova 参数自动读回'],
+          ['⌗ (左下角)', '按生成链整理布局'],
           ['双击节点', '打开 lightbox'],
           ['右键节点', '上下文菜单（重绘/扩图/复制/删除）'],
         ] },

@@ -98,3 +98,12 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 
 - **生图表单新增"✏️ 上传图片改图"**（label+hidden file input → FileReader dataURL → 参考图槽位）：原来参考图只能从画廊挑，本地图必须先拖进画布，这就是"没有改图"的体感来源。已有多参考图槽位（4 槽/角色/强度）。
 - **画廊项新增"✏️ 改图"按钮**（.snx-gal-edit）：点击切画布+选中节点+notify 指引；顺带接活了被 lightbox 盖住的 onOpen 选中逻辑。
+
+## v9.2：GitHub 同类对标升级（2026-10-11 晚，用户："再去GitHub上看看同类的"）
+
+调研（GitHub API，WebSearch 配额耗尽）：Toonflow 17k★（短剧向，画布组织剧本/资产）、AI-Canvas 234★（tldraw+Codex 插件，标注修图/Skill 模板/结果放原图右侧）、258-Canvas（多平台聚合+ComfyUI 工作流）、Loomic/infinite-atelier； InvokeAI/ComfyUI 参照既有认知。差距矩阵核实后发现 undo/redo（60 层快照栈）、Ctrl+D 复制、对齐/等距分布、PNG tEXt 嵌入（导出时 keyword=sensenova）**工作流那轮已经全做了**——真正的缺口两件，本轮补齐：
+
+1. **PNG 参数读回（parsePngParams）**：读 tEXt/iTXt keyword=`sensenova`，解析 `prompt | model= | size= | seed=` 格式。三路接入：画布拖入/粘贴（新节点直挂 prompt+params，genPrefs 回填+toast）、生图表单上传参考图（提示词为空才自动填）。配合已有的导出嵌入，形成"生成→下载带参数→任何会话拖回来→参数还原"闭环（SD 生态 png-info 同款）。
+2. **整理布局（arrangeByChain，⌗ 按钮在画布左右下角缩放控件区）**：按 parentId 链分代，列=代数、同代按原 y 排序垂直居中，一键把乱画布排成 ComfyUI 式三代流。入 undo 栈。
+
+**坑**：画布容器真实类名是 `.snx-canvas-stage`（wrapRef 挂点）/`.snx-canvas-wrap`（外层），CSS 里的 `.snx-cv-wrap` 是 v4 死类名——合成 DragEvent 测试时 querySelector('.snx-cv-wrap') 落空过。演示数据 parentId 链早前重建时也丢了（全 null 导致整理单列），已补 柴犬→圣诞帽→绿礼盒 三代链。
