@@ -260,9 +260,9 @@ window.__ModuleLoader__.load({
 .snx-rb-title{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600}
 .snx-rb-ico{color:var(--snx-accent);font-size:14px;line-height:1}
 /* Phase 1：浮动操作条 / 悬浮 prompt bar / 蒙版工具条 / 比例弹层 */
-.snx-ab{position:absolute;z-index:6;display:flex;gap:1px;background:var(--dsw-alias-button-floating-fill,#2c2c2e);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);
+.snx-ab{position:absolute;z-index:6;display:flex;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100% - 16px);gap:1px;background:var(--dsw-alias-button-floating-fill,#2c2c2e);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);
   border-radius:8px;padding:3px;box-shadow:0 8px 24px rgba(0,0,0,.22)}
-.snx-ab button{background:none;border:none;color:var(--dsw-alias-label-secondary,#cfd3d6);font-size:13px;padding:5px 8px;cursor:pointer;border-radius:5px;font-family:inherit}
+.snx-ab button{background:none;border:none;color:var(--dsw-alias-label-secondary,#cfd3d6);font-size:12.5px;padding:5px 7px;cursor:pointer;border-radius:5px;font-family:inherit;white-space:nowrap}
 .snx-ab button:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--snx-accent)}
 .snx-ab button.warn:hover{color:var(--snx-error)}
 .snx-pbar{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:8px;
@@ -605,6 +605,9 @@ window.__ModuleLoader__.load({
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
 }
 .snx-gal-item-sub{font-size:10.5px;color:var(--dsw-alias-label-caption,#81858c);margin-top:4px;letter-spacing:.04em}
+.snx-gal-edit{background:none;border:1px solid var(--dsw-alias-border-l2,#ffffff1f);color:var(--dsw-alias-label-secondary,#cfd3d6);
+  border-radius:5px;padding:2px 8px;font-size:10.5px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.snx-gal-edit:hover{border-color:var(--snx-accent);color:var(--snx-accent)}
 .snx-gal-empty{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:60px 20px;text-align:center;color:var(--dsw-alias-label-caption,#81858c);gap:6px;
@@ -2440,7 +2443,7 @@ window.__ModuleLoader__.load({
       const c = store.doc.camera
       const sx = node.x * c.scale + c.x
       const sy = node.y * c.scale + c.y
-      const barW = 470
+      const barW = 520
       const left = Math.min(Math.max(8, sx), Math.max(8, wrapEl.clientWidth - barW - 8))
       const top = sy > 70 ? sy - 48 : sy + node.h * c.scale + 12
       const act = (fn) => () => { if (!busy) fn(node) }
@@ -2504,7 +2507,7 @@ window.__ModuleLoader__.load({
               .catch((e) => notify('发送失败：' + String((e && e.message) || e)))
               .finally(() => setBusy(false))
           }),
-        }, '🤖 问'),
+        }, '💬 问'),
         h('button', {
           title: '下载原图', disabled: busy,
           onClick: act((n) => {
@@ -3617,6 +3620,12 @@ window.__ModuleLoader__.load({
                 force((n) => n + 1)
               },
               onOpenLightbox: () => setLightbox(n),
+              onEdit: () => {
+                setMode('canvas')
+                store.sel = new Set([n.id])
+                force((n) => n + 1)
+                notify && notify('✏️ 已在画布选中：顶部输入修改指令 Enter，或用浮动工具条')
+              },
             })),
           ),
         )
@@ -4314,6 +4323,17 @@ window.__ModuleLoader__.load({
         setRefs([...refs, { src: node.src, role: 'reference', strength: 0.7, fromId: node.id }])
         setPickerOpen(false)
       }
+      // 本地文件 → dataURL 参考图（改图入口：任意图都能传进来编辑）
+      const uploadRef = (e) => {
+        const f = e.target.files && e.target.files[0]
+        e.target.value = ''
+        if (!f) return
+        const r = new window.FileReader()
+        r.onload = () => {
+          setRefs((prev) => (prev.length >= 4 ? prev : [...prev, { src: String(r.result), role: 'reference', strength: 0.7 }]))
+        }
+        r.readAsDataURL(f)
+      }
       const removeRef = (i) => setRefs(refs.filter((_, j) => j !== i))
       const setRefRole = (i, role) => {
         const ns = refs.slice(); ns[i] = { ...ns[i], role }; setRefs(ns)
@@ -4445,6 +4465,11 @@ window.__ModuleLoader__.load({
                 onClick: () => setPickerOpen(!pickerOpen),
                 title: '从画廊选择参考图',
               }, pickerOpen ? '✕ 收起' : '+ 参考图') : null,
+              refs.length < 4 ? h('label', {
+                className: 'snx-gen-ref-add', title: '上传本地图片作为参考图（改图）', style: { cursor: 'pointer' },
+              },
+                h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onChange: uploadRef }),
+                '📂 上传') : null,
             ),
             pickerOpen ? h('div', { className: 'snx-gen-ref-picker' },
               store.doc.nodes.filter((n) => n.status === 'done').slice().reverse().slice(0, 12).map((n) =>
@@ -4454,11 +4479,18 @@ window.__ModuleLoader__.load({
                 }, h('img', { src: n.src, alt: '', loading: 'lazy' })),
               ),
             ) : null,
-          ) : h('button', {
-            type: 'button', className: 'snx-gen-refs-add',
-            onClick: () => setPickerOpen(true),
-            title: '添加参考图（Midjourney 风格 / 角色 / 构图）',
-          }, '🖼 + 多参考图'),
+          ) : h('div', { style: { display: 'flex', gap: '6px' } },
+            h('button', {
+              type: 'button', className: 'snx-gen-refs-add',
+              onClick: () => setPickerOpen(true),
+              title: '添加参考图（Midjourney 风格 / 角色 / 构图）',
+            }, '🖼 + 多参考图'),
+            h('label', {
+              className: 'snx-gen-refs-add', title: '上传本地图片，写修改指令即可改图', style: { cursor: 'pointer', flex: 'none' },
+            },
+              h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onChange: uploadRef }),
+              '✏️ 上传图片改图'),
+          ),
           // ── 风格预设 ──
           h('div', { className: 'snx-gen-styles' },
             h('div', { className: 'lb' },
@@ -4638,7 +4670,7 @@ window.__ModuleLoader__.load({
     }
 
     // ── 画廊单项 ──
-    function GalleryItem({ node, onOpen, onOpenLightbox }) {
+    function GalleryItem({ node, onOpen, onOpenLightbox, onEdit }) {
       const ts = node.ts ? new Date(node.ts) : null
       const date = ts ? `${ts.getMonth() + 1}/${ts.getDate()} ${String(ts.getHours()).padStart(2, '0')}:${String(ts.getMinutes()).padStart(2, '0')}` : ''
       return h('div', {
@@ -4657,9 +4689,16 @@ window.__ModuleLoader__.load({
         ),
         h('div', { className: 'snx-gal-item-meta' },
           h('div', { className: 'snx-gal-item-pr' }, (node.prompt || '—').replace(/^💬\s*/, '').slice(0, 64)),
-          h('div', { className: 'snx-gal-item-sub' },
-            node.w && node.h ? `${node.w}×${node.h}` : '',
-            date ? ' · ' + date : '',
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+            h('div', { className: 'snx-gal-item-sub', style: { flex: 1 } },
+              node.w && node.h ? `${node.w}×${node.h}` : '',
+              date ? ' · ' + date : '',
+            ),
+            onEdit ? h('button', {
+              type: 'button', className: 'snx-gal-edit',
+              title: '到画布改这张图：顶部输入修改指令，或用 重绘/消除/扩图/变体',
+              onClick: (e) => { e.stopPropagation(); onEdit() },
+            }, '✏️ 改图') : null,
           ),
         ),
       )
