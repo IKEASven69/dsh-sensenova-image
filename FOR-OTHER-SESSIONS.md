@@ -107,3 +107,18 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 2. **整理布局（arrangeByChain，⌗ 按钮在画布左右下角缩放控件区）**：按 parentId 链分代，列=代数、同代按原 y 排序垂直居中，一键把乱画布排成 ComfyUI 式三代流。入 undo 栈。
 
 **坑**：画布容器真实类名是 `.snx-canvas-stage`（wrapRef 挂点）/`.snx-canvas-wrap`（外层），CSS 里的 `.snx-cv-wrap` 是 v4 死类名——合成 DragEvent 测试时 querySelector('.snx-cv-wrap') 落空过。演示数据 parentId 链早前重建时也丢了（全 null 导致整理单列），已补 柴犬→圣诞帽→绿礼盒 三代链。
+
+## v10：InvokeAI 对标全量重制（2026-10-12，用户拍板"一轮全做"）
+
+对标 InvokeAI 28.5k★（webv2 workbench 源码级）+ Krita AI Diffusion 10.7k★。规格见 DESIGN-SPEC-v10.md。全部落地并真机验证：
+
+1. **图标系统**：52 个 lucide 官方路径（ISC）内联为 ICONS 字典 + `ic(name,size)` 帮手；五轮 codemod 清掉全部 UI emoji（剩 12 处 = 💬 数据标记 + 帮助表键帽文字）。教训：**codemod 会漏三元表达式里的逗号结构**（`? ic(a), 'x' : ic(b), 'y'` 需要数组括号），共修 5 处括号损坏，`node --check` 每轮必跑。
+2. **SnxSelect 自定义下拉**：button+popover（外点关/当前项高亮/键盘可达），替换全部 7 处原生 select（画廊排序/对比添加/混合模式/参考角色/模型/导出格式/设置预设）——用户点名的"low"根除。
+3. **灯箱重制**：调整面板**停靠右栏**（不再悬浮挡图），6 滑块（亮度/对比/饱和/色相/色温/晕影）+ 6 预设（原片/黑白/复古/冷调/暖调/鲜艳）；**GPU 管线 applyFiltersGpu**（ctx.filter + soft-light 色温层 + 径向晕影，替代 JS 逐像素循环，任意尺寸实时预览）；**←/→ 翻页**（键盘+按钮+N/M 计数，在 done 图列表 wrap）。旧 applyFiltersAsync 保留（他处仍引用）。
+4. **动作参数飞出**（InvokeAI ToolStripFlyout 模式）：变体（张数 1/2/4 + 变化幅度→措辞近似 + 复用种子）、增强（2K/4K 档 + 去水印开关 → 服务端 prompt 覆盖）、抠图（背景 白/黑/自定义色）。ActionBar 加了 hooks（组件渲染，合法）。
+5. **画布质感**：done 节点 Konva 阴影（rgba(0,0,0,.38) blur16 offset 2/5）；连线改三阶贝塞尔（控制点水平外推 0.45dx）+ 端点圆点 accent 45%；**PendingOverlay** HTML 转圈悬浮层（双画布模式挂载，替代静态文字）。
+6. **命名风格预设**：正/负提示词成套存 localStorage（loadPromptLib.presets），设置页 CRUD（名称/正/负 + 保存/删除），生图页风格条上方 SnxSelect 一键套用（snx:restoreParams 事件回填）。
+7. **队列暂停/恢复/重跑**：waitIfPaused 闸（runOne 首行 await，恢复即放行等待者）；队列页 ⏸/▶ + 「重跑失败」。
+8. **Boards 画板**：doc.boards + node.boardId；画廊画板筛选条（全部/未分组/各画板/＋新建/右键删）；灯箱画板归属 SnxSelect。
+
+**坑**：`node -e "..."` 双引号里写含模板字符串/`${}` 的补丁必被 bash 吃掉（enhancePrompt 两次损坏）——**复杂补丁一律 Edit 工具原样写入**。合成测试滑块要先挪值再 dispatch（React valueTracker 同步 direct-assign 的值，不挪 React 看不到 diff）。

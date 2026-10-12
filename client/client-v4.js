@@ -23,6 +23,42 @@ window.__ModuleLoader__.load({
   factory: (require) => {
     const module = { exports: {} }
     const inject = ['slots', 'sessions', 'uiConversation', 'conversation', 'sidebarRightTabs', 'sidebarRight', 'layout']
+
+    // ─── v10：内联 lucide 图标（ISC）——ic(name, size) 返回 currentColor 描边 SVG ───
+    const ICONS = {"arrow-up-right":"<path d=\"M7 7h10v10\" /><path d=\"M7 17 17 7\" />","brush":"<path d=\"m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08\" /><path d=\"M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z\" />","camera":"<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\" /><circle cx=\"12\" cy=\"13\" r=\"3\" />","check":"<path d=\"M20 6 9 17l-5-5\" />","chevron-down":"<path d=\"m6 9 6 6 6-6\" />","chevron-right":"<path d=\"m9 18 6-6-6-6\" />","circle-x":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m15 9-6 6\" /><path d=\"m9 9 6 6\" />","clipboard-copy":"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /><path d=\"M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2\" /><path d=\"M16 4h2a2 2 0 0 1 2 2v4\" /><path d=\"M21 14H11\" /><path d=\"m15 10-4 4 4 4\" />","clock":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><polyline points=\"12 6 12 12 16 14\" />","columns-2":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M12 3v18\" />","copy":"<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\" /><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\" />","database":"<ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\" /><path d=\"M3 5V19A9 3 0 0 0 21 19V5\" /><path d=\"M3 12A9 3 0 0 0 21 12\" />","dices":"<rect width=\"12\" height=\"12\" x=\"2\" y=\"10\" rx=\"2\" ry=\"2\" /><path d=\"m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6\" /><path d=\"M6 18h.01\" /><path d=\"M10 14h.01\" /><path d=\"M15 6h.01\" /><path d=\"M18 9h.01\" />","download":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"7 10 12 15 17 10\" /><line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\" />","eraser":"<path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\" /><path d=\"M22 21H7\" /><path d=\"m5 11 9 9\" />","expand":"<path d=\"m21 21-6-6m6 6v-4.8m0 4.8h-4.8\" /><path d=\"M3 16.2V21m0 0h4.8M3 21l6-6\" /><path d=\"M21 7.8V3m0 0h-4.8M21 3l-6 6\" /><path d=\"M3 7.8V3m0 0h4.8M3 3l6 6\" />","eye-off":"<path d=\"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49\" /><path d=\"M14.084 14.158a3 3 0 0 1-4.242-4.242\" /><path d=\"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143\" /><path d=\"m2 2 20 20\" />","eye":"<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","film":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M7 3v18\" /><path d=\"M3 7.5h4\" /><path d=\"M3 12h18\" /><path d=\"M3 16.5h4\" /><path d=\"M17 3v18\" /><path d=\"M17 7.5h4\" /><path d=\"M17 16.5h4\" />","folder-plus":"<path d=\"M12 10v6\" /><path d=\"M9 13h6\" /><path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />","frame":"<line x1=\"22\" x2=\"2\" y1=\"6\" y2=\"6\" /><line x1=\"22\" x2=\"2\" y1=\"18\" y2=\"18\" /><line x1=\"6\" x2=\"6\" y1=\"2\" y2=\"22\" /><line x1=\"18\" x2=\"18\" y1=\"2\" y2=\"22\" />","git-fork":"<circle cx=\"12\" cy=\"18\" r=\"3\" /><circle cx=\"6\" cy=\"6\" r=\"3\" /><circle cx=\"18\" cy=\"6\" r=\"3\" /><path d=\"M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9\" /><path d=\"M12 12v3\" />","grid-2x2":"<path d=\"M12 3v18\" /><path d=\"M3 12h18\" /><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" />","image-plus":"<path d=\"M16 5h6\" /><path d=\"M19 2v6\" /><path d=\"M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" /><circle cx=\"9\" cy=\"9\" r=\"2\" />","image":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\" /><circle cx=\"9\" cy=\"9\" r=\"2\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" />","images":"<path d=\"M18 22H4a2 2 0 0 1-2-2V6\" /><path d=\"m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18\" /><circle cx=\"12\" cy=\"8\" r=\"2\" /><rect width=\"16\" height=\"16\" x=\"6\" y=\"2\" rx=\"2\" />","key-round":"<path d=\"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z\" /><circle cx=\"16.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","keyboard":"<path d=\"M10 8h.01\" /><path d=\"M12 12h.01\" /><path d=\"M14 8h.01\" /><path d=\"M16 12h.01\" /><path d=\"M18 8h.01\" /><path d=\"M6 8h.01\" /><path d=\"M7 16h10\" /><path d=\"M8 12h.01\" /><rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />","layers":"<path d=\"M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z\" /><path d=\"M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12\" /><path d=\"M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17\" />","library":"<path d=\"m16 6 4 14\" /><path d=\"M12 6v14\" /><path d=\"M8 8v12\" /><path d=\"M4 4v16\" />","list-ordered":"<path d=\"M10 12h11\" /><path d=\"M10 18h11\" /><path d=\"M10 6h11\" /><path d=\"M4 10h2\" /><path d=\"M4 6h1v4\" /><path d=\"M6 18H4c0-1 2-2 2-3s-1-1.5-2-1\" />","loader-circle":"<path d=\"M21 12a9 9 0 1 1-6.219-8.56\" />","lock-open":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 9.9-1\" />","lock":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 10 0v4\" />","maximize":"<path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /><path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /><path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /><path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" />","message-circle":"<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\" />","minus":"<path d=\"M5 12h14\" />","package":"<path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\" /><path d=\"M12 22V12\" /><path d=\"m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7\" /><path d=\"m7.5 4.27 9 5.15\" />","palette":"<circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\" /><path d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z\" />","pause":"<rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" /><rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" />","pen-line":"<path d=\"M12 20h9\" /><path d=\"M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z\" />","pen-tool":"<path d=\"M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z\" /><path d=\"m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18\" /><path d=\"m2.3 2.3 7.286 7.286\" /><circle cx=\"11\" cy=\"11\" r=\"2\" />","pin":"<path d=\"M12 17v5\" /><path d=\"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z\" />","play":"<polygon points=\"6 3 20 12 6 21 6 3\" />","plug":"<path d=\"M12 22v-5\" /><path d=\"M9 8V2\" /><path d=\"M15 8V2\" /><path d=\"M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z\" />","plus":"<path d=\"M5 12h14\" /><path d=\"M12 5v14\" />","rotate-ccw":"<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /><path d=\"M3 3v5h5\" />","save":"<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" /><path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" /><path d=\"M7 3v4a1 1 0 0 0 1 1h7\" />","scissors":"<circle cx=\"6\" cy=\"6\" r=\"3\" /><path d=\"M8.12 8.12 12 12\" /><path d=\"M20 4 8.12 15.88\" /><circle cx=\"6\" cy=\"18\" r=\"3\" /><path d=\"M14.8 14.8 20 20\" />","settings":"<path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","sliders-horizontal":"<line x1=\"21\" x2=\"14\" y1=\"4\" y2=\"4\" /><line x1=\"10\" x2=\"3\" y1=\"4\" y2=\"4\" /><line x1=\"21\" x2=\"12\" y1=\"12\" y2=\"12\" /><line x1=\"8\" x2=\"3\" y1=\"12\" y2=\"12\" /><line x1=\"21\" x2=\"16\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"3\" y1=\"20\" y2=\"20\" /><line x1=\"14\" x2=\"14\" y1=\"2\" y2=\"6\" /><line x1=\"8\" x2=\"8\" y1=\"10\" y2=\"14\" /><line x1=\"16\" x2=\"16\" y1=\"18\" y2=\"22\" />","sparkles":"<path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\" /><path d=\"M20 3v4\" /><path d=\"M22 5h-4\" /><path d=\"M4 17v2\" /><path d=\"M5 18H3\" />","star":"<path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" />","trash-2":"<path d=\"M3 6h18\" /><path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /><path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /><line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /><line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />","triangle-alert":"<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /><path d=\"M12 9v4\" /><path d=\"M12 17h.01\" />","type":"<polyline points=\"4 7 4 4 20 4 20 7\" /><line x1=\"9\" x2=\"15\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"12\" y1=\"4\" y2=\"20\" />","upload":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"17 8 12 3 7 8\" /><line x1=\"12\" x2=\"12\" y1=\"3\" y2=\"15\" />","wand-sparkles":"<path d=\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72\" /><path d=\"m14 7 3 3\" /><path d=\"M5 6v4\" /><path d=\"M19 14v4\" /><path d=\"M10 2v2\" /><path d=\"M7 8H3\" /><path d=\"M21 16h-4\" /><path d=\"M11 3H9\" />","x":"<path d=\"M18 6 6 18\" /><path d=\"m6 6 12 12\" />","zap":"<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\" />"};
+    function ic(name, size) {
+      return h('svg', {
+        viewBox: '0 0 24 24', width: size || 14, height: size || 14, fill: 'none',
+        stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+        dangerouslySetInnerHTML: { __html: ICONS[name] || '' },
+        'aria-hidden': true,
+      })
+    }
+    // ─── v10：自定义下拉（替代原生 select：系统弹层与深色 UI 脱节）───
+    function SnxSelect(props) {
+      const [open, setOpen] = useState(false)
+      const ref = useRef(null)
+      useEffect(() => {
+        if (!open) return
+        const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+        window.addEventListener('mousedown', close)
+        return () => window.removeEventListener('mousedown', close)
+      }, [open])
+      const options = props.options || []
+      const cur = options.find((o) => o.value === props.value) || options[0]
+      return h('div', { className: 'snx-sel', ref, style: props.width ? { width: props.width } : null, title: props.title },
+        h('button', { type: 'button', className: 'snx-sel-btn', onClick: () => setOpen(!open) },
+          h('span', { className: 'lb' }, cur ? cur.label : '—'),
+          ic('chevron-down', 12)),
+        open ? h('div', { className: 'snx-sel-pop', style: props.popWidth ? { minWidth: props.popWidth } : null },
+          options.map((o) => h('button', {
+            key: o.value, type: 'button',
+            className: 'snx-sel-opt' + (o.value === props.value ? ' on' : ''),
+            onClick: () => { setOpen(false); if (o.value !== props.value) props.onChange(o.value) },
+          }, h('span', null, o.label), o.value === props.value ? h('span', { className: 'd' }, ic('check', 12)) : null)),
+        ) : null)
+    }
+
     // v8.1：可选支持 dsh-better-sidebar（软依赖 — ctx.betterSidebar 不存在时静默回退到原生右栏注册）
     const hasBetterSidebar = (ctx) => { try { return ctx && ctx.get && !!ctx.get('betterSidebar') } catch { return false } }
     const React = require('react')
@@ -1602,6 +1638,61 @@ window.__ModuleLoader__.load({
 .snx-hero-dot.off{background:var(--dsw-alias-label-caption,#81858c)}
 .snx-hero-dot.err{background:var(--dsw-alias-state-error-primary,#f25a5a)}
 .snx-hero-lb{font-size:11px;color:var(--dsw-alias-label-tertiary,#adb2b8)}
+
+/* ── v10：图标微动效 / 自定义下拉 / 飞出 / 开关 / 转圈 ── */
+.snx-spinring{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid color-mix(in srgb,var(--snx-ac) 35%,transparent);border-top-color:var(--snx-ac);animation:snx-spin .8s linear infinite;vertical-align:-2px}
+@keyframes snx-spin{to{transform:rotate(360deg)}}
+.snx-pending-ov{position:absolute;z-index:7;display:grid;place-items:center;pointer-events:none;background:color-mix(in srgb,var(--snx-ac) 7%,transparent);border:1.5px dashed color-mix(in srgb,var(--snx-ac) 55%,transparent);border-radius:9px}
+.snx-pending-ov .ring{width:26px;height:26px;border-radius:50%;border:2.5px solid color-mix(in srgb,var(--snx-ac) 30%,transparent);border-top-color:var(--snx-ac);animation:snx-spin 1s linear infinite}
+.snx-pending-ov .txt{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--snx-ac);white-space:nowrap}
+.snx-sel{position:relative;display:inline-block;min-width:0}
+.snx-sel-btn{display:inline-flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;background:var(--dsw-alias-bg-module-platform,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:6px;color:var(--dsw-alias-label-primary,#f9fafb);font-size:11.5px;font-family:inherit;padding:5px 9px;cursor:pointer;justify-content:space-between}
+.snx-sel-btn:hover{border-color:var(--snx-ac)}
+.snx-sel-btn .lb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.snx-sel-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:320;min-width:100%;max-height:220px;overflow-y:auto;background:var(--dsw-alias-bg-layer-3,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.4);padding:4px}
+.snx-sel-opt{display:flex;align-items:center;gap:6px;width:100%;text-align:left;background:none;border:none;color:var(--dsw-alias-label-secondary,#cfd3d6);font-size:11.5px;font-family:inherit;padding:6px 9px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.snx-sel-opt:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--dsw-alias-label-primary,#f9fafb)}
+.snx-sel-opt.on{color:var(--snx-ac)}
+.snx-sel-opt .d{margin-left:auto;opacity:.9;display:inline-flex}
+.snx-flyout{position:absolute;z-index:70;background:var(--dsw-alias-bg-layer-3,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.45);padding:12px;width:236px}
+.snx-flyout h4{margin:0 0 10px;font-size:12px;color:var(--dsw-alias-label-primary,#f9fafb);display:flex;align-items:center;gap:6px}
+.snx-flyout h4 svg{flex:none}
+.snx-frow{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.snx-frow label{font-size:11.5px;color:var(--dsw-alias-label-tertiary,#adb2b8);width:58px;flex:none}
+.snx-frow input[type=range]{flex:1;accent-color:var(--snx-ac)}
+.snx-frow .val{font-size:11px;color:var(--dsw-alias-label-secondary,#cfd3d6);width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.snx-swrow{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--dsw-alias-label-tertiary,#adb2b8)}
+.snx-sw{width:30px;height:17px;border-radius:9px;background:rgba(255,255,255,.16);position:relative;cursor:pointer;transition:background .15s;flex:none;border:none;padding:0}
+.snx-sw.on{background:var(--snx-acf)}
+.snx-sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .15s}
+.snx-sw.on::after{left:15px}
+.snx-seg2{display:inline-flex;border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:7px;overflow:hidden}
+.snx-seg2 button{background:none;border:none;color:var(--dsw-alias-label-tertiary,#adb2b8);font-size:11.5px;font-family:inherit;padding:4px 11px;cursor:pointer}
+.snx-seg2 button.on{background:var(--snx-acf);color:var(--dsw-alias-label-primary-foreground,#fff)}
+.snx-adjrow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.snx-adjrow label{font-size:11.5px;color:var(--dsw-alias-label-tertiary,#adb2b8);width:32px;flex:none}
+.snx-adjrow input[type=range]{flex:1;height:3px;accent-color:var(--snx-ac)}
+.snx-adjrow .v{width:34px;text-align:right;font-size:11px;color:var(--dsw-alias-label-secondary,#cfd3d6);font-variant-numeric:tabular-nums}
+
+/* ── v10：灯箱停靠调整面板 + 翻页 ── */
+.snx-lb-side{overflow-y:auto}
+.snx-lb-adj2{background:var(--dsw-alias-bg-layer-2,#2c2c2e);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:10px;padding:10px 11px;margin-bottom:10px}
+.snx-lb-adj2 .snx-adjrow span:first-child{font-size:11.5px;color:var(--dsw-alias-label-tertiary,#adb2b8)}
+.snx-lb-adj-h{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dsw-alias-label-primary,#f9fafb);margin-bottom:9px}
+.snx-lb-adj-live{font-size:10px;color:var(--dsw-alias-label-caption,#81858c);font-weight:400}
+.snx-lb-presets{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 10px}
+.snx-lb-preset{background:none;border:1px solid var(--dsw-alias-border-l2,#ffffff1f);color:var(--dsw-alias-label-tertiary,#adb2b8);font-size:11px;font-family:inherit;border-radius:999px;padding:3px 10px;cursor:pointer;transition:all .15s}
+.snx-lb-preset:hover{color:var(--dsw-alias-label-primary,#f9fafb);border-color:var(--dsw-alias-label-caption,#81858c)}
+.snx-lb-nav{display:flex;align-items:center;gap:6px}
+.snx-lb-nav button{background:var(--dsw-alias-button-floating-fill,#2c2c2e);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);color:var(--dsw-alias-label-secondary,#cfd3d6);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;font-family:inherit}
+.snx-lb-nav button:hover{color:var(--snx-ac);border-color:var(--snx-ac)}
+.snx-lb-navct{font-size:11px;color:var(--dsw-alias-label-tertiary,#adb2b8);font-variant-numeric:tabular-nums;min-width:44px;text-align:center}
+.snx-lb-adj-rst,.snx-lb-adj-save{display:inline-flex;align-items:center;justify-content:center;gap:5px;border-radius:7px;padding:6px 0;font-size:11.5px;font-family:inherit;cursor:pointer}
+.snx-lb-adj-rst{background:rgba(255,255,255,.07);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);color:var(--dsw-alias-label-secondary,#cfd3d6)}
+.snx-lb-adj-rst:hover:not(:disabled){color:var(--dsw-alias-label-primary,#f9fafb)}
+.snx-lb-adj-save{background:var(--snx-acf);border:none;color:var(--dsw-alias-label-primary-foreground,#fff);font-weight:600}
+.snx-lb-adj-save:hover:not(:disabled){filter:brightness(1.15)}
+.snx-lb-adj-rst:disabled,.snx-lb-adj-save:disabled{opacity:.45;cursor:default}
 `
 
 
@@ -1694,7 +1785,7 @@ window.__ModuleLoader__.load({
     // ——— 画布文档 store（vanilla，单一事实源）———
     let activeEngine = null   // 打开中的引擎实例；store.emit 时驱动重绘
     function nid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }
-    function emptyDoc() { return { v: 1, camera: { x: 0, y: 0, scale: 1 }, nodes: [] } }
+    function emptyDoc() { return { v: 1, camera: { x: 0, y: 0, scale: 1 }, nodes: [], boards: [] } }
 
     const store = {
       doc: emptyDoc(),
@@ -1952,7 +2043,21 @@ window.__ModuleLoader__.load({
         store.emit(); autosave()
       }
     }
+    // ─── v10：队列暂停闸（pending 在暂停期不入跑，恢复即放行）───
+    let queuePaused = false
+    const queueWaiters = new Set()
+    function waitIfPaused() {
+      if (!queuePaused) return Promise.resolve()
+      return new Promise((res) => queueWaiters.add(res))
+    }
+    function setQueuePaused(v) {
+      queuePaused = v
+      if (!v) { queueWaiters.forEach((r) => r()); queueWaiters.clear() }
+      try { window.dispatchEvent(new CustomEvent('snx:queuePaused', { detail: v })) } catch { }
+    }
+
     async function runOne(nodeId, o) {
+      await waitIfPaused()
       const { prompt, size = '2048x2048', model = '', reference, refs, upscale, negative, seed } = o
       store.updateNode(nodeId, { status: 'running', _startedAt: Date.now(), errMsg: '' })
       const ac = new AbortController()
@@ -2195,7 +2300,7 @@ window.__ModuleLoader__.load({
             cornerRadius: 8, fill: theme.tint(theme.accent, 0.06),
           }))
           g.add(new Konva.Text({
-            width: n.w, y: n.h / 2 - 22, align: 'center', text: '⏳ 生成中…\n(20-60 秒)',
+            width: n.w, y: n.h / 2 - 22, align: 'center', text: '生成中…\n(20-60 秒)',
             fontSize: 14, fill: theme.accent, lineHeight: 1.8,
           }))
           g.add(new Konva.Text({
@@ -2228,6 +2333,7 @@ window.__ModuleLoader__.load({
           const k = new Konva.Image({
             x: n.x, y: n.y, width: n.w, height: n.h, draggable: !n.locked,
             stroke: theme.border, strokeWidth: 1,
+            shadowColor: 'rgba(0,0,0,0.38)', shadowBlur: 16, shadowOffset: { x: 2, y: 5 },
           })
           k.setAttr('snxStatus', 'done')
           // v8：图层属性
@@ -2247,10 +2353,17 @@ window.__ModuleLoader__.load({
           if (!n.parentId) continue
           const p = store.node(n.parentId)
           if (!p) continue
+          // v10：三阶贝塞尔（控制点水平外推），端点小圆点
+          const x0 = p.x + p.w, y0 = p.y + p.h / 2
+          const x1 = n.x, y1 = n.y + n.h / 2
+          const dx = Math.max(24, (x1 - x0) * 0.45)
           edgeLayer.add(new Konva.Line({
-            points: [p.x + p.w, p.y + p.h / 2, n.x, n.y + n.h / 2],
-            stroke: theme.tint(theme.accent, 0.3), strokeWidth: 1.5,
+            points: [x0, y0, x0 + dx, y0, x1 - dx, y1, x1, y1],
+            bezier: true,
+            stroke: theme.tint(theme.accent, 0.45), strokeWidth: 1.75,
           }))
+          edgeLayer.add(new Konva.Circle({ x: x0, y: y0, radius: 2.5, fill: theme.tint(theme.accent, 0.6) }))
+          edgeLayer.add(new Konva.Circle({ x: x1, y: y1, radius: 2.5, fill: theme.tint(theme.accent, 0.6) }))
         }
         edgeLayer.batchDraw()
       }
@@ -2434,10 +2547,14 @@ window.__ModuleLoader__.load({
     function loadPromptLib() {
       try {
         const raw = localStorage.getItem(PROMPT_LIB_KEY)
-        if (!raw) return { stars: [], recents: [] }
+        if (!raw) return { stars: [], recents: [], presets: [] }
         const o = JSON.parse(raw)
-        return { stars: Array.isArray(o.stars) ? o.stars : [], recents: Array.isArray(o.recents) ? o.recents : [] }
-      } catch { return { stars: [], recents: [] } }
+        return {
+          stars: Array.isArray(o.stars) ? o.stars : [],
+          recents: Array.isArray(o.recents) ? o.recents : [],
+          presets: Array.isArray(o.presets) ? o.presets : [],
+        }
+      } catch { return { stars: [], recents: [], presets: [] } }
     }
     function savePromptLib(lib) {
       try { localStorage.setItem(PROMPT_LIB_KEY, JSON.stringify(lib)) } catch { }
@@ -2495,19 +2612,26 @@ window.__ModuleLoader__.load({
         finally { setBusy(false) }
       }
       return h('div', { className: 'snx-pbar' },
-        h('span', { className: 'tag' + (selDone ? '' : ' t2i') }, selDone ? '✏️ 编辑选中图' : '✦ 文生图'),
+        h('span', { className: 'tag' + (selDone ? '' : ' t2i') }, selDone ? [ic('brush'), ' 编辑选中图'] : [ic('wand-sparkles'), ' 文生图']),
         h('input', {
           value: text,
           onChange: (e) => setText(e.target.value),
           onKeyDown: (e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) go() },
           placeholder: selDone ? '描述要怎么改这张图，Enter 生成到其右侧…' : '描述要生成的图，Enter 直接画…',
         }),
-        h('button', { className: 'go', onClick: go, disabled: busy || !text.trim() }, busy ? '⏳' : '⚡'),
+        h('button', { className: 'go', onClick: go, disabled: busy || !text.trim() }, busy ? h('span', { className: 'snx-spinring' }) : ic('wand-sparkles')),
       )
     }
 
     // ——— 浮动操作条（选中单 done 图时跟随）———
     function ActionBar({ engineRef, busy, setBusy, notify, onInpaint, onErase, onOutpaint, viewTick }) {
+      const [fly, setFly] = useState(null)   // 'variant' | 'enhance' | 'cutout' | null
+      const [vCount, setVCount] = useState(1)
+      const [vAmp, setVAmp] = useState(45)
+      const [vSeed, setVSeed] = useState(true)
+      const [eQ, setEQ] = useState('2k')
+      const [eWm, setEWm] = useState(true)
+      const [cBg, setCBg] = useState('#ffffff')
       let node = null
       if (store.sel.size === 1) {
         const cand = store.node([...store.sel][0])
@@ -2522,51 +2646,65 @@ window.__ModuleLoader__.load({
       const left = Math.min(Math.max(8, sx), Math.max(8, wrapEl.clientWidth - barW - 8))
       const top = sy > 70 ? sy - 48 : sy + node.h * c.scale + 12
       const act = (fn) => () => { if (!busy) fn(node) }
+      // v10：变化幅度 → 提示词强度词（SenseNova 无 denoise，用措辞近似）
+      const ampSuffix = (amp) => amp <= 30 ? '，轻微变化，保持构图与色调基本不变'
+        : amp <= 60 ? '，生成这张图的变化版本，保持主体与风格'
+          : '，大胆变化构图与配色，保留主体特征'
+      const enhancePrompt = (q, wm) => `Enhance this image to ${q === '4k' ? 'ultra-clear 4K' : 'clear 2K'} quality, increase sharpness and detail${wm ? ', remove any watermark text without leaving artifacts' : ''}, keep all original elements, composition, colors, lighting and style exactly unchanged.`
+      const bgName = (hex) => hex.toLowerCase() === '#ffffff' ? '纯白色' : hex.toLowerCase() === '#111111' ? '纯黑色' : `纯色（${hex}）`
+      const doVariant = (n) => {
+        setBusy(true); setFly(null)
+        const base = n.prompt || '生成这张图的变化版本，保持风格与构图'
+        genToCanvas(engineRef.current, {
+          prompt: base + ampSuffix(vAmp),
+          reference: n.src, size: n.params && n.params.size ? n.params.size : sizeForAspect(n.w, n.h),
+          model: (n.params && n.params.model) || '', anchorNode: n, n: vCount,
+          seed: vSeed && n.params && typeof n.params.seed === 'number' ? n.params.seed : undefined,
+        }).finally(() => setBusy(false))
+      }
+      const doEnhance = async (n) => {
+        setBusy(true); setFly(null)
+        try {
+          const r = await post('/api/sensenova/enhance', { image: n.src, model: (n.params && n.params.model) || undefined, prompt: enhancePrompt(eQ, eWm) })
+          if (!r.ok || !r.image) throw new Error(r.error || '增强失败')
+          const value = r.image.kind === 'base64' ? 'data:image/png;base64,' + r.image.value : r.image.value
+          const im = await loadImg(value)
+          const fit = nodeFit(im, 480)
+          store.addNode({
+            id: nid(), type: 'image', status: 'done', src: value, parentId: n.id,
+            x: n.x + n.w + 60, y: n.y, w: fit.w, h: fit.h,
+            prompt: '[增强·' + eQ.toUpperCase() + '] ' + (n.prompt || ''), params: {}, ts: Date.now(),
+          }, true)
+        } catch (e) { notify(String((e && e.message) || e)) }
+        finally { setBusy(false) }
+      }
+      const doCutout = (n) => {
+        setBusy(true); setFly(null)
+        genToCanvas(engineRef.current, {
+          prompt: `抠图：完全去除背景，只保留画面主体；背景替换为${bgName(cBg)}，主体边缘干净利落，不要裁切或变形主体。`,
+          reference: n.src,
+          size: (n.params && n.params.size) ? n.params.size : sizeForAspect(n.w, n.h),
+          model: (n.params && n.params.model) || '', anchorNode: n, n: 1,
+        }).finally(() => setBusy(false))
+      }
       return h('div', { className: 'snx-ab', style: { left, top } },
         h('button', {
-          title: '以这张图为参考再生成一张变体', disabled: busy,
-          onClick: act((n) => {
-            setBusy(true)
-            genToCanvas(engineRef.current, {
-              prompt: n.prompt || '生成这张图的变化版本，保持风格与构图',
-              reference: n.src, size: n.params && n.params.size ? n.params.size : sizeForAspect(n.w, n.h),
-              model: (n.params && n.params.model) || '', anchorNode: n, n: 1,
-            }).finally(() => setBusy(false))
-          }),
-        }, '🔀 变体'),
+          title: '以这张图为参考再生成变化版本（张数/幅度/种子可调）', disabled: busy,
+          onClick: () => setFly(fly === 'variant' ? null : 'variant'),
+          style: fly === 'variant' ? { background: 'color-mix(in srgb,var(--snx-ac) 18%,transparent)', color: 'var(--snx-ac)' } : null,
+        }, ic('shuffle'), ' 变体'),
         h('button', {
-          title: '清晰化/4K 增强（U1.5）', disabled: busy,
-          onClick: act(async (n) => {
-            setBusy(true)
-            try {
-              const r = await post('/api/sensenova/enhance', { image: n.src, model: (n.params && n.params.model) || undefined })
-              if (!r.ok || !r.image) throw new Error(r.error || '增强失败')
-              const value = r.image.kind === 'base64' ? 'data:image/png;base64,' + r.image.value : r.image.value
-              const im = await loadImg(value)
-              const fit = nodeFit(im, 480)
-              store.addNode({
-                id: nid(), type: 'image', status: 'done', src: value, parentId: n.id,
-                x: n.x + n.w + 60, y: n.y, w: fit.w, h: fit.h,
-                prompt: '[增强] ' + (n.prompt || ''), params: {}, ts: Date.now(),
-              }, true)
-            } catch (e) { notify(String((e && e.message) || e)) }
-            finally { setBusy(false) }
-          }),
-        }, '✨ 增强'),
-        h('button', { title: '画笔标注局部重绘', disabled: busy, onClick: act(onInpaint) }, '🖌 重绘'),
-        h('button', { title: '消除笔：涂抹即删（预填清除指令，可改）', disabled: busy, onClick: act(onErase) }, '🧽 消除'),
-        h('button', { title: '一键去背景：抠出主体，背景替换为纯白', disabled: busy,
-          onClick: act((n) => {
-            setBusy(true)
-            genToCanvas(engineRef.current, {
-              prompt: REMOVE_BG_PROMPT,
-              reference: n.src,
-              size: (n.params && n.params.size) ? n.params.size : sizeForAspect(n.w, n.h),
-              model: (n.params && n.params.model) || '', anchorNode: n, n: 1,
-            }).finally(() => setBusy(false))
-          }),
-        }, '🪄 抠图'),
-        h('button', { title: '扩展画面（outpaint）', disabled: busy, onClick: act(onOutpaint) }, '⬛ 扩图'),
+          title: '清晰化增强（档位/去水印可调）', disabled: busy,
+          onClick: () => setFly(fly === 'enhance' ? null : 'enhance'),
+          style: fly === 'enhance' ? { background: 'color-mix(in srgb,var(--snx-ac) 18%,transparent)', color: 'var(--snx-ac)' } : null,
+        }, ic('sparkles'), ' 增强'),
+        h('button', { title: '画笔标注局部重绘', disabled: busy, onClick: act(onInpaint) }, ic('brush'), ' 重绘'),
+        h('button', { title: '消除笔：涂抹即删（预填清除指令，可改）', disabled: busy, onClick: act(onErase) }, ic('eraser'), ' 消除'),
+        h('button', { title: '一键去背景（背景色可调）', disabled: busy,
+          onClick: () => setFly(fly === 'cutout' ? null : 'cutout'),
+          style: fly === 'cutout' ? { background: 'color-mix(in srgb,var(--snx-ac) 18%,transparent)', color: 'var(--snx-ac)' } : null,
+        }, ic('scissors'), ' 抠图'),
+        h('button', { title: '扩展画面（outpaint）', disabled: busy, onClick: act(onOutpaint) }, ic('expand'), ' 扩图'),
         h('button', {
           title: '把这张图和画布上下文发进当前会话，问 agent', disabled: busy,
           onClick: act((n) => {
@@ -2582,7 +2720,7 @@ window.__ModuleLoader__.load({
               .catch((e) => notify('发送失败：' + String((e && e.message) || e)))
               .finally(() => setBusy(false))
           }),
-        }, '💬 问'),
+        }, ic('message-circle'), ' 问'),
         h('button', {
           title: '下载原图', disabled: busy,
           onClick: act((n) => {
@@ -2591,8 +2729,79 @@ window.__ModuleLoader__.load({
             a.target = '_blank'; a.click()
           }),
         }, '⬇'),
-        h('button', { title: '删除', className: 'warn', disabled: busy, onClick: act(() => store.removeSelected()) }, '🗑'),
+        h('button', { title: '删除', className: 'warn', disabled: busy, onClick: act(() => store.removeSelected()) }, ic('trash-2')),
+        // v10：动作参数飞出（对齐 InvokeAI ToolStripFlyout）
+        fly === 'variant' ? h('div', { className: 'snx-flyout', style: { left: 4, top: 'calc(100% + 6px)' }, onClick: (e) => e.stopPropagation() },
+          h('h4', null, ic('shuffle'), '变体参数'),
+          h('div', { className: 'snx-frow' },
+            h('label', null, '张数'),
+            h('div', { className: 'snx-seg2' },
+              [1, 2, 4].map((c) => h('button', { key: c, type: 'button', className: vCount === c ? 'on' : '', onClick: () => setVCount(c) }, c)),
+            ),
+          ),
+          h('div', { className: 'snx-frow' },
+            h('label', null, '变化幅度'),
+            h('input', { type: 'range', min: 10, max: 90, value: vAmp, onChange: (e) => setVAmp(parseInt(e.target.value, 10)) }),
+            h('span', { className: 'val' }, vAmp + '%'),
+          ),
+          h('div', { className: 'snx-swrow' }, '复用原图种子',
+            h('button', { type: 'button', className: 'snx-sw' + (vSeed ? ' on' : ''), onClick: () => setVSeed(!vSeed), 'aria-checked': !!vSeed, role: 'switch' }),
+          ),
+          h('div', { style: { marginTop: '10px' } },
+            h('button', { type: 'button', className: 'snx-lb-adj-save', style: { width: '100%' }, disabled: busy, onClick: () => doVariant(node) },
+              ic('wand-sparkles'), '生成 ' + vCount + ' 张变体'),
+          ),
+        ) : null,
+        fly === 'enhance' ? h('div', { className: 'snx-flyout', style: { left: 4, top: 'calc(100% + 6px)' }, onClick: (e) => e.stopPropagation() },
+          h('h4', null, ic('sparkles'), '增强参数'),
+          h('div', { className: 'snx-frow' },
+            h('label', null, '档位'),
+            h('div', { className: 'snx-seg2' },
+              h('button', { type: 'button', className: eQ === '2k' ? 'on' : '', onClick: () => setEQ('2k') }, '2K'),
+              h('button', { type: 'button', className: eQ === '4k' ? 'on' : '', onClick: () => setEQ('4k') }, '4K'),
+            ),
+            h('div', { className: 'snx-swrow', style: { marginLeft: 'auto' } }, '去水印',
+              h('button', { type: 'button', className: 'snx-sw' + (eWm ? ' on' : ''), onClick: () => setEWm(!eWm), 'aria-checked': !!eWm, role: 'switch' }),
+            ),
+          ),
+          h('div', { style: { marginTop: '10px' } },
+            h('button', { type: 'button', className: 'snx-lb-adj-save', style: { width: '100%' }, disabled: busy, onClick: () => doEnhance(node) },
+              ic('sparkles'), '开始增强'),
+          ),
+        ) : null,
+        fly === 'cutout' ? h('div', { className: 'snx-flyout', style: { left: 4, top: 'calc(100% + 6px)' }, onClick: (e) => e.stopPropagation() },
+          h('h4', null, ic('scissors'), '抠图 · 背景色'),
+          h('div', { className: 'snx-frow' },
+            h('label', null, '背景'),
+            h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } },
+              h('button', { type: 'button', className: 'snx-sw', style: { background: '#ffffff', outline: cBg === '#ffffff' ? '2px solid var(--snx-ac)' : 'none', outlineOffset: '1px' }, onClick: () => setCBg('#ffffff'), 'aria-label': '白色背景' }),
+              h('button', { type: 'button', className: 'snx-sw', style: { background: '#111111', outline: cBg === '#111111' ? '2px solid var(--snx-ac)' : 'none', outlineOffset: '1px' }, onClick: () => setCBg('#111111'), 'aria-label': '黑色背景' }),
+              h('input', { type: 'color', value: cBg, onChange: (e) => setCBg(e.target.value), style: { width: '24px', height: '24px', border: '1px solid var(--dsw-alias-border-l2,#ffffff1f)', borderRadius: '6px', background: 'none', padding: '1px', cursor: 'pointer' } }),
+            ),
+          ),
+          h('div', { style: { marginTop: '10px' } },
+            h('button', { type: 'button', className: 'snx-lb-adj-save', style: { width: '100%' }, disabled: busy, onClick: () => doCutout(node) },
+              ic('scissors'), '开始抠图'),
+          ),
+        ) : null,
       )
+    }
+
+    // ——— v10：pending 节点悬浮层（HTML 转圈，跟随相机变换）———
+    function PendingOverlay({ engineRef }) {
+      const wrapEl = engineRef.current ? engineRef.current.wrapEl : null
+      if (!wrapEl) return null
+      const pend = store.doc.nodes.filter((n) => n.status === 'pending')
+      if (!pend.length) return null
+      const c = store.doc.camera
+      return h('div', null, pend.map((n) => {
+        const sx = n.x * c.scale + c.x
+        const sy = n.y * c.scale + c.y
+        return h('div', { className: 'snx-pending-ov', key: n.id, style: { left: sx, top: sy, width: Math.max(40, n.w * c.scale), height: Math.max(40, n.h * c.scale) } },
+          h('div', { className: 'ring' }),
+          h('span', { className: 'txt' }, (n.params && n.params.upscale) ? ('放大中 · ' + n.params.upscale + 'x') : '生成中…'),
+        )
+      }))
     }
 
     // ——— 扩图比例弹层 ———
@@ -2640,21 +2849,21 @@ window.__ModuleLoader__.load({
         setBusy(false)
       }
       return h('div', { className: 'snx-cv-menu', style: { left: menu.x, top: menu.y } },
-        target && target.status === 'error' ? h('button', { onClick: retry, disabled: busy }, '🔄 重试生成') : null,
-        target && target.status === 'done' ? h('button', { onClick: act(() => window.open(target.src, '_blank')) }, '🔍 新标签打开') : null,
+        target && target.status === 'error' ? h('button', { onClick: retry, disabled: busy }, ic('rotate-ccw'), ' 重试生成') : null,
+        target && target.status === 'done' ? h('button', { onClick: act(() => window.open(target.src, '_blank')) }, '新标签打开') : null,
         target && target.status === 'done' ? h('button', {
           onClick: act(() => {
             const a = document.createElement('a')
             a.href = target.src; a.download = (target.prompt || 'sensenova').slice(0, 30).replace(/[\\/:*?"<>|]/g, '') + '.png'
             a.target = '_blank'; a.click()
           }),
-        }, '⬇ 下载') : null,
+        }, ic('download'), ' 下载') : null,
         target && target.status === 'done' ? h('button', {
           onClick: act(() => onRestoreParams && onRestoreParams(target)),
           title: '把这张图的提示词与全部生成参数回填到生图表单',
         }, '⤵ 回填参数') : null,
-        target ? h('button', { onClick: act(() => { store.sel = new Set([target.id]); store.duplicateSelected() }) }, '⧉ 复制') : null,
-        h('button', { onClick: act(() => store.removeSelected()), disabled: !target }, '🗑 删除'),
+        target ? h('button', { onClick: act(() => { store.sel = new Set([target.id]); store.duplicateSelected() }) }, ic('copy'), ' 复制') : null,
+        h('button', { onClick: act(() => store.removeSelected()), disabled: !target }, ic('trash-2'), ' 删除'),
         // ── 多选：对齐 / 等距分布 / 成组（tldraw 基线）──
         store.sel.size >= 2 ? h('div', { className: 'sep' }) : null,
         store.sel.size >= 2 ? h('div', { style: { display: 'flex', gap: '3px', padding: '2px 8px' } },
@@ -2666,17 +2875,17 @@ window.__ModuleLoader__.load({
           h('button', { style: { flex: '1' }, title: '水平等距分布', onClick: act(() => alignSel('dist-h')) }, '↔ 等距'),
           h('button', { style: { flex: '1' }, title: '垂直等距分布', onClick: act(() => alignSel('dist-v')) }, '↕ 等距'),
         ) : null,
-        store.sel.size >= 2 ? h('button', { onClick: act(() => groupSel()), title: '成组：成员拖拽/变换时一起移动' }, '📦 成组') : null,
+        store.sel.size >= 2 ? h('button', { onClick: act(() => groupSel()), title: '成组：成员拖拽/变换时一起移动' }, '成组') : null,
         selNodes().some((n) => n.groupId) ? h('button', { onClick: act(() => ungroupSel()), title: '解组：取消一起移动' }, '⛓ 解组') : null,
         h('div', { className: 'sep' }),
-        h('button', { onClick: act(() => engineRef.current && engineRef.current.fit()) }, '⛶ 适应画面'),
-        h('button', { onClick: act(() => onExportCanvas()), title: '全部可见图按布局合成一张 PNG' }, '🧾 导出画布 PNG'),
+        h('button', { onClick: act(() => engineRef.current && engineRef.current.fit()) }, ic('maximize'), ' 适应画面'),
+        h('button', { onClick: act(() => onExportCanvas()), title: '全部可见图按布局合成一张 PNG' }, ic('image'), ' 导出画布 PNG'),
         !target ? h('button', {
           onClick: act(() => {
             store.pushUndo(); store.doc.nodes = []
             store.emit(); autosave()
           }),
-        }, '🧹 清空画布') : null,
+        }, ic('trash-2'), ' 清空画布') : null,
       )
     }
 
@@ -2731,10 +2940,10 @@ window.__ModuleLoader__.load({
           h('button', {
             onClick: () => { snxInsertToCanvas(url, prompt).then(() => setInserted(true)) },
             title: '追加到生图工作台画布',
-          }, inserted ? '✓ 已插入' : '📌 插入画布'),
+          }, inserted ? '✓ 已插入' : ic('pin'), ' 插入画布'),
           h('button', {
             onClick: () => { const a = document.createElement('a'); a.href = url; a.download = 'sensenova.png'; a.click() },
-          }, '⬇ 下载'),
+          }, ic('download'), ' 下载'),
         ),
       )
     }
@@ -2744,7 +2953,7 @@ window.__ModuleLoader__.load({
       const [inserted, setInserted] = useState(false)
       const block = props && props.block
       const settled = block && block.kind === 'tool-result'
-      if (!settled) return h('div', { className: 'snx-tv' }, h('span', { className: 'snx-tv-run' }, '🎨 SenseNova 生成中…'))
+      if (!settled) return h('div', { className: 'snx-tv' }, h('span', { className: 'snx-tv-run' }, ic('wand-sparkles'), ' SenseNova 生成中…'))
       const info = snxParseResult(block)
       let prompt = (info && info.prompt) || ''
       if (!prompt && block.call && block.call.argsRaw) {
@@ -2777,13 +2986,13 @@ window.__ModuleLoader__.load({
           h('button', {
             onClick: (e) => { e.stopPropagation(); snxInsertToCanvas(url, prompt).then(() => setInserted(true)) },
             title: '追加到生图工作台画布',
-          }, inserted ? '✓ 已插入画布' : '📌 插入画布'),
+          }, inserted ? '✓ 已插入画布' : ic('pin'), ' 插入画布'),
           h('button', {
             onClick: (e) => {
               e.stopPropagation()
               const a = document.createElement('a'); a.href = url; a.download = 'sensenova.png'; a.click()
             },
-          }, '⬇ 下载'),
+          }, ic('download'), ' 下载'),
         ),
         lb ? h(TvLightbox, { url: lb.url, prompt: lb.prompt, onClose: () => setLb(null) }) : null,
       )
@@ -2839,7 +3048,7 @@ window.__ModuleLoader__.load({
         if (this.state.err) {
           return h('div', { className: 'snx-cv' },
             h('div', { className: 'snx-cv-top' },
-              h('div', { className: 'brand' }, '⚡ SENSENOVA ', h('b', null, '生图工作台')),
+              h('div', { className: 'brand' }, ic('zap'), ' SENSENOVA ', h('b', null, '生图工作台')),
               h('span', { className: 'key no' }, '渲染异常'),
             ),
             h('div', { className: 'snx-cv-main' },
@@ -2882,6 +3091,7 @@ window.__ModuleLoader__.load({
       const [galTag, setGalTag] = useState('')
       const [galSort, setGalSort] = useState('time')
       const [galFav, setGalFav] = useState(false)
+      const [galBoard, setGalBoard] = useState('')   // v10：'' 全部 / 'none' 未分组 / boardId
       // 设置页：Key 内联配置（renderSettingsMode 是内联函数，状态必须挂在顶层）
       const [keyDraft, setKeyDraft] = useState('')
       const [keyVisible, setKeyVisible] = useState(false)
@@ -3335,7 +3545,7 @@ window.__ModuleLoader__.load({
         // ─── 顶部品牌栏 ───
         h('header', { className: 'snx-pro-top' },
           h('div', { className: 'snx-pro-brand' },
-            h('span', { className: 'snx-pro-ico' }, '✦'),
+            h('span', { className: 'snx-pro-ico' }, ic('zap')),
             h('span', { className: 'snx-pro-name' }, 'SenseNova'),
             h('span', { className: 'snx-pro-tag' }, '生图工作台'),
           ),
@@ -3343,29 +3553,29 @@ window.__ModuleLoader__.load({
           h('span', {
             className: 'snx-pro-key ' + (keyOk === false ? 'no' : (keyOk ? 'ok' : 'unk')),
             title: keyOk === null ? '检查中…' : keyOk ? 'SenseNova API Key 已配置' : '未配置 Key → 设置',
-          }, keyOk === null ? '⌛' : keyOk ? 'Key ✓' : 'Key ✗'),
+          }, keyOk === null ? ic('clock', 12) : keyOk ? 'Key ✓' : 'Key ✗'),
         ),
         // ─── 模式 tab ───
         h('nav', { className: 'snx-pro-tabs' },
           h('button', { className: mode === 'gen' ? 'on' : '', onClick: () => setMode('gen') },
-            h('span', { className: 'ti' }, '✎'), '生图'),
+            h('span', { className: 'ti' }, ic('wand-sparkles')), '生图'),
           h('button', {
             className: mode === 'queue' ? 'on' : '',
             onClick: () => setMode('queue'),
             title: '生成队列',
           },
-            h('span', { className: 'ti' }, '⚡'), '队列',
+            h('span', { className: 'ti' }, ic('list-ordered')), '队列',
             queueLen > 0 ? h('span', { className: 'cnt pulse' }, queueLen) : null),
           h('button', { className: mode === 'canvas' ? 'on' : '', onClick: () => setMode('canvas') },
-            h('span', { className: 'ti' }, '🎨'), '画布'),
+            h('span', { className: 'ti' }, ic('frame')), '画布'),
           h('button', { className: mode === 'gallery' ? 'on' : '', onClick: () => setMode('gallery') },
-            h('span', { className: 'ti' }, '🖼'), '画廊',
+            h('span', { className: 'ti' }, ic('images')), '画廊',
             store.doc.nodes.length ? h('span', { className: 'cnt' }, store.doc.nodes.length) : null,
           ),
           h('button', { className: mode === 'compare' ? 'on' : '', onClick: () => { setCmpTouched(false); setMode('compare') } },
-            h('span', { className: 'ti' }, '⇄'), '对比'),
+            h('span', { className: 'ti' }, ic('columns-2')), '对比'),
           h('button', { className: mode === 'settings' ? 'on' : '', onClick: () => setMode('settings') },
-            h('span', { className: 'ti' }, '⚙'), ''),
+            h('span', { className: 'ti' }, ic('settings')), ''),
         ),
         // ─── 主内容 ───
         h('main', { className: 'snx-pro-main' },
@@ -3381,6 +3591,21 @@ window.__ModuleLoader__.load({
           node: lightbox,
           notify,
           store,
+          onNav: (dir) => {
+            const list = store.doc.nodes.filter((nn) => nn.status === 'done' && nn.src)
+            const i = list.findIndex((nn) => nn.id === lightbox.id)
+            if (i < 0 || !list.length) return
+            setLightbox(list[(i + dir + list.length) % list.length])
+          },
+          nav: { idx: store.doc.nodes.filter((nn) => nn.status === 'done' && nn.src).findIndex((nn) => nn.id === lightbox.id), total: store.doc.nodes.filter((nn) => nn.status === 'done' && nn.src).length },
+          boards: store.doc.boards || [],
+          onChangeBoard: (n, boardId) => {
+            if (boardId) n.boardId = boardId
+            else delete n.boardId
+            autosave(); force((x) => x + 1)
+            const b = (store.doc.boards || []).find((x) => x.id === boardId)
+            notify && notify(boardId ? '✓ 已移入画板「' + b.name + '」' : '✓ 已移出画板')
+          },
           onClose: () => setLightbox(null),
           onUseAsAnchor: () => {
             store.sel = new Set([lightbox.id])
@@ -3443,7 +3668,7 @@ window.__ModuleLoader__.load({
           },
           // v8：调整（保存为新节点）
           onAdjust: async (n, filters) => {
-            const adjSrc = await applyFiltersAsync(n.src, filters.brightness, filters.contrast, filters.saturation)
+            const adjSrc = await applyFiltersGpu(n.src, filters)
             const id = nid()
             store.pushUndo()
             store.doc.nodes.push({
@@ -3548,13 +3773,13 @@ window.__ModuleLoader__.load({
             type: 'button',
             onClick: () => setFsCanvas(true),
             title: '展开全屏画布（Esc 退出）',
-          }, '⛶ 展开'),
+          }, ic('maximize'), ' 展开'),
           // Konva 容器（全屏画布打开时让出 wrapRef，避免两个元素争抢同一 ref 导致 detach 死锁）
           !fsCanvas ? h('div', { className: 'snx-canvas-stage', ref: wrapRef },
             loadErr ? h('div', { className: 'snx-canvas-err' }, loadErr) : null,
             // 空画布提示
             ready && !loadErr && store.doc.nodes.length === 0 && !maskId ? h('div', { className: 'snx-canvas-empty' },
-              h('div', { className: 'big' }, '✦'),
+              h('div', { className: 'big' }, ic('wand-sparkles', 42)),
               h('div', { className: 't1' }, '画布为空'),
               h('div', { className: 't2' }, '在「生图」标签里输入提示词，或粘贴/拖入图像'),
             ) : null,
@@ -3562,7 +3787,7 @@ window.__ModuleLoader__.load({
             maskId ? h('div', { className: 'snx-maskbar v2' },
               // 画笔 4 滑块（v8）
               h('div', { className: 'snx-brush-controls' },
-                h('span', { className: 'lb' }, '🖌 画笔'),
+                h('span', { className: 'lb' }, ic('brush'), ' 画笔'),
                 h('label', { className: 'br-row' },
                   h('span', { className: 'br-k' }, '大小'),
                   h('input', { type: 'range', min: 8, max: 200, value: brush,
@@ -3594,7 +3819,7 @@ window.__ModuleLoader__.load({
                 placeholder: '这块区域要改成什么？' }),
               h('button', { onClick: () => { const st = maskRef.current; if (st) { st.strokes.pop(); if (st.redraw) st.redraw() } } }, '↩ 撤一笔'),
               h('button', { onClick: cancelMask }, '✕ 取消'),
-              h('button', { className: 'go', onClick: applyMask, disabled: busy }, busy ? '⏳' : '✓ 应用生成'),
+              h('button', { className: 'go', onClick: applyMask, disabled: busy }, busy ? h('span', { className: 'snx-spinring' }) : ic('check'), ' 应用生成'),
               // 画笔预览圈（跟鼠标走）
               brushCursor.show ? h('div', {
                 className: 'snx-brush-cursor',
@@ -3622,6 +3847,7 @@ window.__ModuleLoader__.load({
                 })
               },
             }) : null,
+            h(PendingOverlay, { engineRef }),
             ratioAt ? h(RatioPopup, {
               at: ratioAt, onPick: (r) => applyOutpaint(r), onClose: () => setRatioAt(null),
             }) : null,
@@ -3630,8 +3856,8 @@ window.__ModuleLoader__.load({
               h('button', { onClick: () => engineRef.current && engineRef.current.zoomBy(1 / 1.25), title: '缩小' }, '−'),
               h('div', { className: 'pct' }, Math.round(((store.doc.camera && store.doc.camera.scale) || 1) * 100) + '%'),
               h('button', { onClick: () => engineRef.current && engineRef.current.zoomBy(1.25), title: '放大' }, '+'),
-              h('button', { onClick: () => engineRef.current && engineRef.current.fit(), title: '适应', style: { width: 'auto', padding: '0 8px' } }, '⛶'),
-              h('button', { onClick: () => { arrangeByChain(); notify && notify('✓ 已按生成链整理布局') }, title: '整理布局：按生成链分层排列', style: { width: 'auto', padding: '0 8px' } }, '⌗'),
+              h('button', { onClick: () => engineRef.current && engineRef.current.fit(), title: '适应', style: { width: 'auto', padding: '0 8px' } }, ic('maximize')),
+              h('button', { onClick: () => { arrangeByChain(); notify && notify('✓ 已按生成链整理布局') }, title: '整理布局：按生成链分层排列', style: { width: 'auto', padding: '0 8px' } }, ic('grid-2x2')),
             ),
           ) : null,
         )
@@ -3646,6 +3872,8 @@ window.__ModuleLoader__.load({
         const [tagFilter, setTagFilter] = [galTag, setGalTag]
         const [sortBy, setSortBy] = [galSort, setGalSort]
         const [favOnly, setFavOnly] = [galFav, setGalFav]
+        const [boardFilter, setBoardFilter] = [galBoard, setGalBoard]
+        const boards = store.doc.boards || (store.doc.boards = [])
         let nodes = store.doc.nodes.slice().reverse()
         // 提取全部 tags
         const allTags = Array.from(new Set(nodes.flatMap((n) => (n.tags || []))))
@@ -3660,6 +3888,32 @@ window.__ModuleLoader__.load({
         if (sortBy === 'size') nodes.sort((a, b) => ((b.w || 0) * (b.h || 0)) - ((a.w || 0) * (a.h || 0)))
         // 否则按时间倒序（默认）
         return h('div', { className: 'snx-gal' },
+          // v10：画板筛选条
+          h('div', { className: 'snx-gal-bar' },
+            h('span', { className: 'lbl', style: { margin: 0 } }, ic('folder-plus'), '画板'),
+            h('button', { className: 'chip' + (boardFilter === '' ? ' on' : ''), type: 'button', onClick: () => setGalBoard('') }, '全部'),
+            h('button', { className: 'chip' + (boardFilter === 'none' ? ' on' : ''), type: 'button', onClick: () => setGalBoard('none') }, '未分组'),
+            boards.map((b) => h('button', {
+              key: b.id, className: 'chip' + (boardFilter === b.id ? ' on' : ''), type: 'button',
+              onClick: () => setGalBoard(b.id),
+              title: '右键删除画板（图保留，回到未分组）',
+              onContextMenu: (e) => {
+                e.preventDefault()
+                if (!confirm('删除画板「' + b.name + '」？图保留并回到未分组。')) return
+                store.doc.boards = boards.filter((x) => x.id !== b.id)
+                store.doc.nodes.forEach((nn) => { if (nn.boardId === b.id) delete nn.boardId })
+                if (galBoard === b.id) setGalBoard('')
+                autosave(); force((x) => x + 1)
+              },
+            }, b.name)),
+            h('button', { className: 'chip', type: 'button', title: '新建画板', onClick: () => {
+              const name = (prompt('画板名称：') || '').trim()
+              if (!name) return
+              store.doc.boards = (store.doc.boards || []).concat([{ id: nid(), name }])
+              autosave(); force((x) => x + 1)
+            } }, '＋ 新建'),
+            h('div', { style: { flex: 1 } }),
+          ),
           h('div', { className: 'snx-gal-bar' },
             h('span', null, `共 ${nodes.length} / ${store.doc.nodes.length} 张`),
             h('div', { style: { flex: 1 } }),
@@ -3672,7 +3926,7 @@ window.__ModuleLoader__.load({
                 force((n) => n + 1)
                 try { await put(CANVAS_ROUTE, { doc: store.doc }) } catch {}
               },
-            }, '🗑 清空') : null,
+            }, ic('trash-2'), ' 清空') : null,
           ),
           // v8：搜索 + 标签 + 排序 + 收藏筛选
           store.doc.nodes.length > 0 ? h('div', { className: 'snx-gal-tools' },
@@ -3682,10 +3936,9 @@ window.__ModuleLoader__.load({
               value: q,
               onChange: (e) => setQ(e.target.value),
             }),
-            h('select', { className: 'snx-gal-sel', value: sortBy, onChange: (e) => setSortBy(e.target.value) },
-              h('option', { value: 'time' }, '⏱ 时间'),
-              h('option', { value: 'size' }, '⛶ 尺寸'),
-            ),
+            h(SnxSelect, { value: sortBy, onChange: (v) => setSortBy(v), width: 108, options: [
+              { value: 'time', label: '时间' }, { value: 'size', label: '尺寸' },
+            ] }),
             h('button', {
               className: 'snx-gal-fav' + (favOnly ? ' on' : ''),
               onClick: () => setFavOnly(!favOnly),
@@ -3704,7 +3957,7 @@ window.__ModuleLoader__.load({
             ) : null,
           ) : null,
           nodes.length === 0 ? h('div', { className: 'snx-gal-empty' },
-            h('div', { className: 'big' }, q || tagFilter || favOnly ? '🔍' : '🖼'),
+            h('div', { className: 'big' }, ic('images', 42)),
             h('div', { className: 't1' }, q || tagFilter || favOnly ? '没有匹配的图' : '画廊为空'),
             h('div', { className: 't2' }, q || tagFilter || favOnly ? '试试清除筛选条件' : '「生图」里跑一张，或让 agent 帮你生成'),
           ) : h('div', { className: 'snx-gal-grid' },
@@ -3761,6 +4014,31 @@ window.__ModuleLoader__.load({
               h('div', { className: 'lb' }, '失败'),
             ),
             h('div', { style: { flex: 1 } }),
+            h('button', {
+              className: 'snx-queue-cancel',
+              type: 'button',
+              onClick: () => { setQueuePaused(!queuePaused); force((x) => x + 1) },
+              title: queuePaused ? '恢复队列（等待中的任务继续跑）' : '暂停队列（等待中的任务先不跑，进行中的不打断）',
+            }, queuePaused ? [ic('play'), ' 继续队列'] : [ic('pause'), ' 暂停队列']),
+            error > 0 ? h('button', {
+              className: 'snx-queue-cancel',
+              type: 'button',
+              onClick: () => {
+                const errs = store.doc.nodes.filter((n) => n.status === 'error')
+                if (!confirm('重跑 ' + errs.length + ' 个失败任务？')) return
+                errs.forEach((n) => {
+                  n.status = 'pending'; n.errMsg = ''
+                  runOne(n.id, {
+                    prompt: n.prompt, size: (n.params && n.params.size) || '2048x2048',
+                    model: (n.params && n.params.model) || '',
+                    reference: (n.params && n.params.reference) || undefined,
+                    negative: (n.params && n.params.negative) || undefined,
+                    seed: (n.params && typeof n.params.seed === 'number') ? n.params.seed : undefined,
+                  })
+                })
+                force((x) => x + 1)
+              },
+            }, ic('rotate-ccw'), ' 重跑失败') : null,
             allJobs.length > 0 ? h('button', {
               className: 'snx-queue-cancel',
               type: 'button',
@@ -3787,7 +4065,7 @@ window.__ModuleLoader__.load({
           // 任务列表
           h('div', { className: 'snx-queue-list' },
             jobs.length === 0 ? h('div', { className: 'snx-queue-empty' },
-              h('div', { className: 'big' }, '⚡'),
+              h('div', { className: 'big' }, ic('list-ordered', 42)),
               h('div', { className: 't1' }, '队列空闲'),
               h('div', { className: 't2' }, '在「生图」里点生成会进队列'),
             ) : jobs.map((n) => h(QueueItem, {
@@ -3863,27 +4141,23 @@ window.__ModuleLoader__.load({
               }),
             ),
             h('div', { style: { flex: 1 } }),
-            canAdd ? h('select', {
-              className: 'snx-cmp-add',
-              value: '',
-              onChange: (e) => {
-                const id = e.target.value
+            canAdd ? h(SnxSelect, {
+              value: '', width: 150,
+              onChange: (id) => {
                 if (!id) return
                 const s = new Set(store.sel); s.add(id); store.sel = s
                 setCmpTouched(true)
                 force((x) => x + 1)
-                e.target.value = ''
               },
-            },
-              h('option', { value: '' }, '＋ 添加…'),
-              allDone.filter((n) => !store.sel.has(n.id)).slice(-20).reverse().map((n) =>
-                h('option', { key: n.id, value: n.id }, (n.prompt || '—').replace(/^💬\s*/, '').slice(0, 36)),
+              options: [{ value: '', label: '＋ 添加…' }].concat(
+                allDone.filter((n) => !store.sel.has(n.id)).slice(-20).reverse().map((n) =>
+                  ({ value: n.id, label: (n.prompt || '—').replace(/^💬\s*/, '').slice(0, 36) })),
               ),
-            ) : null,
+            }) : null,
           ),
           // 对比视图
           selected.length < 2 ? h('div', { className: 'snx-cmp-empty' },
-            h('div', { className: 'big' }, '⇄'),
+            h('div', { className: 'big' }, ic('columns-2', 42)),
             h('div', { className: 't1' }, '选中 2-4 张图开始对比'),
             h('div', { className: 't2' }, '在下方画廊池单击切换，或用 ＋ 添加'),
           ) : selected.length === 2 ? h(ComparePair, { a: selected[0], b: selected[1] }) :
@@ -3925,7 +4199,7 @@ window.__ModuleLoader__.load({
         return h('div', { className: 'snx-fs' },
           h('div', { className: 'snx-fs-top' },
             h('div', { className: 'snx-fs-brand' },
-              h('span', { className: 'ti' }, '🎨'),
+              h('span', { className: 'ti' }, ic('palette')),
               h('span', null, '画布编辑'),
               h('span', { className: 'cnt' }, store.doc.nodes.length + ' 张'),
             ),
@@ -3937,7 +4211,7 @@ window.__ModuleLoader__.load({
           h('div', { className: 'snx-fs-body' },
             // 左侧图层面板
             h('aside', { className: 'snx-fs-layers' },
-              h('div', { className: 'snx-fs-h' }, '🗂 图层'),
+              h('div', { className: 'snx-fs-h' }, ic('layers'), ' 图层'),
               h('div', { className: 'snx-fs-layers-list' },
                 store.doc.nodes.slice().reverse().map((n) => h('div', {
                   key: n.id,
@@ -3950,7 +4224,7 @@ window.__ModuleLoader__.load({
                 },
                   h('div', { className: 'snx-fs-layer-img' },
                     n.src ? h('img', { src: n.src, alt: '' }) :
-                      h('span', null, n.status === 'running' ? '⏳' : n.status === 'pending' ? '⌛' : n.status === 'error' ? '⚠' : '∅'),
+                      h('span', null, n.status === 'running' ? h('span', { className: 'snx-spinring' }) : n.status === 'pending' ? ic('clock', 12) : n.status === 'error' ? ic('circle-x', 12) : ic('minus', 12)),
                   ),
                   h('div', { className: 'snx-fs-layer-info' },
                     h('div', { className: 'snx-fs-layer-pr' }, (n.prompt || '—').slice(0, 32)),
@@ -3968,12 +4242,12 @@ window.__ModuleLoader__.load({
               h('div', { className: 'snx-fs-canvas', ref: wrapRef },
                 loadErr ? h('div', { className: 'snx-canvas-err' }, loadErr) : null,
                 ready && !loadErr && store.doc.nodes.length === 0 && !maskId ? h('div', { className: 'snx-canvas-empty' },
-                  h('div', { className: 'big' }, '✦'),
+                  h('div', { className: 'big' }, ic('wand-sparkles', 42)),
                   h('div', { className: 't1' }, '画布为空'),
                   h('div', { className: 't2' }, '回到「生图」生成，或粘贴/拖入图像'),
                 ) : null,
                 maskId ? h('div', { className: 'snx-maskbar' },
-                  h('span', { className: 'lb' }, '🖌 涂抹要修改的区域'),
+                  h('span', { className: 'lb' }, ic('brush'), ' 涂抹要修改的区域'),
                   h('input', { type: 'range', min: 12, max: 160, value: brush,
                     onChange: (e) => setBrush(parseInt(e.target.value, 10)), title: '笔刷大小' }),
                   h('input', { type: 'text', value: maskPrompt,
@@ -3982,7 +4256,7 @@ window.__ModuleLoader__.load({
                     placeholder: '这块区域要改成什么？' }),
                   h('button', { onClick: () => { const st = maskRef.current; if (st) { st.strokes.pop(); if (st.redraw) st.redraw() } } }, '↩ 撤一笔'),
                   h('button', { onClick: cancelMask }, '✕ 取消'),
-                  h('button', { className: 'go', onClick: applyMask, disabled: busy }, busy ? '⏳' : '✓ 应用生成'),
+                  h('button', { className: 'go', onClick: applyMask, disabled: busy }, busy ? h('span', { className: 'snx-spinring' }) : ic('check'), ' 应用生成'),
                 ) : null,
                 selDone && engineRef.current ? h(ActionBar, {
                   engineRef, busy, setBusy, notify, viewTick: undefined,
@@ -4006,14 +4280,14 @@ window.__ModuleLoader__.load({
                   h('button', { onClick: () => engineRef.current && engineRef.current.zoomBy(1 / 1.25), title: '缩小' }, '−'),
                   h('div', { className: 'pct' }, Math.round(((store.doc.camera && store.doc.camera.scale) || 1) * 100) + '%'),
                   h('button', { onClick: () => engineRef.current && engineRef.current.zoomBy(1.25), title: '放大' }, '+'),
-                  h('button', { onClick: () => engineRef.current && engineRef.current.fit(), title: '适应', style: { width: 'auto', padding: '0 8px' } }, '⛶'),
-                  h('button', { onClick: () => { arrangeByChain(); notify && notify('✓ 已按生成链整理布局') }, title: '整理布局：按生成链分层排列', style: { width: 'auto', padding: '0 8px' } }, '⌗'),
+                  h('button', { onClick: () => engineRef.current && engineRef.current.fit(), title: '适应', style: { width: 'auto', padding: '0 8px' } }, ic('maximize')),
+                  h('button', { onClick: () => { arrangeByChain(); notify && notify('✓ 已按生成链整理布局') }, title: '整理布局：按生成链分层排列', style: { width: 'auto', padding: '0 8px' } }, ic('grid-2x2')),
                 ),
               ),
             ),
             // 右侧属性面板
             h('aside', { className: 'snx-fs-props' },
-              h('div', { className: 'snx-fs-h' }, '🎛 属性'),
+              h('div', { className: 'snx-fs-h' }, ic('sliders-horizontal'), ' 属性'),
               selNode ? h('div', { className: 'snx-fs-props-body' },
                 h('div', { className: 'snx-fs-prop' },
                   h('div', { className: 'lb' }, '提示词'),
@@ -4040,7 +4314,7 @@ window.__ModuleLoader__.load({
                       type: 'button',
                       className: 'snx-fs-pa',
                       onClick: () => enterMask(selNode),
-                    }, '🖌 重绘'),
+                    }, ic('brush'), ' 重绘'),
                     h('button', {
                       type: 'button',
                       className: 'snx-fs-pa',
@@ -4054,12 +4328,12 @@ window.__ModuleLoader__.load({
                           nodeId: selNode.id, label: '',
                         })
                       },
-                    }, '⬛ 扩图'),
+                    }, ic('expand'), ' 扩图'),
                     h('button', {
                       type: 'button',
                       className: 'snx-fs-pa',
                       onClick: () => { store.duplicateSelected(); force((x) => x + 1) },
-                    }, '⧉ 复制'),
+                    }, ic('copy'), ' 复制'),
                     h('button', {
                       type: 'button',
                       className: 'snx-fs-pa danger',
@@ -4069,7 +4343,7 @@ window.__ModuleLoader__.load({
                         force((x) => x + 1)
                         autosave()
                       },
-                    }, '🗑 删除'),
+                    }, ic('trash-2'), ' 删除'),
                   ),
                 ),
                 selNode.parentId ? h('div', { className: 'snx-fs-prop' },
@@ -4081,18 +4355,15 @@ window.__ModuleLoader__.load({
                   h('div', { className: 'lb' }, '图层属性'),
                   h('div', { className: 'snx-fs-prop-row' },
                     h('label', null, h('span', null, '混合'),
-                      h('select', {
+                      h(SnxSelect, {
                         value: selNode.blendMode || 'normal',
-                        onChange: (e) => {
-                          selNode.blendMode = e.target.value
+                        onChange: (v) => {
+                          selNode.blendMode = v
                           engineRef.current && engineRef.current.refresh && engineRef.current.refresh()
                           force((x) => x + 1); autosave()
                         },
-                      },
-                        ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'].map((m) =>
-                          h('option', { key: m, value: m }, m),
-                        ),
-                      ),
+                        options: ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'].map((m) => ({ value: m, label: m })),
+                      }),
                     ),
                   ),
                   h('div', { className: 'snx-fs-prop-row' },
@@ -4116,7 +4387,7 @@ window.__ModuleLoader__.load({
                         engineRef.current && engineRef.current.refresh && engineRef.current.refresh()
                         force((x) => x + 1); autosave()
                       },
-                    }, selNode.hidden ? '👁‍🗨 隐藏中' : '👁 可见'),
+                    }, selNode.hidden ? [ic('eye-off'), ' 隐藏中'] : [ic('eye'), ' 可见']),
                     h('button', {
                       type: 'button',
                       className: 'snx-fs-pa2' + (selNode.locked ? ' on' : ''),
@@ -4125,11 +4396,11 @@ window.__ModuleLoader__.load({
                         engineRef.current && engineRef.current.refresh && engineRef.current.refresh()
                         force((x) => x + 1); autosave()
                       },
-                    }, selNode.locked ? '🔒 已锁' : '🔓 解锁'),
+                    }, selNode.locked ? [ic('lock'), ' 已锁'] : [ic('lock-open'), ' 解锁']),
                   ),
                 ),
               ) : h('div', { className: 'snx-fs-props-empty' },
-                h('div', { className: 'big' }, '🎛'),
+                h('div', { className: 'big' }, ic('sliders-horizontal', 42)),
                 h('div', null, '在画布上点一张图'),
               ),
             ),
@@ -4171,11 +4442,11 @@ window.__ModuleLoader__.load({
           ),
           h('div', { className: 'snx-set-section' },
             h('div', { className: 'snx-set-h' },
-              h('span', { className: 'ti' }, '🔑'),
+              h('span', { className: 'ti' }, ic('key-round')),
               h('span', null, 'SenseNova API Key'),
               h('div', { style: { flex: 1 } }),
               h('span', { className: 'snx-pro-key ' + (keyOk === false ? 'no' : (keyOk ? 'ok' : 'unk')) },
-                keyOk === null ? '⌛' : keyOk ? '已配置' : '未配置'),
+                keyOk === null ? [ic('clock'), ' …'] : keyOk ? '已配置' : '未配置'),
             ),
             h('div', { className: 'snx-cfg-row', style: { marginTop: '10px', marginBottom: '8px' } },
               h('div', { style: { display: 'flex', gap: '6px' } },
@@ -4192,12 +4463,12 @@ window.__ModuleLoader__.load({
                   className: 'snx-set-btn', type: 'button', title: keyVisible ? '隐藏' : '显示',
                   onClick: () => setKeyVisible(!keyVisible),
                   style: { flexShrink: '0', color: 'var(--dsw-alias-label-secondary,#b3b6ba)', borderColor: 'var(--dsw-alias-border-l2,#ffffff1f)' },
-                }, keyVisible ? '🙈 隐藏' : '👁 显示'),
+                }, keyVisible ? [ic('eye-off'), ' 隐藏'] : [ic('eye'), ' 显示']),
               ),
             ),
             h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
-              h('button', { className: 'snx-set-btn save', type: 'button', onClick: saveKey, disabled: keySaving || !keyDraft.trim() }, keySaving ? '保存中…' : '💾 保存 Key'),
-              h('button', { className: 'snx-set-btn test', type: 'button', onClick: testKey, disabled: keyTesting }, keyTesting ? '测试中…' : '🔌 测试连接'),
+              h('button', { className: 'snx-set-btn save', type: 'button', onClick: saveKey, disabled: keySaving || !keyDraft.trim() }, keySaving ? '保存中…' : ic('save'), ' 保存 Key'),
+              h('button', { className: 'snx-set-btn test', type: 'button', onClick: testKey, disabled: keyTesting }, keyTesting ? '测试中…' : ic('plug'), ' 测试连接'),
               pingResult ? h('span', { className: 'snx-pro-key ' + (pingResult.ok ? 'ok' : 'no') },
                 pingResult.ok ? '✓ 可用 · ' + (pingResult.models || []).length + ' 个模型' : '✗ ' + (pingResult.error || '失败').slice(0, 60)) : null,
             ),
@@ -4206,7 +4477,7 @@ window.__ModuleLoader__.load({
           ),
           h('div', { className: 'snx-set-section' },
             h('div', { className: 'snx-set-h' },
-              h('span', { className: 'ti' }, '🎨'),
+              h('span', { className: 'ti' }, ic('palette')),
               h('span', null, '模型 / 画质'),
             ),
             h('div', { className: 'snx-set-row' },
@@ -4218,7 +4489,7 @@ window.__ModuleLoader__.load({
           ),
           h('div', { className: 'snx-set-section' },
             h('div', { className: 'snx-set-h' },
-              h('span', { className: 'ti' }, '💾'),
+              h('span', { className: 'ti' }, ic('database')),
               h('span', null, '数据'),
               h('div', { style: { flex: 1 } }),
               h('button', {
@@ -4232,7 +4503,7 @@ window.__ModuleLoader__.load({
                   try { await put(CANVAS_ROUTE, { doc: store.doc }) } catch {}
                   notify && notify('✓ 画布已清空')
                 },
-              }, '🗑 清空画布'),
+              }, ic('trash-2'), ' 清空画布'),
             ),
             h('div', { className: 'snx-set-tip' },
               `当前画布共 ${store.doc.nodes.length} 张图，`,
@@ -4242,7 +4513,7 @@ window.__ModuleLoader__.load({
           ),
           h('div', { className: 'snx-set-section' },
             h('div', { className: 'snx-set-h' },
-              h('span', { className: 'ti' }, '⌨️'),
+              h('span', { className: 'ti' }, ic('keyboard')),
               h('span', null, '快捷键'),
             ),
             h('div', { className: 'snx-set-row' },
@@ -4267,6 +4538,9 @@ window.__ModuleLoader__.load({
     function PromptLibSection({ notify }) {
       const [lib, setLib] = useState(loadPromptLib())
       const refresh = () => setLib(loadPromptLib())
+      const [npName, setNpName] = useState('')
+      const [npP, setNpP] = useState('')
+      const [npN, setNpN] = useState('')
       const usePrompt = (p) => {
         // 同时写 genPrefs：GenForm 只在生图 tab 挂载，设置页里 dispatch 无人接收，
         // 等切回生图 tab 重新挂载时初值读 genPrefs.prompt，这样提示词才真正落地
@@ -4276,12 +4550,59 @@ window.__ModuleLoader__.load({
       }
       return h('div', { className: 'snx-set-section' },
         h('div', { className: 'snx-set-h' },
-          h('span', { className: 'ti' }, '📚'),
+          h('span', { className: 'ti' }, ic('library')),
           h('span', null, '提示词库'),
           h('div', { style: { flex: 1 } }),
           h('span', { className: 'h' }, `${lib.stars.length} 收藏 / ${lib.recents.length} 最近`),
         ),
         h('div', { className: 'snx-promptlib' },
+          h('div', { className: 'snx-promptlib-h' }, ic('sparkles'), ' 命名预设（正/负成套）'),
+          lib.presets.map((ps) => h('div', { key: ps.name, className: 'snx-promptlib-item' },
+            h('div', { className: 'snx-promptlib-pr', onClick: () => {
+              genPrefs.prompt = ps.prompt || ''
+              genPrefs.negPrompt = ps.negative || ''
+              window.dispatchEvent(new CustomEvent('snx:restoreParams', { detail: { prompt: ps.prompt || '', negPrompt: ps.negative || '' } }))
+              notify && notify('✓ 已套用预设「' + ps.name + '」（切到生图 tab 可见）')
+            }, title: '点击套用（正/负提示词一起回填）' },
+              (ps.name || '未命名') + ' ｜ ' + (ps.prompt || '').slice(0, 40) + (ps.negative ? ' ｜ 负:' + ps.negative.slice(0, 20) : '')),
+            h('button', { type: 'button', className: 'snx-promptlib-x', onClick: () => {
+              if (!confirm('删除预设「' + ps.name + '」？')) return
+              const ll = loadPromptLib()
+              ll.presets = ll.presets.filter((x) => x.name !== ps.name)
+              savePromptLib(ll); refresh()
+            }, title: '删除预设' }, '✕'),
+          )),
+          h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' } },
+            h('input', {
+              placeholder: '预设名称（如：雪夜电影感）', value: npName,
+              onChange: (e) => setNpName(e.target.value),
+              style: { background: 'var(--dsw-alias-bg-module-platform,#353638)', border: '1px solid var(--dsw-alias-border-l2,#ffffff1f)', borderRadius: '6px', color: 'var(--dsw-alias-label-primary,#f9fafb)', padding: '6px 9px', fontSize: '11.5px', fontFamily: 'inherit' },
+            }),
+            h('input', {
+              placeholder: '正向提示词（从生图页或历史里粘贴）', value: npP,
+              onChange: (e) => setNpP(e.target.value),
+              style: { background: 'var(--dsw-alias-bg-module-platform,#353638)', border: '1px solid var(--dsw-alias-border-l2,#ffffff1f)', borderRadius: '6px', color: 'var(--dsw-alias-label-primary,#f9fafb)', padding: '6px 9px', fontSize: '11.5px', fontFamily: 'inherit' },
+            }),
+            h('input', {
+              placeholder: '负向提示词（选填）', value: npN,
+              onChange: (e) => setNpN(e.target.value),
+              style: { background: 'var(--dsw-alias-bg-module-platform,#353638)', border: '1px solid var(--dsw-alias-border-l2,#ffffff1f)', borderRadius: '6px', color: 'var(--dsw-alias-label-primary,#f9fafb)', padding: '6px 9px', fontSize: '11.5px', fontFamily: 'inherit' },
+            }),
+            h('button', {
+              type: 'button',
+              className: 'snx-lb-adj-save',
+              disabled: !npName.trim() || !npP.trim(),
+              onClick: () => {
+                const ll = loadPromptLib()
+                ll.presets = (ll.presets || []).filter((x) => x.name !== npName.trim())
+                ll.presets.push({ name: npName.trim(), prompt: npP.trim(), negative: npN.trim(), ts: Date.now() })
+                savePromptLib(ll); refresh()
+                setNpName(''); setNpP(''); setNpN('')
+                notify && notify('✓ 预设已保存，生图页「套用命名预设」可选')
+              },
+              style: { justifyContent: 'center' },
+            }, ic('save'), ' 保存预设'),
+          ),
           lib.stars.length ? h('div', { className: 'snx-promptlib-h' }, '⭐ 收藏') : null,
           lib.stars.map((s) => h('div', { key: s.prompt, className: 'snx-promptlib-item star' },
             h('div', { className: 'snx-promptlib-pr', onClick: () => usePrompt(s.prompt), title: '点击填回提示词' }, s.prompt),
@@ -4292,7 +4613,7 @@ window.__ModuleLoader__.load({
               savePromptLib(ll); refresh()
             }, title: '删除收藏' }, '✕'),
           )),
-          lib.recents.length ? h('div', { className: 'snx-promptlib-h' }, '🕐 最近') : null,
+          lib.recents.length ? h('div', { className: 'snx-promptlib-h' }, ic('clock'), ' 最近') : null,
           lib.recents.slice(0, 10).map((p, i) => h('div', { key: i, className: 'snx-promptlib-item' },
             h('div', { className: 'snx-promptlib-pr', onClick: () => usePrompt(p), title: '点击填回提示词' }, p),
             h('button', { type: 'button', className: 'snx-promptlib-star', onClick: () => {
@@ -4323,7 +4644,7 @@ window.__ModuleLoader__.load({
           src ? h('img', { src: src, alt: '' }) :
             h('div', { className: 'snx-gen-hero-fail' }, '⚠ 加载失败'),
           hover ? h('div', { className: 'snx-gen-hero-overlay' },
-            h('div', { className: 'snx-gen-hero-zoom' }, '⛶ 查看大图'),
+            h('div', { className: 'snx-gen-hero-zoom' }, ic('maximize'), ' 查看大图'),
           ) : null,
         ),
         h('div', { className: 'snx-gen-hero-cap' },
@@ -4334,10 +4655,10 @@ window.__ModuleLoader__.load({
             node && node.ts ? ' · ' + new Date(node.ts).toLocaleString() : '',
           ),
           h('div', { className: 'acts' },
-            h('button', { className: 'snx-gen-act', onClick: onEdit, title: '打开画布编辑器' }, '🎨 画布'),
-            h('button', { className: 'snx-gen-act', onClick: onOpenLightbox, title: '全屏预览' }, '⛶ 大图'),
-            src ? h('a', { className: 'snx-gen-act', href: src, download: '', target: '_blank', rel: 'noreferrer' }, '⬇ 下载') : null,
-            h('button', { className: 'snx-gen-act', onClick: onRefresh }, '🔄'),
+            h('button', { className: 'snx-gen-act', onClick: onEdit, title: '打开画布编辑器' }, ic('frame'), ' 画布'),
+            h('button', { className: 'snx-gen-act', onClick: onOpenLightbox, title: '全屏预览' }, ic('maximize'), ' 大图'),
+            src ? h('a', { className: 'snx-gen-act', href: src, download: '', target: '_blank', rel: 'noreferrer' }, ic('download'), ' 下载') : null,
+            h('button', { className: 'snx-gen-act', onClick: onRefresh }, ic('rotate-ccw')),
           ),
         ),
       )
@@ -4345,7 +4666,7 @@ window.__ModuleLoader__.load({
 
     function GenHeroEmpty({ busy }) {
       return h('div', { className: 'snx-gen-hero-empty' },
-        h('div', { className: 'big' }, busy ? '🎨' : '✦'),
+        h('div', { className: 'big' }, busy ? h('span', { className: 'snx-spinring' }) : ic('images')),
         h('div', { className: 't1' }, busy ? 'SenseNova 生成中…' : '还没有生成图'),
         h('div', { className: 't2' }, busy ? '请稍等几秒' : '在下方输入提示词，或让 agent 帮你画'),
       )
@@ -4353,14 +4674,14 @@ window.__ModuleLoader__.load({
 
     // ── 提示词 + 表单（v2：含风格预设 / i2i 提示 / 完整参数）──
     const STYLE_PRESETS = [
-      { id: 'cinematic', label: '🎬 电影', suffix: ', cinematic lighting, film grain, depth of field, 8K, dramatic atmosphere' },
-      { id: 'photo', label: '📷 摄影', suffix: ', photorealistic, sharp focus, natural lighting, high detail, DSLR quality' },
-      { id: 'anime', label: '🎨 动漫', suffix: ', anime style, cel shading, vibrant colors, clean linework' },
-      { id: 'oil', label: '🖌 油画', suffix: ', oil painting, visible brushstrokes, rich texture, classical composition' },
-      { id: '3d', label: '🧊 3D', suffix: ', 3D render, octane render, volumetric lighting, hyperdetailed' },
+      { id: 'cinematic', label: '电影', suffix: ', cinematic lighting, film grain, depth of field, 8K, dramatic atmosphere' },
+      { id: 'photo', label: '摄影', suffix: ', photorealistic, sharp focus, natural lighting, high detail, DSLR quality' },
+      { id: 'anime', label: '动漫', suffix: ', anime style, cel shading, vibrant colors, clean linework' },
+      { id: 'oil', label: '油画', suffix: ', oil painting, visible brushstrokes, rich texture, classical composition' },
+      { id: '3d', label: '3D', suffix: ', 3D render, octane render, volumetric lighting, hyperdetailed' },
       { id: 'ink', label: '✒️ 水墨', suffix: ', Chinese ink wash painting, xieyi style, flowing brushwork, minimalist' },
-      { id: 'pixel', label: '👾 像素', suffix: ', pixel art, 16-bit, crisp pixels, retro game aesthetic' },
-      { id: 'archi', label: '🏛 建筑', suffix: ', architectural visualization, clean lines, studio lighting, wide angle' },
+      { id: 'pixel', label: '像素', suffix: ', pixel art, 16-bit, crisp pixels, retro game aesthetic' },
+      { id: 'archi', label: '建筑', suffix: ', architectural visualization, clean lines, studio lighting, wide angle' },
     ]
     const SIZE_PRESETS = [
       { id: 'square', label: '1:1', w: 1024, h: 1024 },
@@ -4508,7 +4829,7 @@ window.__ModuleLoader__.load({
         // ── 提示词 ──
         h('div', { className: 'snx-gen-fprompt' },
           h('div', { className: 'lb' },
-              h('span', { className: 'ti' }, '✎'),
+              h('span', { className: 'ti' }, ic('wand-sparkles')),
               h('span', null, anchor ? '编辑指令' : '提示词'),
               h('div', { style: { flex: 1 } }),
               h('button', {
@@ -4535,7 +4856,7 @@ window.__ModuleLoader__.load({
           // ── 多参考图槽位（v8）──
           refs.length > 0 || pickerOpen ? h('div', { className: 'snx-gen-refs' },
             h('div', { className: 'lb' },
-              h('span', { className: 'ti' }, '🖼'),
+              h('span', { className: 'ti' }, ic('images')),
               h('span', null, `参考图（${refs.length}/4）`),
               h('div', { style: { flex: 1 } }),
               h('span', { className: 'h' }, '风格 / 角色 / 构图'),
@@ -4544,17 +4865,17 @@ window.__ModuleLoader__.load({
               refs.map((r, i) => h('div', { key: i, className: 'snx-gen-ref' },
                 h('img', { src: r.src, alt: '', className: 'snx-gen-ref-img' }),
                 h('div', { className: 'snx-gen-ref-meta' },
-                  h('select', {
-                    className: 'snx-gen-ref-role',
+                  h(SnxSelect, {
                     value: r.role,
-                    onChange: (e) => setRefRole(i, e.target.value),
-                    title: '参考角色',
-                  },
-                    h('option', { value: 'reference' }, '参考'),
-                    h('option', { value: 'style' }, '风格'),
-                    h('option', { value: 'character' }, '角色'),
-                    h('option', { value: 'composition' }, '构图'),
-                  ),
+                    onChange: (v) => setRefRole(i, v),
+                    title: '参考角色', width: 74,
+                    options: [
+                      { value: 'reference', label: '参考' },
+                      { value: 'style', label: '风格' },
+                      { value: 'character', label: '角色' },
+                      { value: 'composition', label: '构图' },
+                    ],
+                  }),
                   h('input', {
                     type: 'range',
                     min: 10, max: 100, value: Math.round((r.strength ?? 0.7) * 100),
@@ -4577,7 +4898,7 @@ window.__ModuleLoader__.load({
                 className: 'snx-gen-ref-add', title: '上传本地图片作为参考图（改图）', style: { cursor: 'pointer' },
               },
                 h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onChange: uploadRef }),
-                '📂 上传') : null,
+                ic('upload'), ' 上传') : null,
             ),
             pickerOpen ? h('div', { className: 'snx-gen-ref-picker' },
               store.doc.nodes.filter((n) => n.status === 'done').slice().reverse().slice(0, 12).map((n) =>
@@ -4592,17 +4913,17 @@ window.__ModuleLoader__.load({
               type: 'button', className: 'snx-gen-refs-add',
               onClick: () => setPickerOpen(true),
               title: '添加参考图（Midjourney 风格 / 角色 / 构图）',
-            }, '🖼 + 多参考图'),
+            }, ic('image-plus'), ' + 多参考图'),
             h('label', {
               className: 'snx-gen-refs-add', title: '上传本地图片，写修改指令即可改图', style: { cursor: 'pointer', flex: 'none' },
             },
               h('input', { type: 'file', accept: 'image/*', style: { display: 'none' }, onChange: uploadRef }),
-              '✏️ 上传图片改图'),
+              ic('wand-sparkles'), ' 上传图片改图'),
           ),
           // ── 风格预设 ──
           h('div', { className: 'snx-gen-styles' },
             h('div', { className: 'lb' },
-              h('span', { className: 'ti' }, '✨'),
+              h('span', { className: 'ti' }, ic('sparkles')),
               h('span', null, '风格'),
               h('div', { style: { flex: 1 } }),
               h('button', {
@@ -4612,6 +4933,26 @@ window.__ModuleLoader__.load({
                 title: '清除风格后缀',
               }, styleId ? '清除' : ''),
             ),
+            // v10：命名预设一键套用（正/负提示词成套，设置页可维护）
+            loadPromptLib().presets.length ? h('div', { style: { marginBottom: '8px' } },
+              h(SnxSelect, {
+                value: '',
+                width: '100%',
+                popWidth: 260,
+                onChange: (name) => {
+                  const ps = loadPromptLib().presets.find((x) => x.name === name)
+                  if (!ps) return
+                  setPrompt(ps.prompt || '')
+                  genPrefs.prompt = ps.prompt || ''
+                  setNegPrompt(ps.negative || '')
+                  genPrefs.negPrompt = ps.negative || ''
+                  notify && notify('✓ 已套用预设「' + name + '」')
+                },
+                options: [{ value: '', label: '套用命名预设…' }].concat(
+                  loadPromptLib().presets.map((pp) => ({ value: pp.name, label: pp.name })),
+                ),
+              }),
+            ) : null,
             h('div', { className: 'snx-gen-styles-row' },
               STYLE_PRESETS.map((s) => h('button', {
                 key: s.id,
@@ -4633,7 +4974,7 @@ window.__ModuleLoader__.load({
               h('span', null, '负面提示词 / 种子 / 高级')),
             showAdv ? h('div', { className: 'snx-gen-fneg-body' },
               h('div', { className: 'lb' },
-                h('span', { className: 'ti' }, '🚫'),
+                h('span', { className: 'ti' }, ic('circle-x')),
                 h('span', null, '负面提示词'),
               ),
               h('textarea', {
@@ -4656,7 +4997,7 @@ window.__ModuleLoader__.load({
                     type: 'button',
                     onClick: () => setSeed(Math.floor(Math.random() * 1e9)),
                     title: '随机种子',
-                  }, '🎲'),
+                  }, ic('dices')),
                   h('span', { className: 'h' }, '-1 = 随机'),
                 ),
               ),
@@ -4666,7 +5007,7 @@ window.__ModuleLoader__.load({
         // ── 比例 + 尺寸 ──
         h('div', { className: 'snx-gen-fsize' },
           h('div', { className: 'lb' },
-            h('span', { className: 'ti' }, '⛶'),
+            h('span', { className: 'ti' }, ic('maximize')),
             h('span', null, '比例'),
             h('div', { style: { flex: 1 } }),
             h('span', { className: 'now' }, size),
@@ -4685,18 +5026,20 @@ window.__ModuleLoader__.load({
         h('div', { className: 'snx-gen-frow3' },
           h('div', { className: 'snx-gen-ff' },
             h('div', { className: 'lb' },
-              h('span', { className: 'ti' }, '🎛️'),
+              h('span', { className: 'ti' }, ic('sliders-horizontal')),
               h('span', null, '模型'),
             ),
-            h('select', {
-              className: 'snx-gen-sel',
+            h(SnxSelect, {
               value: model,
-              onChange: (e) => { setModel(e.target.value); genPrefs.model = e.target.value },
-            }, MODEL_PRESETS_FORM.map((p) => h('option', { key: p.id, value: p.id }, p.label))),
+              onChange: (v) => { setModel(v); genPrefs.model = v },
+              width: '100%',
+              popWidth: 240,
+              options: MODEL_PRESETS_FORM.map((p) => ({ value: p.id, label: p.label })),
+            }),
           ),
           h('div', { className: 'snx-gen-ff tiny' },
             h('div', { className: 'lb' },
-              h('span', { className: 'ti' }, '🎚'),
+              h('span', { className: 'ti' }, ic('sliders-horizontal')),
               h('span', null, '画质'),
             ),
             h('div', { className: 'snx-gen-seg' },
@@ -4727,7 +5070,7 @@ window.__ModuleLoader__.load({
           disabled: busy || !prompt.trim(),
           type: 'button',
         },
-          h('span', { className: 'ti' }, busy ? '⏳' : '✦'),
+          h('span', { className: 'ti' }, busy ? h('span', { className: 'snx-spinring' }) : ic('wand-sparkles')),
           h('span', null, busy ? '生成中…' : (anchor ? '生成 i2i' : '生成到画布')),
         ),
         err ? h('div', { className: 'snx-gen-err' }, err) : null,
@@ -4740,18 +5083,18 @@ window.__ModuleLoader__.load({
       if (nodes.length === 0) {
         return h('div', { className: 'snx-gen-recent' },
           h('div', { className: 'lb' },
-            h('span', { className: 'ti' }, '🖼'),
+            h('span', { className: 'ti' }, ic('images')),
             h('span', null, '最近生成'),
             h('div', { style: { flex: 1 } }),
             h('span', { className: 'h' }, '还没有'),
           ),
           h('div', { className: 'snx-gen-recent-empty' },
-            '生成出来的图会按时间倒序排在下面。点击图→「画布编辑」或「⛶ 大图」'),
+            '生成出来的图会按时间倒序排在下面。点击图→「画布编辑」或「大图」'),
         )
       }
       return h('div', { className: 'snx-gen-recent' },
         h('div', { className: 'lb' },
-          h('span', { className: 'ti' }, '🖼'),
+          h('span', { className: 'ti' }, ic('images')),
           h('span', null, `最近 ${nodes.length}`),
           h('div', { style: { flex: 1 } }),
           store.doc.nodes.length > nodes.length ? h('button', {
@@ -4806,7 +5149,7 @@ window.__ModuleLoader__.load({
               type: 'button', className: 'snx-gal-edit',
               title: '到画布改这张图：顶部输入修改指令，或用 重绘/消除/扩图/变体',
               onClick: (e) => { e.stopPropagation(); onEdit() },
-            }, '✏️ 改图') : null,
+            }, ic('pen-line'), ' 改图') : null,
           ),
         ),
       )
@@ -4853,8 +5196,8 @@ window.__ModuleLoader__.load({
           h('span', { className: 'snx-bsb-pct' }, Math.round(scale * 100) + '%'),
           h('button', { type: 'button', onClick: () => setScale(Math.min(8, scale * 1.25)) }, '+'),
           h('button', { type: 'button', onClick: () => setScale(1) }, '1:1'),
-          h('button', { type: 'button', onClick: () => fit() }, '⛶ 适应'),
-          h('button', { type: 'button', onClick: download, className: 'snx-bsb-dl' }, '⬇ 下载'),
+          h('button', { type: 'button', onClick: () => fit() }, ic('maximize'), ' 适应'),
+          h('button', { type: 'button', onClick: download, className: 'snx-bsb-dl' }, ic('download'), ' 下载'),
         ),
         loading ? h('div', { className: 'snx-bsb-load' }, h('div', { className: 'spin' }), '加载中…') :
         err ? h('div', { className: 'snx-bsb-err' }, err) :
@@ -4890,12 +5233,12 @@ window.__ModuleLoader__.load({
         return () => window.removeEventListener('keydown', onKey)
       }, [onClose])
       const groups = [
-        { title: '⚡ 生成', items: [
+        { title: '生成', items: [
           ['⌘ / Ctrl + Enter', '生图'],
-          ['⭐ (星标)', '收藏/取消收藏当前提示词'],
-          ['🖼 + 按钮', '添加多参考图（风格/角色/构图）'],
+          ['(星标)', '收藏/取消收藏当前提示词'],
+          ['+ 按钮', '添加多参考图（风格/角色/构图）'],
         ] },
-        { title: '🖼 画布编辑', items: [
+        { title: '画布编辑', items: [
           ['滚轮', '缩放'],
           ['Space + 拖动', '平移画布'],
           ['F', '适应画面'],
@@ -4903,18 +5246,18 @@ window.__ModuleLoader__.load({
           ['Ctrl + Z / Shift + Z', '撤销 / 重做'],
           ['Ctrl + D', '复制选中节点'],
           ['Ctrl + V / 拖入 PNG', '成节点，带 sensenova 参数自动读回'],
-          ['⌗ (左下角)', '按生成链整理布局'],
+          ['⌗ 整理（画布左下角）', '按生成链整理布局'],
           ['双击节点', '打开 lightbox'],
           ['右键节点', '上下文菜单（重绘/扩图/复制/删除）'],
         ] },
-        { title: '🖌 重绘模式', items: [
+        { title: '重绘模式', items: [
           ['涂抹', '标记要修改的区域'],
           ['大小滑块', '笔刷直径 8~200px'],
           ['不透明滑块', '标注透明度'],
           ['硬度滑块', '中心实色程度'],
           ['羽化滑块', '边缘虚化程度'],
         ] },
-        { title: '🔍 lightbox / 全屏画布', items: [
+        { title: '灯箱 / 全屏画布', items: [
           ['Esc', '关闭'],
           ['+ / −', '缩放'],
           ['0', '实际尺寸 1:1'],
@@ -4925,7 +5268,7 @@ window.__ModuleLoader__.load({
       return h('div', { className: 'snx-help-bg', onClick: onClose },
         h('div', { className: 'snx-help', onClick: (e) => e.stopPropagation() },
           h('div', { className: 'snx-help-top' },
-            h('span', { className: 'ti' }, '⌨️'),
+            h('span', { className: 'ti' }, ic('keyboard')),
             h('span', null, '快捷键速查'),
             h('div', { style: { flex: 1 } }),
             h('span', { className: 'h' }, '按 ? 关闭 · Esc 退出'),
@@ -4978,7 +5321,7 @@ window.__ModuleLoader__.load({
           ),
         ),
         h('div', { className: 'snx-qi-acts' },
-          st === 'done' ? h('button', { className: 'snx-qi-act', onClick: onOpen, type: 'button' }, '⛶') : null,
+          st === 'done' ? h('button', { className: 'snx-qi-act', onClick: onOpen, type: 'button' }, ic('maximize')) : null,
           (st === 'pending' || st === 'running') ? h('button', {
             className: 'snx-qi-act danger',
             onClick: (e) => { e.stopPropagation(); onCancel() },
@@ -5076,12 +5419,20 @@ window.__ModuleLoader__.load({
     }
 
     // ── Lightbox 全屏预览组件 ──
-    function Lightbox({ node, onClose, notify, onUseAsAnchor, onEdit, onDownload, onCopyParams, onRestoreParams, onDelete, onUpscale, onAdjust, onExport, onToggleFavorite, onOpenVersion }) {
+    const ADJ_SPECS = [
+      ['brightness', '亮度', -100, 100], ['contrast', '对比', -100, 100], ['saturation', '饱和', -100, 100],
+      ['hue', '色相', -180, 180], ['temp', '色温', -100, 100], ['vignette', '晕影', 0, 100],
+    ]
+    const ADJ_PRESETS = [
+      ['原片', {}], ['黑白', { saturation: -100 }], ['复古', { saturation: -15, temp: 30, vignette: 35, contrast: -8 }],
+      ['冷调', { temp: -45, saturation: 8 }], ['暖调', { temp: 45, saturation: 6 }], ['鲜艳', { saturation: 42, contrast: 12 }],
+    ]
+    function Lightbox({ node, onClose, notify, onUseAsAnchor, onEdit, onDownload, onCopyParams, onRestoreParams, onDelete, onUpscale, onAdjust, onExport, onToggleFavorite, onOpenVersion, onNav, nav, boards, onChangeBoard }) {
       const [scale, setScale] = useState(1)
-      // v8：调整（亮度/对比/饱和），实时预览
-      const [adjB, setAdjB] = useState((node && node.filters && node.filters.brightness) || 0)
-      const [adjC, setAdjC] = useState((node && node.filters && node.filters.contrast) || 0)
-      const [adjS, setAdjS] = useState((node && node.filters && node.filters.saturation) || 0)
+      // v10：调整（亮度/对比/饱和/色相/色温/晕影），ctx.filter 实时预览
+      const [adj, setAdj] = useState(() => Object.assign({ brightness: 0, contrast: 0, saturation: 0, hue: 0, temp: 0, vignette: 0 }, (node && node.filters) || {}))
+      const setAdjK = (k, v) => setAdj((prev) => Object.assign({}, prev, { [k]: v }))
+      const adjDirty = !!(adj.brightness || adj.contrast || adj.saturation || adj.hue || adj.temp || adj.vignette)
       const [exportOpen, setExportOpen] = useState(false)
       const [exportFmt, setExportFmt] = useState('png')
       const [exportQuality, setExportQuality] = useState(92)
@@ -5092,18 +5443,20 @@ window.__ModuleLoader__.load({
           else if (e.key === '+' || e.key === '=') setScale((s) => Math.min(4, s * 1.25))
           else if (e.key === '-') setScale((s) => Math.max(0.25, s / 1.25))
           else if (e.key === '0') setScale(1)
+          else if (e.key === 'ArrowLeft' && onNav) onNav(-1)
+          else if (e.key === 'ArrowRight' && onNav) onNav(1)
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-      }, [onClose])
-      // 应用调整 → 异步 canvas 重绘
+      }, [onClose, onNav])
+      // 应用调整 → GPU 滤镜实时预览
       const [adjustedSrc, setAdjustedSrc] = useState(node && node.src)
       useEffect(() => {
         let cancelled = false
-        if (!adjB && !adjC && !adjS) { setAdjustedSrc(node && node.src); return }
-        applyFiltersAsync(node && node.src, adjB, adjC, adjS).then((s) => { if (!cancelled) setAdjustedSrc(s) })
+        if (!(adj.brightness || adj.contrast || adj.saturation || adj.hue || adj.temp || adj.vignette)) { setAdjustedSrc(node && node.src); return }
+        applyFiltersGpu(node && node.src, adj).then((s) => { if (!cancelled) setAdjustedSrc(s) })
         return () => { cancelled = true }
-      }, [node && node.src, adjB, adjC, adjS])
+      }, [node && node.src, adj])
       const ts = node && node.ts ? new Date(node.ts) : null
       const date = ts ? `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}-${String(ts.getDate()).padStart(2, '0')} ${String(ts.getHours()).padStart(2, '0')}:${String(ts.getMinutes()).padStart(2, '0')}:${String(ts.getSeconds()).padStart(2, '0')}` : ''
       const params = node && node.params ? node.params : {}
@@ -5136,9 +5489,15 @@ window.__ModuleLoader__.load({
               }, fav ? '★' : '☆'),
             ),
             h('div', { style: { flex: 1 } }),
+            // v10：←/→ 在已完成图中翻页
+            onNav && nav && nav.total > 1 ? h('div', { className: 'snx-lb-nav' },
+              h('button', { type: 'button', onClick: () => onNav(-1), title: '上一张 (←)' }, '←'),
+              h('span', { className: 'snx-lb-navct' }, (nav.idx + 1) + ' / ' + nav.total),
+              h('button', { type: 'button', onClick: () => onNav(1), title: '下一张 (→)' }, '→'),
+            ) : null,
             // v8：放大按钮
-            h('button', { type: 'button', className: 'snx-lb-up', onClick: () => onUpscale && onUpscale(node, 2), title: '2x 放大重生成' }, '🔍 2x'),
-            h('button', { type: 'button', className: 'snx-lb-up', onClick: () => onUpscale && onUpscale(node, 4), title: '4x 放大重生成' }, '🔍 4x'),
+            h('button', { type: 'button', className: 'snx-lb-up', onClick: () => onUpscale && onUpscale(node, 2), title: '2x 放大重生成' }, '2x'),
+            h('button', { type: 'button', className: 'snx-lb-up', onClick: () => onUpscale && onUpscale(node, 4), title: '4x 放大重生成' }, '4x'),
             h('div', { className: 'snx-lb-zoom' },
               h('button', { type: 'button', onClick: () => setScale((s) => Math.max(0.25, s / 1.25)), title: '缩小 (-)' }, '−'),
               h('span', null, Math.round(scale * 100) + '%'),
@@ -5151,36 +5510,50 @@ window.__ModuleLoader__.load({
           h('div', { className: 'snx-lb-body' },
             // 左：版本树
             tree ? h('aside', { className: 'snx-lb-tree' },
-              h('div', { className: 'snx-lb-tree-h' }, '🌳 衍生链'),
+              h('div', { className: 'snx-lb-tree-h' }, ic('git-fork'), ' 衍生链'),
               h(VersionTree, { tree, currentId: node && node.id, onSelect: onOpenVersion }),
             ) : null,
-            // 中：图片
+            // 中：图片（v10：调整面板停靠到右栏，图上不再悬浮遮挡）
             h('div', { className: 'snx-lb-stage' },
               h('div', { className: 'snx-lb-imgwrap', style: { transform: 'scale(' + scale + ')' } },
                 h('img', { src: adjustedSrc, alt: '', className: 'snx-lb-img' }),
               ),
-              // v8：调整滑块（浮在图上）
-              h('div', { className: 'snx-lb-adj' },
+            ),
+            // 右：调整（停靠）+ 详情 + 操作
+            h('aside', { className: 'snx-lb-side' },
+              // v10：调整面板
+              h('div', { className: 'snx-lb-adj2' },
                 h('div', { className: 'snx-lb-adj-h' },
-                  h('span', null, '🎛 调整'),
+                  ic('sliders-horizontal'), h('span', null, '调整'),
                   h('div', { style: { flex: 1 } }),
-                  (adjB || adjC || adjS) ? h('button', {
+                  h('span', { className: 'snx-lb-adj-live' }, '实时预览'),
+                ),
+                ADJ_SPECS.map(([k, label, min, max]) => h('label', { key: k, className: 'snx-adjrow' },
+                  h('span', null, label),
+                  h('input', { type: 'range', min, max, value: adj[k] || 0, onChange: (e) => setAdjK(k, parseInt(e.target.value, 10)) }),
+                  h('span', { className: 'v' }, adj[k] || 0),
+                )),
+                h('div', { className: 'snx-lb-presets' },
+                  ADJ_PRESETS.map(([name, vals]) => h('button', {
+                    key: name, type: 'button', className: 'snx-lb-preset',
+                    onClick: () => setAdj(Object.assign({ brightness: 0, contrast: 0, saturation: 0, hue: 0, temp: 0, vignette: 0 }, vals)),
+                  }, name)),
+                ),
+                h('div', { style: { display: 'flex', gap: '8px' } },
+                  h('button', {
                     type: 'button', className: 'snx-lb-adj-rst',
-                    onClick: () => { setAdjB(0); setAdjC(0); setAdjS(0) },
-                  }, '↺ 重置') : null,
+                    onClick: () => setAdj({ brightness: 0, contrast: 0, saturation: 0, hue: 0, temp: 0, vignette: 0 }),
+                    disabled: !adjDirty,
+                    style: { flex: 1 },
+                  }, ic('rotate-ccw'), ' 重置'),
                   h('button', {
                     type: 'button', className: 'snx-lb-adj-save',
-                    onClick: () => onAdjust && onAdjust(node, { brightness: adjB, contrast: adjC, saturation: adjS }),
-                    disabled: !adjB && !adjC && !adjS,
-                  }, '💾 应用'),
+                    onClick: () => onAdjust && onAdjust(node, adj),
+                    disabled: !adjDirty,
+                    style: { flex: 1 },
+                  }, ic('check'), ' 应用'),
                 ),
-                h('label', null, h('span', null, '亮度'), h('input', { type: 'range', min: -100, max: 100, value: adjB, onChange: (e) => setAdjB(parseInt(e.target.value, 10)) }), h('span', { className: 'v' }, adjB)),
-                h('label', null, h('span', null, '对比'), h('input', { type: 'range', min: -100, max: 100, value: adjC, onChange: (e) => setAdjC(parseInt(e.target.value, 10)) }), h('span', { className: 'v' }, adjC)),
-                h('label', null, h('span', null, '饱和'), h('input', { type: 'range', min: -100, max: 100, value: adjS, onChange: (e) => setAdjS(parseInt(e.target.value, 10)) }), h('span', { className: 'v' }, adjS)),
               ),
-            ),
-            // 右：详情
-            h('aside', { className: 'snx-lb-side' },
               h('div', { className: 'snx-lb-meta' },
                 h('div', { className: 'snx-lb-pr' },
                   h('div', { className: 'lb' }, '提示词'),
@@ -5195,27 +5568,37 @@ window.__ModuleLoader__.load({
                   node && node.params && node.params.fromChat ? h('div', null, h('span', { className: 'k' }, '来源'), h('span', { className: 'v' }, '聊天生成')) : null,
                 ),
               ),
+              // v10：画板归属
+              h('div', { className: 'snx-lb-meta', style: { marginBottom: '10px' } },
+                h('div', { className: 'lb' }, ic('folder-plus'), ' 画板'),
+                h(SnxSelect, {
+                  value: (node && node.boardId) || '',
+                  width: '100%',
+                  onChange: (v) => onChangeBoard && onChangeBoard(node, v),
+                  options: [{ value: '', label: '未分组' }].concat((boards || []).map((b) => ({ value: b.id, label: b.name }))),
+                }),
+              ),
               h('div', { className: 'snx-lb-acts' },
-                h('button', { className: 'snx-lb-act go', type: 'button', onClick: onUseAsAnchor }, '🎨 作为参考图'),
-                h('button', { className: 'snx-lb-act', type: 'button', onClick: onEdit }, '✏️ 画布编辑'),
-                h('button', { className: 'snx-lb-act', type: 'button', onClick: onCopyParams }, '📋 复制参数'),
+                h('button', { className: 'snx-lb-act go', type: 'button', onClick: onUseAsAnchor }, ic('image-plus'), ' 作为参考图'),
+                h('button', { className: 'snx-lb-act', type: 'button', onClick: onEdit }, ic('pen-tool'), ' 画布编辑'),
+                h('button', { className: 'snx-lb-act', type: 'button', onClick: onCopyParams }, ic('clipboard-copy'), ' 复制参数'),
                 h('button', {
                   className: 'snx-lb-act', type: 'button', title: '把这张图的提示词与全部生成参数回填到生图表单',
                   onClick: () => onRestoreParams && onRestoreParams(node),
                 }, '⤵ 回填参数'),
-                h('button', { className: 'snx-lb-act', type: 'button', onClick: onDownload }, '⬇ 原始下载'),
-                h('button', { className: 'snx-lb-act', type: 'button', onClick: () => setExportOpen(!exportOpen) }, '📦 导出…'),
-                h('button', { className: 'snx-lb-act danger', type: 'button', onClick: onDelete }, '🗑 删除'),
+                h('button', { className: 'snx-lb-act', type: 'button', onClick: onDownload }, ic('download'), ' 原始下载'),
+                h('button', { className: 'snx-lb-act', type: 'button', onClick: () => setExportOpen(!exportOpen) }, ic('package'), ' 导出…'),
+                h('button', { className: 'snx-lb-act danger', type: 'button', onClick: onDelete }, ic('trash-2'), ' 删除'),
               ),
               // v8：导出面板
               exportOpen ? h('div', { className: 'snx-lb-export' },
-                h('div', { className: 'lb' }, '📦 导出设置'),
+                h('div', { className: 'lb' }, ic('package'), ' 导出设置'),
                 h('label', null, h('span', null, '格式'),
-                  h('select', { value: exportFmt, onChange: (e) => setExportFmt(e.target.value) },
-                    h('option', { value: 'png' }, 'PNG（无损）'),
-                    h('option', { value: 'jpg' }, 'JPG（压缩）'),
-                    h('option', { value: 'webp' }, 'WebP（推荐）'),
-                  ),
+                  h(SnxSelect, { value: exportFmt, onChange: (v) => setExportFmt(v), width: 130, options: [
+                    { value: 'png', label: 'PNG（无损）' },
+                    { value: 'jpg', label: 'JPG（压缩）' },
+                    { value: 'webp', label: 'WebP（推荐）' },
+                  ] }),
                 ),
                 exportFmt !== 'png' ? h('label', null, h('span', null, '质量'),
                   h('input', { type: 'range', min: 50, max: 100, value: exportQuality, onChange: (e) => setExportQuality(parseInt(e.target.value, 10)) }),
@@ -5237,7 +5620,7 @@ window.__ModuleLoader__.load({
                         notify && notify('✓ 图像已复制到剪贴板')
                       } catch (e) { notify && notify('✗ 复制失败：' + String((e && e.message) || e)) }
                     },
-                  }, '📋 复制图像'),
+                  }, ic('copy'), ' 复制图像'),
                   h('button', { type: 'button', className: 'snx-lb-act', onClick: () => setExportOpen(false) }, '取消'),
                 ),
               ) : null,
@@ -5293,6 +5676,44 @@ window.__ModuleLoader__.load({
         t.children.length ? h('div', { className: 'snx-tree-children' }, t.children.map(renderNode)) : null,
       )
       return h('div', { className: 'snx-tree' }, renderNode(tree))
+    }
+
+    // ——— v10：GPU 滤镜管线（ctx.filter + soft-light 色温层 + 径向晕影），任意尺寸实时预览 ———
+    function applyFiltersGpu(src, adj) {
+      return new Promise((resolve) => {
+        const dirty = adj && (adj.brightness || adj.contrast || adj.saturation || adj.hue || adj.temp || adj.vignette)
+        if (!src || !dirty) { resolve(src); return }
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.onload = () => {
+          try {
+            const cv = document.createElement('canvas')
+            cv.width = img.naturalWidth; cv.height = img.naturalHeight
+            const cx = cv.getContext('2d')
+            cx.filter = `brightness(${1 + (adj.brightness || 0) / 100}) contrast(${1 + (adj.contrast || 0) / 100}) saturate(${1 + (adj.saturation || 0) / 100}) hue-rotate(${adj.hue || 0}deg)`
+            cx.drawImage(img, 0, 0)
+            cx.filter = 'none'
+            const t = adj.temp || 0
+            if (t) {
+              cx.globalCompositeOperation = 'soft-light'
+              cx.fillStyle = t > 0 ? `rgba(255,138,40,${t / 220})` : `rgba(70,140,255,${-t / 220})`
+              cx.fillRect(0, 0, cv.width, cv.height)
+              cx.globalCompositeOperation = 'source-over'
+            }
+            const v = adj.vignette || 0
+            if (v) {
+              const g = cx.createRadialGradient(cv.width / 2, cv.height / 2, Math.min(cv.width, cv.height) * 0.42, cv.width / 2, cv.height / 2, Math.max(cv.width, cv.height) * 0.72)
+              g.addColorStop(0, 'rgba(0,0,0,0)')
+              g.addColorStop(1, `rgba(0,0,0,${v / 100})`)
+              cx.fillStyle = g
+              cx.fillRect(0, 0, cv.width, cv.height)
+            }
+            resolve(cv.toDataURL('image/png'))
+          } catch (e) { resolve(src) }
+        }
+        img.onerror = () => resolve(src)
+        img.src = src
+      })
     }
 
     // ——— v8：图片滤镜（亮度/对比/饱和）实时预览 ———
@@ -5480,7 +5901,7 @@ window.__ModuleLoader__.load({
       return h('div', { className: 'snx-cfg', style: { maxWidth: '640px' } },
         // ——— API Key ———
         h('div', { className: 'snx-cfg-row' },
-          h('label', { className: 'snx-cfg-lb' }, '🔑 API Key'),
+          h('label', { className: 'snx-cfg-lb' }, 'API Key'),
           h('span', { className: 'snx-cfg-hint' }, ' 商汤 SenseNova 控制台 → API Key 管理。留空 = 不修改（保留现有/环境变量）'),
           h('div', { className: 'snx-cfg-in-wrap' },
             h('input', {
@@ -5496,12 +5917,12 @@ window.__ModuleLoader__.load({
               className: 'snx-cfg-eye', type: 'button',
               onClick: () => setShowKey(!showKey),
               title: showKey ? '隐藏' : '显示',
-            }, showKey ? '🙈' : '👁'),
+            }, showKey ? ic('eye-off') : ic('eye')),
           ),
         ),
         // ——— baseUrl ———
         h('div', { className: 'snx-cfg-row' },
-          h('label', { className: 'snx-cfg-lb' }, '🌐 baseUrl'),
+          h('label', { className: 'snx-cfg-lb' }, 'baseUrl'),
           h('span', { className: 'snx-cfg-hint' }, ' 一般无需改。默认 https://token.sensenova.cn/v1'),
           h('input', {
             className: 'snx-cfg-in', value: baseUrl,
@@ -5511,17 +5932,17 @@ window.__ModuleLoader__.load({
         ),
         // ——— 模型 ———
         h('div', { className: 'snx-cfg-row' },
-          h('label', { className: 'snx-cfg-lb' }, '🎛️ 模型'),
+          h('label', { className: 'snx-cfg-lb' }, '模型'),
           h('span', { className: 'snx-cfg-hint' }, ' 选预设或自定义。控制台「模型广场」可查实际 id。'),
-          h('select', {
-            className: 'snx-cfg-sel',
+          h(SnxSelect, {
             value: presetsInited ? modelPreset : '__keep__',
-            onChange: (e) => {
-              const v = e.target.value
+            onChange: (v) => {
               setModelPreset(v)
               if (v !== '__keep__' && v !== '__custom__') setModel(v)
             },
-          }, MODEL_PRESETS.map((p) => h('option', { value: p.id }, p.label))),
+            popWidth: 300,
+            options: MODEL_PRESETS.map((p) => ({ value: p.id, label: p.label })),
+          }),
           modelPreset === '__custom__'
             ? h('input', {
               className: 'snx-cfg-in', style: { marginTop: '8px', fontFamily: 'var(--mono, monospace)' },
@@ -5535,9 +5956,9 @@ window.__ModuleLoader__.load({
         ),
         // ——— 按钮组 ———
         h('div', { className: 'snx-cfg-actions' },
-          h('button', { className: 'snx-cfg-go', onClick: save }, '💾 保存设置'),
+          h('button', { className: 'snx-cfg-go', onClick: save }, ic('save'), ' 保存设置'),
           h('button', { className: 'snx-cfg-test', onClick: test, disabled: testing },
-            testing ? '⏳ 测试中…' : '🔌 测试连接'),
+            testing ? [h('span', { className: 'snx-spinring' }), ' 测试中…'] : ic('plug'), ' 测试连接'),
         ),
         msg ? h('div', { className: 'snx-cfg-msg ' + (msg.startsWith('✓') ? 'ok' : 'err') }, msg) : null,
         testMsg ? h('div', { className: 'snx-cfg-msg ' + (testMsg.startsWith('✓') ? 'ok' : 'err') }, testMsg) : null,
@@ -5574,7 +5995,7 @@ window.__ModuleLoader__.load({
             kind: SNX_TAB_KIND,
             priority: 'plugin',
             title: () => 'SenseNova 生图',
-            icon: () => h('span', { className: 'snx-rb-ico' }, '✦'),
+            icon: () => h('span', { className: 'snx-rb-ico' }, ic('zap')),
           })
           // 2) 注册 tab body 渲染组件
           ctx.slots.inject('sidebar.right.pane.tab', () =>
@@ -5591,7 +6012,7 @@ window.__ModuleLoader__.load({
           ctx.slots.inject('sidebar.right.pane.tab.title', () =>
             ctx.slots.register({ name: 'sidebar.right.pane.tab.title', key: SNX_TAB_KEY },
               () => h('span', { className: 'snx-rb-title' },
-                h('span', { className: 'snx-rb-ico' }, '✦'),
+                h('span', { className: 'snx-rb-ico' }, ic('zap')),
                 'SenseNova 生图',
               )))
         }, 'sensenova-image: sidebar.right.pane.tab.title')
@@ -5609,7 +6030,7 @@ window.__ModuleLoader__.load({
                 id: 'dsh-sensenova-image:workbench',
                 title: () => 'SenseNova 生图',
                 description: () => '商汤 U1.5 多模态生图工作台：并发队列 / 多参考图 / 画笔 / 全屏画布',
-                icon: () => h('span', { className: 'snx-rb-ico' }, '✦'),
+                icon: () => h('span', { className: 'snx-rb-ico' }, ic('zap')),
                 order: 60,
                 single: true,
                 component: function SenseNovaWorkbench() {
