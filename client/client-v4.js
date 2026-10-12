@@ -1038,6 +1038,7 @@ window.__ModuleLoader__.load({
 .snx-cmp-stage{
   position:relative;background:var(--dsw-alias-bg-document-preview,#151517);border-radius:8px;overflow:hidden;
   aspect-ratio:1;cursor:ew-resize;user-select:none;
+  width:100%;max-width:460px;margin:0 auto;
   border:1px solid var(--dsw-alias-border-l2,#ffffff1f);
 }
 .snx-cmp-base,.snx-cmp-clip img{display:block;width:100%;height:100%;object-fit:contain}
