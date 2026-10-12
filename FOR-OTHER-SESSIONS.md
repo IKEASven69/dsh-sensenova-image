@@ -122,3 +122,9 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 8. **Boards 画板**：doc.boards + node.boardId；画廊画板筛选条（全部/未分组/各画板/＋新建/右键删）；灯箱画板归属 SnxSelect。
 
 **坑**：`node -e "..."` 双引号里写含模板字符串/`${}` 的补丁必被 bash 吃掉（enhancePrompt 两次损坏）——**复杂补丁一律 Edit 工具原样写入**。合成测试滑块要先挪值再 dispatch（React valueTracker 同步 direct-assign 的值，不挪 React 看不到 diff）。
+
+## v10 验收自检补遗（2026-10-12，用户质疑后全面对账）
+
+用户抓到画板 chip 是裸原生按钮——className 对账脚本（JS className 使用 vs CSS 定义全量 diff）查出 6 个无样式类：chip（v10 新增，原型类没带样式）+ snx-gen-fneg / snx-gen-fsize / snx-help-g / snx-lb-pr / snx-tree-node（工作流时代存量）。全部补齐。
+
+画板筛选逻辑曾缺失：插入脚本被 bash 模板插值吃掉后只写入了 chips 没写入过滤块（数据在、渲染假），已补。画板新建从原生 prompt() 改内联输入行（原生弹窗既 low 又无法自动化）。验收自检记录：①模块 done ②模型下拉 3 选项 ③预设 CRUD→生图页套用回填 E2E ④队列暂停/继续 ⑤画板新建/归属/筛选 1/5 ⑥对比渲染 ⑦增强/抠图飞出字段齐全。

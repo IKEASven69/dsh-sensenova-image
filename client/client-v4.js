@@ -1693,6 +1693,21 @@ window.__ModuleLoader__.load({
 .snx-lb-adj-save{background:var(--snx-acf);border:none;color:var(--dsw-alias-label-primary-foreground,#fff);font-weight:600}
 .snx-lb-adj-save:hover:not(:disabled){filter:brightness(1.15)}
 .snx-lb-adj-rst:disabled,.snx-lb-adj-save:disabled{opacity:.45;cursor:default}
+
+/* ── v10.1：对账补漏（无样式类全修）─── */
+.snx-gal-bar .chip{background:none;border:1px solid var(--dsw-alias-border-l2,#ffffff1f);color:var(--dsw-alias-label-tertiary,#adb2b8);
+  font-size:11.5px;font-family:inherit;border-radius:999px;padding:3px 12px;cursor:pointer;transition:all .15s}
+.snx-gal-bar .chip:hover{color:var(--dsw-alias-label-primary,#f9fafb);border-color:var(--dsw-alias-label-caption,#81858c)}
+.snx-gal-bar .chip.on{border-color:var(--snx-ac);color:var(--snx-ac);background:color-mix(in srgb,var(--snx-ac) 12%,transparent)}
+.snx-gal-bar .lbl{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--dsw-alias-label-tertiary,#adb2b8);letter-spacing:.04em}
+.snx-gal-bar .lbl svg{flex:none}
+.snx-gen-fneg{margin-top:10px;border-top:1px dashed var(--dsw-alias-border-l2,#ffffff1f);padding-top:8px}
+.snx-gen-fsize{margin-top:8px}
+.snx-help-g{font-size:11px;color:var(--snx-ac);letter-spacing:.08em;margin:12px 0 6px;font-weight:600}
+.snx-lb-pr{margin-bottom:10px}
+.snx-lb-pr .lb{font-size:11px;color:var(--dsw-alias-label-tertiary,#adb2b8);margin-bottom:5px}
+.snx-lb-pr .val{font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,#cfd3d6);max-height:110px;overflow-y:auto;word-break:break-all}
+.snx-tree-node{margin:2px 0}
 `
 
 
@@ -3092,6 +3107,8 @@ window.__ModuleLoader__.load({
       const [galSort, setGalSort] = useState('time')
       const [galFav, setGalFav] = useState(false)
       const [galBoard, setGalBoard] = useState('')   // v10：'' 全部 / 'none' 未分组 / boardId
+      const [galBdCreating, setGalBdCreating] = useState(false)
+      const [galBdName, setGalBdName] = useState('')
       // 设置页：Key 内联配置（renderSettingsMode 是内联函数，状态必须挂在顶层）
       const [keyDraft, setKeyDraft] = useState('')
       const [keyVisible, setKeyVisible] = useState(false)
@@ -3874,7 +3891,18 @@ window.__ModuleLoader__.load({
         const [favOnly, setFavOnly] = [galFav, setGalFav]
         const [boardFilter, setBoardFilter] = [galBoard, setGalBoard]
         const boards = store.doc.boards || (store.doc.boards = [])
+        const [bdCreating, setBdCreating] = [galBdCreating, setGalBdCreating]
+        const [bdName, setBdName] = [galBdName, setGalBdName]
+        const createBoard = () => {
+          const name = bdName.trim()
+          if (!name) return
+          store.doc.boards = (store.doc.boards || []).concat([{ id: nid(), name }])
+          autosave(); setGalBdName(''); setGalBdCreating(false); force((x) => x + 1)
+        }
         let nodes = store.doc.nodes.slice().reverse()
+        // v10：画板筛选（空=全部；none=未分组）
+        if (boardFilter === 'none') nodes = nodes.filter((n) => !n.boardId)
+        else if (boardFilter) nodes = nodes.filter((n) => n.boardId === boardFilter)
         // 提取全部 tags
         const allTags = Array.from(new Set(nodes.flatMap((n) => (n.tags || []))))
         // 过滤
@@ -3906,12 +3934,16 @@ window.__ModuleLoader__.load({
                 autosave(); force((x) => x + 1)
               },
             }, b.name)),
-            h('button', { className: 'chip', type: 'button', title: '新建画板', onClick: () => {
-              const name = (prompt('画板名称：') || '').trim()
-              if (!name) return
-              store.doc.boards = (store.doc.boards || []).concat([{ id: nid(), name }])
-              autosave(); force((x) => x + 1)
-            } }, '＋ 新建'),
+            bdCreating ? h('span', { style: { display: 'inline-flex', gap: '4px', alignItems: 'center' } },
+              h('input', {
+                placeholder: '画板名称', value: bdName, autoFocus: true,
+                onChange: (e) => setBdName(e.target.value),
+                onKeyDown: (e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) createBoard(); if (e.key === 'Escape') { setBdCreating(false); setBdName('') } },
+                style: { background: 'var(--dsw-alias-bg-module-platform,#353638)', border: '1px solid var(--snx-ac)', borderRadius: '6px', color: 'var(--dsw-alias-label-primary,#f9fafb)', padding: '3px 8px', fontSize: '11.5px', fontFamily: 'inherit', width: '120px', outline: 'none' },
+              }),
+              h('button', { className: 'chip on', type: 'button', onClick: createBoard, disabled: !bdName.trim(), style: { opacity: bdName.trim() ? 1 : 0.5 } }, '✓'),
+              h('button', { className: 'chip', type: 'button', onClick: () => { setBdCreating(false); setBdName('') } }, '✕'),
+            ) : h('button', { className: 'chip', type: 'button', title: '新建画板', onClick: () => setGalBdCreating(true) }, '＋ 新建'),
             h('div', { style: { flex: 1 } }),
           ),
           h('div', { className: 'snx-gal-bar' },
