@@ -1708,6 +1708,22 @@ window.__ModuleLoader__.load({
 .snx-lb-pr .lb{font-size:11px;color:var(--dsw-alias-label-tertiary,#adb2b8);margin-bottom:5px}
 .snx-lb-pr .val{font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,#cfd3d6);max-height:110px;overflow-y:auto;word-break:break-all}
 .snx-tree-node{margin:2px 0}
+
+/* ── v10.2：质感补课（品牌/主按钮/页签/对比手柄）─── */
+.snx-pro-ico{background:linear-gradient(135deg,#4176e6,#22d3ee);color:var(--dsw-alias-label-primary-foreground,#fff);border-radius:6px}
+.snx-cv-top .brand::before{content:"";display:inline-block;width:18px;height:18px;margin-right:8px;vertical-align:-4px;border-radius:5px;
+  background:linear-gradient(135deg,#4176e6,#22d3ee) ;box-shadow:0 2px 8px color-mix(in srgb,var(--snx-accent) 40%,transparent)}
+.snx-cv-gen,.snx-gen-go{background:linear-gradient(135deg,var(--snx-accent-fill),color-mix(in srgb,var(--snx-accent) 55%,#22d3ee))!important;
+  box-shadow:0 4px 16px color-mix(in srgb,var(--snx-accent) 32%,transparent);transition:box-shadow .15s,filter .15s}
+.snx-cv-gen:hover:not(:disabled),.snx-gen-go:hover:not(.disabled):not(.busy){box-shadow:0 6px 24px color-mix(in srgb,var(--snx-accent) 52%,transparent);filter:brightness(1.08)}
+.snx-pro-tabs button{border-radius:8px 8px 0 0;transition:color .15s,background .15s}
+.snx-pro-tabs button.on{background:color-mix(in srgb,var(--snx-accent) 9%,transparent)}
+.snx-cmp-handle-bar{width:3px;border-radius:2px}
+.snx-cmp-handle-knob{width:40px;height:40px;font-size:15px;letter-spacing:-1px}
+.snx-cmp-tag{padding:4px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(4px)}
+.snx-cmp-tag.l{border:1px solid rgba(255,255,255,.4);background:rgba(10,10,14,.6)}
+.snx-cmp-tag.r{border:1px solid color-mix(in srgb,var(--snx-accent) 60%,transparent)}
+.snx-snack{border-left:3px solid var(--snx-ac)}
 `
 
 
