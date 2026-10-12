@@ -128,3 +128,17 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 用户抓到画板 chip 是裸原生按钮——className 对账脚本（JS className 使用 vs CSS 定义全量 diff）查出 6 个无样式类：chip（v10 新增，原型类没带样式）+ snx-gen-fneg / snx-gen-fsize / snx-help-g / snx-lb-pr / snx-tree-node（工作流时代存量）。全部补齐。
 
 画板筛选逻辑曾缺失：插入脚本被 bash 模板插值吃掉后只写入了 chips 没写入过滤块（数据在、渲染假），已补。画板新建从原生 prompt() 改内联输入行（原生弹窗既 low 又无法自动化）。验收自检记录：①模块 done ②模型下拉 3 选项 ③预设 CRUD→生图页套用回填 E2E ④队列暂停/继续 ⑤画板新建/归属/筛选 1/5 ⑥对比渲染 ⑦增强/抠图飞出字段齐全。
+
+## v10.5：侧边栏宽度自适应全量修复（2026-10-12，用户："侧边栏宽度拉伸之后各个宽度的适配没做"）
+
+方法：Playwright 起真 Chromium，把 `.snx-pro` 宽度逐档设为 280→960（14 档）× 6 视图，程序化收集「自身 overflow 可见且 scrollWidth 超宽」+「矩形出界」两类**真实**破版（overflow:hidden 的设计性截断如生成按钮扫光 ::after、hero 数字 ellipsis 不算），首扫 44 个组合报警，定位后修复，复扫 **0**。再用右侧 dock 真实拖拽手柄（col-resize）340→500→900→299 四档复查，全部干净。Konva 画布早有 ResizeObserver 跟随（2505 行），无需改。
+
+四个真根因（都是恒定溢出，与容器宽度无关，宽窄全坏）：
+1. **参考图 CTA 行**：空状态两个按钮都 `width:100%` 塞一条不换行 flex 行，label 还 inline `flex:'none'` 拒绝收缩 → 内容钉在 min-content 总和，恒定 +52px；窄档「上传图片改图」直接出界被裁。修：JSX 换 `.snx-gen-refcta` 类（wrap + `flex:1 1 140px`）。
+2. **`.snx-gal-q` 搜索框**：全项目无全局 border-box 复位，它 content-box + `width:100%` + padding 18 + border 2 = 恒定 +8。修：补 `box-sizing:border-box`。
+3. **`.snx-pbar` 画布悬浮提示条**：`left:50%` 居中 + `max-width:72%` 但 input `min-width:240px` → 280-520px 全溢出（最宽 +183，input 出界 103px）。修：改 `left:12px;right:12px` 流式锚定 + input `flex:1;min-width:0`。
+4. **设置页 API Key 行**：input inline `flex:1` 但 min-width:auto 钉在 min-content，+ 隐藏按钮 66px → 280px 档 +9。修：input 加 `minWidth:0`。
+
+宽档观感顺带升级（拉伸变宽不再稀疏）：`.snx-gal-grid` 2 固定列 → `auto-fill minmax(132px,1fr)`；gen-thumbs 4 列 → minmax(88)；队列 summary 4 列 → minmax(96)；对比画廊池 8 列 → minmax(44)；参考选择器 4 列 → minmax(64)；帮助弹窗 2 列 → auto-fit minmax(210)。≤379 断点里对应的列数覆盖删除（auto-fill 自治）。`.snx-cmp-picks` 保持 `repeat(4,1fr)`——它是语义上的固定 A/B/2 槽位，不是缩略图池。
+
+**坑**：探测脚本要区分 overflow:hidden 的 scrollWidth 虚报（扫光动画/ellipsis 都会报）；拖拽手柄拖完会换位置，连拖多档必须每档重新取手柄坐标（stale box 让第 2-4 拖全空）。测试实例：用户实例别杀（5181 有活连接），另起 `dsh web --no-open --port 5183`；client-v4.js 是硬链接，页面重载即生效，无需重启实例。
