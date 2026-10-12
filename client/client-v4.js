@@ -1042,9 +1042,7 @@ window.__ModuleLoader__.load({
 }
 .snx-cmp-base,.snx-cmp-clip img{display:block;width:100%;height:100%;object-fit:contain}
 .snx-cmp-clip{
-  position:absolute;top:0;left:0;height:100%;overflow:hidden;
-  border-right:2px solid var(--snx-accent);
-  box-shadow:4px 0 16px color-mix(in srgb,var(--snx-accent) 30%,transparent);
+  position:absolute;inset:0;overflow:hidden;pointer-events:none;
 }
 .snx-cmp-handle{
   position:absolute;top:0;bottom:0;width:2px;transform:translateX(-50%);
@@ -5390,16 +5388,14 @@ window.__ModuleLoader__.load({
     function ComparePair({ a, b }) {
       const [pos, setPos] = useState(50)
       return h('div', { className: 'snx-cmp-pair' },
-        h('div', { className: 'snx-cmp-stage' },
-          h('img', { className: 'snx-cmp-base', src: a.src, alt: 'A' }),
-          h('div', { className: 'snx-cmp-clip', style: { width: pos + '%' } },
-            h('img', { src: b.src, alt: 'B' }),
+        h('div', { className: 'snx-cmp-stage', onMouseDown: startDrag, onTouchStart: startDrag, onDoubleClick: () => setPos(50) },
+          h('img', { className: 'snx-cmp-base', src: a.src, alt: 'A', draggable: false }),
+          h('div', { className: 'snx-cmp-clip', style: { clipPath: 'inset(0 ' + (100 - pos) + '% 0 0)' } },
+            h('img', { src: b.src, alt: 'B', draggable: false }),
           ),
           h('div', {
             className: 'snx-cmp-handle',
             style: { left: pos + '%' },
-            onMouseDown: startDrag,
-            onTouchStart: startDrag,
           },
             h('div', { className: 'snx-cmp-handle-bar' }),
             h('div', { className: 'snx-cmp-handle-knob' }, '⇄'),
@@ -5420,7 +5416,7 @@ window.__ModuleLoader__.load({
       )
       function startDrag(e) {
         e.preventDefault()
-        const stage = e.currentTarget.parentElement
+        const stage = e.currentTarget
         const onMove = (ev) => {
           const rect = stage.getBoundingClientRect()
           const clientX = ev.touches ? ev.touches[0].clientX : ev.clientX
