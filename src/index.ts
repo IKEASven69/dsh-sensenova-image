@@ -557,6 +557,31 @@ export function apply(ctx: Context, rawConfig: Config) {
     })()
   })
 
+  // P1-2：参考图落盘路由（无副作用，不进画布）——客户端在上传 dataURL 参考图入队前
+  // 先换成本文件 URL，失败重试才有图可带（否则静默变文生图）
+  reg('/api/sensenova/upload', (req, res) => {
+    if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
+    const origin = String(req.headers?.origin ?? '')
+    if (origin) {
+      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
+    }
+    void (async () => {
+      try {
+        const body = JSON.parse((await readBody(req)) || '{}')
+        const src = body.src ? String(body.src) : ''
+        if (!src) { sendJson(res, 400, { ok: false, error: 'src required' }); return }
+        // 已是自家文件引用就原样返回（幂等，不重复落盘）
+        if (src.startsWith('/api/sensenova/image/')) { sendJson(res, 200, { ok: true, url: src, persisted: false }); return }
+        const kind = src.startsWith('data:') ? 'base64' : src.startsWith('http') ? 'url' : 'path'
+        const saved = await persistImage(kind, src)
+        if (!saved) { sendJson(res, 502, { ok: false, error: '参考图落盘失败（URL 不可达或非图片）' }); return }
+        sendJson(res, 200, { ok: true, url: saved.url, id: saved.id })
+      } catch (e) {
+        sendJson(res, 500, { ok: false, error: e instanceof Error ? e.message : String(e) })
+      }
+    })()
+  })
+
   function atomicWriteFile(file: string, data: string | Buffer): void {
     mkdirSync(dirname(file), { recursive: true })
     const tmp = `${file}.${Date.now()}.tmp`

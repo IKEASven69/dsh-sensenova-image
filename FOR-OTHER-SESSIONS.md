@@ -142,3 +142,34 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 宽档观感顺带升级（拉伸变宽不再稀疏）：`.snx-gal-grid` 2 固定列 → `auto-fill minmax(132px,1fr)`；gen-thumbs 4 列 → minmax(88)；队列 summary 4 列 → minmax(96)；对比画廊池 8 列 → minmax(44)；参考选择器 4 列 → minmax(64)；帮助弹窗 2 列 → auto-fit minmax(210)。≤379 断点里对应的列数覆盖删除（auto-fill 自治）。`.snx-cmp-picks` 保持 `repeat(4,1fr)`——它是语义上的固定 A/B/2 槽位，不是缩略图池。
 
 **坑**：探测脚本要区分 overflow:hidden 的 scrollWidth 虚报（扫光动画/ellipsis 都会报）；拖拽手柄拖完会换位置，连拖多档必须每档重新取手柄坐标（stale box 让第 2-4 拖全空）。测试实例：用户实例别杀（5181 有活连接），另起 `dsh web --no-open --port 5183`；client-v4.js 是硬链接，页面重载即生效，无需重启实例。
+
+## v11：全面优化五连（2026-10-13 ~ 10-14，五批工作流交付）
+
+> 本章由文档同步会话据五批改动报告写成，关键事实已做静态复核（命令与结果见「怎么验证的」）。完整修复清单与 InvokeAI 对齐点见 `DESIGN-SPEC-v10.md` 文末「v11 全面优化附录」。
+
+### 做了什么（主体 client/client-v4.js，服务端仅一处；全部为静态交付，未做浏览器验收）
+
+- **P0 四件**：断链 CSS 变量正名（`--snx-ac`/`--snx-acf`→`--snx-accent(-fill)`，残留 0）；无 src 节点全链路防御（画廊完成/生成中/失败分层渲染+计数栏、灯箱降级、doExport 守卫）；灯箱缩放重做（适应窗口基准×scale 直写布局宽高、overflow:auto 生效、滚轮光标锚点缩放、拖拽平移、双击/0 复位、换图自动复位）；模块级模态栈（modalPush/modalPop/modalTop/modalOpen，灯箱/帮助入栈，画布按键让路）。
+- **画廊 InvokeAI 化**：点击语义分层（单击轻选中/Ctrl 多选/Shift 可见序范围选/双击灯箱，galSel 与画布 sel 解耦）、底部批量条（移画板/删除/清空）、缩略图 hover 轻操作、右键菜单单选/多选两套、拖图到画板 chip 归类（最小诚实版：无插入位置预览/无自动滚边/无触屏长按）。
+- **服务端唯一改动**：`src/index.ts` 新增 `POST /api/sensenova/upload`（P1-2 重试链路参考图持久化，复用 persistImage），已 `npm run build`，dist/index.js 已含该路由。
+- **P1/P2 其余（摘要）**：SnxConfirm 替换全部 7 处原生 confirm（带被引用警告、可撤销）；灯箱回填热键 R/P/S/D；比例芯片 5 档对齐已验证尺寸线；风格芯片单选互斥；增强入队列状态机；队列清除已失败/重跑跳过主动取消项/耗时按 `_startedAt`；SSE 选中保留+undo 基线重建；undo 全覆盖（不透明度 800ms pushUndoMerge 合并）；Konva pending 占位简化+真实耗时 ETA；GenBar 参数同步；对比独立集合+池 60；图层面板 focusNode+徽章中文化；滤镜预览 rAF 节流降采样+导出原分辨率；SnxSelect 重写（portal+全键盘+typeahead）；设置页模型/画质直写 genPrefs；帮助浮层重写（页脚 v11）；UI 字形清零（ICONS 补 12 个 lucide path，顺带修了变体按钮缺图渲染空 SVG 的存量 bug）；Key 状态三态；生成按钮 idle 扫光移除；toast 队列化（4 条/5s）；灯箱标签+画廊标签筛选（被删空自动失效）；提示词库缓存收敛；工具卡插入三态；全局 :focus-visible；画布 Ctrl+A/方向键/z 序；蒙版工具条收口共享 renderMaskBar()；GenRecent 右键回归双击；命名预设独立入口；base64 dataURL>2MB 不入文档（P2-9）。
+
+### 怎么验证的（全部是静态检查，无浏览器）
+
+- 构建员五批自检：node --check 每轮通过；`npm run build` 成功且 dist 含 upload 路由；自写对账脚本（落盘后运行）：原生 confirm/prompt 0 处、362 个 className 字面量全有 CSS、32 个 var() 引用全有定义或 fallback；指定字形 grep=0；ic() 与 ICONS 对账无缺失。
+- 文档会话复核（2026-10-14）：`node --check client/client-v4.js` → SYNTAX-OK；`grep -c -- "--snx-ac\b\|--snx-acf\b"` → 0（--snx-accent 185 处）；grep confirm(/prompt( 全文仅剩 `session.prompt`（dsh 会话 API，非弹窗，client-v4.js:259）；upload 路由在 src/index.ts:562 且 dist 已含；帮助页脚「v11」在 client-v4.js:6367；SIZE_CHIPS 五档 client-v4.js:5699；对比池 slice(0,60) client-v4.js:5054；「清除已失败」client-v4.js:4964。
+- **浏览器渲染/交互验收未执行**（纪律归验收员）。验收注意：client-v4.js 改后浏览器要关 tab 重开；dist/index.js 已是最新（含 upload 路由），若 profile 装法不是 hardlink 需重新构建/同步。
+
+### 坑 / 注意（给下一个会话）
+
+- `.snx-pro` 是 container-type，会收编 fixed 后代——蒙版画笔预览圈坐标按该包含块换算；portal 弹层（GalContextMenu/SnxSelect/SnxConfirm）一律 portalToBody 挂 body，外点关闭要同时排除触发钮与弹层。
+- 灯箱缩放不要改回 `transform:scale` 或 flex 居中：现在是「适应窗口基准×scale」直写 imgwrap 布局宽高 + `.snx-lb-stage` margin:auto 居中让 overflow:auto 生效（flex 居中会裁左上，老 bug）。
+- SSE canvas:update 现在保留仍存在的选中项并重建 undo 基线（undoStack=[当前快照]、redoStack 清空）——别在别处再叠基线逻辑。
+- `params.upscale` 不再写入；PendingOverlay 对旧数据仍留兼容分支（client-v4.js:3191-3192）。重绘增强请求分辨率走 sizeForAspect 已验证档（≤2752）。
+- P2-9：base64 dataURL 超过 `SNX_MAX_INLINE_DATAURL=2MB`（client-v4.js:2313）不入文档，节点转 error 可重试；阈值是参照服务端 8MB 文档上限自定的，要调只改这一处。toast 上限 4 条/自动关 5s 同为合理默认（ask 未指定数值）。
+- 💬 写侧已停用，读侧 `replace(/^💬\s*/,'')` 是旧存量文档数据兼容，别当残留清理；⌘/← 是真实键名标注（kbd/title）；代码注释里的 → 有意保留（不属 UI）。
+- **旧 error 节点的参考图不可恢复**（当时已被 keepShortRef 丢弃），这些节点重试仍是文生图——是数据不可逆，不是回归，别误报。
+- 手动连线编辑（改 parentId 的锚点把手/拖拽命中/悬停态/成环防护/undo）评估后缓办：parentId 同时是版本树与衍生链根链路，做之前先立专项。
+- isStarred（client-v4.js:2909）改派生后零引用，刻意保留；要清就单独一批。
+- 全屏属性面板「删除」与画布 ActionBar「删除」直接删但有 pushUndo，不在 7 处原生 confirm 清单内，按改动最小化未加确认。
+- 本轮改动未 commit（工作区 client-v4.js、src/index.ts 处于 modified）；~/.dsh/storages 实况文件未触碰。
