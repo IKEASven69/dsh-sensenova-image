@@ -1,0 +1,349 @@
+<div id="snxv12" class="pv-root viz-dotted-background">
+  <div class="pv-caption">① 生成 · 决策面板 —— 按下之前就知道一切(点上方按钮切换三种状态)</div>
+  <div class="pv-controls">
+    <button type="button" class="pv-ctl on" data-st="ready">就绪态</button>
+    <button type="button" class="pv-ctl" data-st="block">阻塞态</button>
+    <button type="button" class="pv-ctl" data-st="paused">队列暂停态</button>
+  </div>
+  <div class="pv-frame pv-gen">
+    <div class="pv-chiprow">
+      <span class="pv-chip on">1:1</span><span class="pv-chip">3:4</span><span class="pv-chip">16:9</span><span class="pv-chip">9:16</span>
+      <span class="pv-chip pv-chip-model">sensenova-u1.5-lite ▾</span>
+    </div>
+    <div class="pv-ta">戴墨镜的柴犬坐在月球表面,4K,电影感</div>
+    <div class="pv-gorow">
+      <div class="pv-decide" id="pv-decide"></div>
+      <button type="button" class="pv-go" id="pv-go"><i data-lucide="sparkles" aria-hidden="true"></i>生成到画布</button>
+    </div>
+  </div>
+
+  <div class="pv-caption">② 灯箱 · 参数清单 —— 每行一个回填按钮,只取想要的那个参数(点行尾按钮试试)</div>
+  <div class="pv-frame pv-lb">
+    <div class="pv-lb-img">
+      <div class="pv-ph pv-ph-a"><i data-lucide="dog" aria-hidden="true"></i><span>示例图 · 柴犬</span></div>
+      <div class="pv-lb-zoom">11%</div>
+    </div>
+    <div class="pv-lb-side">
+      <div class="pv-lb-h">
+        <span>参数清单</span>
+        <button type="button" class="pv-remix" id="pv-remix"><i data-lucide="wand-sparkles" aria-hidden="true"></i>整套回填</button>
+      </div>
+      <div class="pv-rows" id="pv-rows"></div>
+    </div>
+    <div class="pv-toast" id="pv-toast"></div>
+  </div>
+
+  <div class="pv-caption">③ 对比 · 三种观照方式 —— 滑块可拖 / 叠化随指针 / 并排五五开,C 或按钮交换</div>
+  <div class="pv-controls">
+    <div class="pv-seg" id="pv-modes">
+      <button type="button" class="pv-segb on" data-m="slider">滑块</button>
+      <button type="button" class="pv-segb" data-m="side">并排</button>
+      <button type="button" class="pv-segb" data-m="hover">叠化</button>
+    </div>
+    <button type="button" class="pv-ctl" id="pv-swap"><i data-lucide="arrow-left-right" aria-hidden="true"></i>交换(C)</button>
+    <span class="pv-hint">拖分割线对比 · 键盘 C 交换</span>
+  </div>
+  <div class="pv-frame pv-cmp">
+    <div class="pv-stage" id="pv-stage">
+      <div class="pv-layer pv-b" id="pv-b"><div class="pv-ph pv-ph-b"><i data-lucide="lamp" aria-hidden="true"></i><span>B · 红灯笼</span></div></div>
+      <div class="pv-layer pv-a" id="pv-a"><div class="pv-ph pv-ph-a2"><i data-lucide="gift" aria-hidden="true"></i><span>A · 绿礼盒</span></div></div>
+      <div class="pv-div" id="pv-div"><div class="pv-divknob"></div></div>
+      <div class="pv-tag pv-tag-a" id="pv-taga">A · 绿礼盒</div>
+      <div class="pv-tag pv-tag-b" id="pv-tagb">B · 红灯笼</div>
+    </div>
+  </div>
+
+  <div class="pv-caption">④ 队列 · 可审讯 —— 每行展开看参数/错误/耗时两段(点行展开)</div>
+  <div class="pv-frame pv-qu">
+    <div class="pv-qi" data-open="0">
+      <div class="pv-qirow">
+        <div class="pv-qith pv-qith-run"></div>
+        <div class="pv-qimain"><div class="pv-qit">雪夜红灯笼,雾气,电影感…</div><div class="pv-qis">2048×1152 · sensenova-u1.5-lite</div></div>
+        <span class="pv-badge pv-run">运行中</span><span class="pv-qi-t">12s</span>
+        <button type="button" class="pv-chev" aria-label="展开"><i data-lucide="chevron-down" aria-hidden="true"></i></button>
+      </div>
+      <div class="pv-qibody">
+        <div class="pv-qbar"><div class="pv-qbarin" style="width:46%"></div></div>
+        <dl><dt>种子</dt><dd>184322101</dd><dt>负面词</dt><dd>低质量,模糊,多余肢体</dd></dl>
+        <dl><dt>耗时</dt><dd>排队 4s + 运行 12s</dd><dt>目标</dt><dd>画板「雪夜灯笼」</dd></dl>
+      </div>
+    </div>
+    <div class="pv-qi" data-open="0">
+      <div class="pv-qirow">
+        <div class="pv-qith pv-qith-pen"></div>
+        <div class="pv-qimain"><div class="pv-qit">月面特写,地球升起</div><div class="pv-qis">1024×1024 · sensenova-u1.5-lite</div></div>
+        <span class="pv-badge pv-pen">排队中 · 第 2 位</span><span class="pv-qi-t">6s</span>
+        <button type="button" class="pv-chev" aria-label="展开"><i data-lucide="chevron-down" aria-hidden="true"></i></button>
+      </div>
+      <div class="pv-qibody"><dl><dt>种子</dt><dd>随机</dd><dt>负面词</dt><dd>低质量</dd></dl></div>
+    </div>
+    <div class="pv-qi" data-open="1">
+      <div class="pv-qirow">
+        <div class="pv-qith pv-qith-err"></div>
+        <div class="pv-qimain"><div class="pv-qit">圣诞帽柴犬(参考图改图)</div><div class="pv-qis">2048×2048 · 含 1 张参考图</div></div>
+        <span class="pv-badge pv-err">失败</span><span class="pv-qi-t">31s</span>
+        <button type="button" class="pv-chev" aria-label="展开"><i data-lucide="chevron-down" aria-hidden="true"></i></button>
+      </div>
+      <div class="pv-qibody">
+        <div class="pv-qerr">生成失败:code 18 内容安全拦截(参考图或提示词触发),已重试 3 次</div>
+        <dl><dt>耗时</dt><dd>排队 2s + 运行 29s</dd><dt>参考图</dt><dd>绿礼盒 · 构图 70%</dd></dl>
+        <button type="button" class="pv-retry"><i data-lucide="rotate-ccw" aria-hidden="true"></i>重试</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+#snxv12 { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; color: var(--foreground); padding: 4px 2px 12px; }
+#snxv12 .pv-caption { font-size: 13px; font-weight: 500; margin: 18px 2px 8px; }
+#snxv12 .pv-controls { display: flex; align-items: center; gap: 8px; margin: 0 2px 8px; flex-wrap: wrap; }
+#snxv12 .pv-ctl { font: inherit; font-size: 12px; padding: 4px 12px; border-radius: 7px; border: 1px dashed var(--border); background: transparent; color: var(--muted-foreground); cursor: interaction; }
+#snxv12 .pv-ctl.on { border-style: solid; color: var(--foreground); border-color: var(--ring); }
+#snxv12 .pv-hint { font-size: 12px; color: var(--muted-foreground); }
+/* ── 产品壳:固定暗色(与工作台一致的令牌桥终值) ── */
+#snxv12 .pv-frame { --b1:#232324; --b2:#2c2c2e; --b3:#353638; --t1:#f9fafb; --t2:#cfd3d6; --t3:#adb2b8; --t4:#81858c; --acc:#7aaaff; --ok:#22c55e; --warn:#f7ad31; --err:#f25a5a; --bd:rgba(255,255,255,.12);
+  background: var(--b1); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; position: relative;
+  max-width: 880px; margin: 0 auto; box-shadow: 0 12px 40px rgba(0,0,0,.35); color: var(--t1); text-align: left; }
+/* ① 生成 */
+#snxv12 .pv-gen { padding: 14px; }
+#snxv12 .pv-chiprow { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+#snxv12 .pv-chip { font-size: 11px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--bd); color: var(--t3); }
+#snxv12 .pv-chip.on { border-color: color-mix(in srgb, var(--acc) 45%, transparent); color: var(--acc); background: rgba(122,170,255,.12); }
+#snxv12 .pv-chip-model { margin-left: auto; font-family: ui-monospace, Consolas, monospace; }
+#snxv12 .pv-ta { background: var(--b3); border: 1px solid var(--bd); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--t1); min-height: 40px; }
+#snxv12 .pv-gorow { position: relative; margin-top: 12px; }
+#snxv12 .pv-go { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; font: inherit; font-size: 13px; font-weight: 600; color: #fff; background: linear-gradient(180deg, #5a9bff, #3f7ef0); border: none; border-radius: 9px; cursor: interaction; }
+#snxv12 .pv-go.off { background: var(--b3); color: var(--t4); cursor: not-allowed; }
+#snxv12 .pv-decide { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 330px; background: var(--b2); border: 1px solid color-mix(in srgb, var(--acc) 30%, var(--bd)); border-radius: 10px; padding: 10px 12px; box-shadow: 0 14px 40px rgba(0,0,0,.5); z-index: 5; }
+#snxv12 .pv-dc-strip { margin: -10px -12px 8px; padding: 5px 12px; background: color-mix(in srgb, var(--err) 16%, transparent); color: var(--err); font-size: 11px; font-weight: 600; }
+#snxv12 .pv-dc-r { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--t2); padding: 3px 0; }
+#snxv12 .pv-dc-r svg { width: 13px; height: 13px; color: var(--acc); flex: none; }
+#snxv12 .pv-dc-r b { color: var(--t1); font-weight: 600; }
+#snxv12 .pv-dc-r.blk svg { color: var(--err); }
+#snxv12 .pv-dc-r.blk { color: var(--t3); }
+/* ② 灯箱 */
+#snxv12 .pv-lb { display: flex; min-height: 320px; }
+#snxv12 .pv-lb-img { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #151517; }
+#snxv12 .pv-lb-zoom { position: absolute; left: 10px; bottom: 10px; font-size: 11px; color: var(--t3); background: rgba(0,0,0,.5); border-radius: 5px; padding: 2px 7px; }
+#snxv12 .pv-lb-side { width: 320px; flex: none; border-left: 1px solid var(--bd); background: var(--b1); display: flex; flex-direction: column; }
+#snxv12 .pv-lb-h { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--bd); font-size: 12px; font-weight: 600; color: var(--t3); letter-spacing: .06em; }
+#snxv12 .pv-remix { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 11px; font-weight: 600; color: var(--acc); background: rgba(122,170,255,.12); border: 1px solid color-mix(in srgb, var(--acc) 40%, transparent); border-radius: 7px; padding: 4px 9px; cursor: interaction; }
+#snxv12 .pv-rows { overflow-y: auto; flex: 1; }
+#snxv12 .pv-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.05); }
+#snxv12 .pv-row.flash { background: rgba(122,170,255,.14); }
+#snxv12 .pv-rl { width: 44px; flex: none; font-size: 11px; color: var(--t4); }
+#snxv12 .pv-rv { flex: 1; font-size: 12px; color: var(--t2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#snxv12 .pv-rv.mono { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+#snxv12 .pv-rb { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--acc) 35%, transparent); background: transparent; color: var(--acc); cursor: interaction; }
+#snxv12 .pv-rb svg { width: 13px; height: 13px; }
+#snxv12 .pv-rb:hover { background: rgba(122,170,255,.15); }
+#snxv12 .pv-toast { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%) translateY(6px); background: var(--b3); border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent); color: var(--t1); font-size: 12px; padding: 7px 14px; border-radius: 8px; opacity: 0; pointer-events: none; transition: all .18s ease-out; z-index: 6; }
+#snxv12 .pv-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* 占位图 */
+#snxv12 .pv-ph { width: 72%; aspect-ratio: 1; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: rgba(255,255,255,.85); font-size: 12px; }
+#snxv12 .pv-ph svg { width: 34px; height: 34px; opacity: .8; }
+#snxv12 .pv-ph-a { background: radial-gradient(circle at 62% 38%, #3f8f7a, #1e3f4d 70%); }
+#snxv12 .pv-ph-a2 { background: radial-gradient(circle at 40% 60%, #2f7d68, #173340 70%); width: 100%; height: 100%; border-radius: 0; }
+#snxv12 .pv-ph-b { background: radial-gradient(circle at 50% 45%, #d86a3a, #4d2417 75%); width: 100%; height: 100%; border-radius: 0; }
+#snxv12 .pv-qith { width: 54px; height: 54px; border-radius: 6px; flex: none; }
+#snxv12 .pv-qith-run { background: radial-gradient(circle at 50% 40%, #3f8f7a, #1e3f4d); }
+#snxv12 .pv-qith-pen { background: radial-gradient(circle at 50% 45%, #556, #2a2a30); }
+#snxv12 .pv-qith-err { background: radial-gradient(circle at 50% 45%, #7a3f3f, #33201d); }
+/* ③ 对比 */
+#snxv12 .pv-seg { display: inline-flex; border: 1px dashed var(--border); border-radius: 8px; overflow: hidden; }
+#snxv12 .pv-segb { font: inherit; font-size: 12px; padding: 4px 14px; border: none; background: transparent; color: var(--muted-foreground); cursor: interaction; }
+#snxv12 .pv-segb.on { background: color-mix(in srgb, var(--ring) 18%, transparent); color: var(--foreground); }
+#snxv12 .pv-cmp { padding: 0; }
+#snxv12 .pv-stage { position: relative; height: 320px; user-select: none; }
+#snxv12 .pv-stage.m-side { display: grid; grid-template-columns: 1fr 1fr; }
+#snxv12 .pv-layer { position: absolute; inset: 0; overflow: hidden; }
+#snxv12 .pv-stage.m-side .pv-layer { position: static; height: 100%; }
+#snxv12 .pv-stage.m-side .pv-a { border-right: 1px solid rgba(255,255,255,.2); }
+#snxv12 .pv-div { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.9); transform: translateX(-50%); cursor: ew-resize; z-index: 4; }
+#snxv12 .pv-divknob { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.92); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+#snxv12 .pv-divknob::before { content: "◄ ►"; font-size: 9px; color: #232324; letter-spacing: -1px; }
+#snxv12 .pv-tag { position: absolute; top: 10px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(0,0,0,.55); padding: 3px 9px; border-radius: 6px; z-index: 5; }
+#snxv12 .pv-tag-a { left: 10px; }
+#snxv12 .pv-tag-b { right: 10px; }
+/* ④ 队列 */
+#snxv12 .pv-qu { padding: 6px 0; }
+#snxv12 .pv-qi { border-bottom: 1px solid rgba(255,255,255,.05); }
+#snxv12 .pv-qi:last-child { border-bottom: none; }
+#snxv12 .pv-qirow { display: flex; align-items: center; gap: 10px; padding: 9px 14px; cursor: interaction; }
+#snxv12 .pv-qirow:hover { background: rgba(255,255,255,.03); }
+#snxv12 .pv-qimain { flex: 1; min-width: 0; }
+#snxv12 .pv-qit { font-size: 12.5px; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#snxv12 .pv-qis { font-size: 11px; color: var(--t4); margin-top: 2px; }
+#snxv12 .pv-badge { flex: none; font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 999px; }
+#snxv12 .pv-run { background: rgba(122,170,255,.14); color: var(--acc); }
+#snxv12 .pv-pen { background: rgba(247,173,49,.13); color: var(--warn); }
+#snxv12 .pv-err { background: rgba(242,90,90,.14); color: var(--err); }
+#snxv12 .pv-qi-t { flex: none; font-size: 11px; color: var(--t4); font-variant-numeric: tabular-nums; }
+#snxv12 .pv-chev { flex: none; display: inline-flex; border: none; background: none; color: var(--t4); cursor: interaction; padding: 4px; border-radius: 5px; }
+#snxv12 .pv-chev svg { width: 15px; height: 15px; transition: transform .15s ease-out; }
+#snxv12 .pv-qi[data-open="1"] .pv-chev svg { transform: rotate(180deg); }
+#snxv12 .pv-qibody { display: none; padding: 2px 14px 12px 78px; }
+#snxv12 .pv-qi[data-open="1"] .pv-qibody { display: block; }
+#snxv12 .pv-qbar { height: 5px; border-radius: 3px; background: var(--b3); overflow: hidden; margin-bottom: 8px; }
+#snxv12 .pv-qbarin { height: 100%; background: var(--acc); border-radius: 3px; }
+#snxv12 .pv-qibody dl { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 4px 10px; margin: 4px 0; font-size: 11.5px; }
+#snxv12 .pv-qibody dt { color: var(--t4); }
+#snxv12 .pv-qibody dd { color: var(--t2); margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#snxv12 .pv-qerr { font-size: 11.5px; color: var(--err); background: rgba(242,90,90,.08); border: 1px solid rgba(242,90,90,.25); border-radius: 7px; padding: 7px 10px; margin-bottom: 8px; }
+#snxv12 .pv-retry { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 11.5px; font-weight: 600; color: var(--t1); background: var(--b3); border: 1px solid var(--bd); border-radius: 7px; padding: 5px 11px; cursor: interaction; }
+#snxv12 .pv-retry svg { width: 12px; height: 12px; color: var(--acc); }
+</style>
+
+<script>
+(function () {
+  var root = document.getElementById('snxv12');
+  if (!root) return;
+
+  /* ① 决策面板三态 */
+  var decide = root.querySelector('#pv-decide');
+  var go = root.querySelector('#pv-go');
+  var STATES = {
+    ready: [
+      ['sparkles', '将生成 <b>2 张</b>'],
+      ['image', '模型 <b>sensenova-u1.5-lite</b> · <b>2048×1152</b>(16:9)'],
+      ['folder', '目标:画板<b>「雪夜灯笼」</b>'],
+      ['list-ordered', '队列等待 <b>1</b> 个任务 · 完成后自动入画布']
+    ],
+    block: [
+      ['circle-x', '未配置 API Key(设置 → Key)'],
+      ['circle-x', '提示词为空'],
+      ['ban', '解决后此处会显示将生成的内容']
+    ],
+    paused: [
+      ['pause', '队列已暂停——任务将排队等待恢复'],
+      ['sparkles', '将生成 <b>2 张</b> · <b>2048×1152</b>(16:9)'],
+      ['list-ordered', '队列等待 <b>3</b> 个任务(含暂停前 2 个)']
+    ]
+  };
+  function esc(s) { return s; }
+  function renderState(st) {
+    var rows = STATES[st].map(function (r) {
+      return '<div class="pv-dc-r' + (st === 'block' ? ' blk' : '') + '"><i data-lucide="' + r[0] + '" aria-hidden="true"></i><span>' + esc(r[1]) + '</span></div>';
+    }).join('');
+    var strip = st === 'paused' ? '<div class="pv-dc-strip">队列已暂停</div>' : '';
+    decide.innerHTML = strip + rows;
+    go.classList.toggle('off', st === 'block');
+    go.innerHTML = '<i data-lucide="sparkles" aria-hidden="true"></i>' + (st === 'block' ? '无法生成' : '生成到画布');
+    if (window.lucide) window.lucide.createIcons({ attrs: { width: 14, height: 14 }, nameAttr: 'data-lucide' });
+  }
+  renderState('ready');
+  root.querySelectorAll('.pv-ctl[data-st]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      root.querySelectorAll('.pv-ctl[data-st]').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      renderState(b.getAttribute('data-st'));
+    });
+  });
+
+  /* ② 行级回填 */
+  var ROWS = [
+    ['提示词', '戴墨镜的柴犬坐在月球表面,4K,电影感…', 'prompt', ''],
+    ['负向词', '低质量,模糊,多余肢体', 'negative', ''],
+    ['模型', 'sensenova-u1.5-lite', 'model', 'mono'],
+    ['尺寸', '2048×1152(16:9)', 'size', 'mono'],
+    ['种子', '184322101', 'seed', 'mono'],
+    ['画板', '雪夜灯笼', 'board', ''],
+    ['创建', '2026-10-13 23:41', '', ''],
+    ['参考图', '1 张(构图 · 强度 70%)', 'refs', ''],
+    ['调整', '亮度 +8 · 色温 -6', 'adjusted', '']
+  ];
+  var rowsEl = root.querySelector('#pv-rows');
+  rowsEl.innerHTML = ROWS.map(function (r, i) {
+    var btn = r[2] ? '<button type="button" class="pv-rb" data-k="' + r[2] + '" data-l="' + r[0] + '" title="只回填「' + r[0] + '」到生图表单"><i data-lucide="corner-right-down" aria-hidden="true"></i></button>' : '<span style="width:24px;flex:none"></span>';
+    return '<div class="pv-row"><span class="pv-rl">' + r[0] + '</span><span class="pv-rv ' + r[3] + '" style="' + (r[0] === '提示词' ? 'white-space:normal;line-height:1.5;' : '') + '">' + r[1] + '</span>' + btn + '</div>';
+  }).join('');
+  var toast = root.querySelector('#pv-toast');
+  var toastTimer = null;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 1400);
+  }
+  rowsEl.addEventListener('click', function (e) {
+    var b = e.target.closest('.pv-rb');
+    if (!b) return;
+    showToast('已回填「' + b.getAttribute('data-l') + '」到生图表单');
+    var row = b.closest('.pv-row');
+    row.classList.add('flash');
+    setTimeout(function () { row.classList.remove('flash'); }, 500);
+  });
+  root.querySelector('#pv-remix').addEventListener('click', function () {
+    showToast('已回填全部参数(提示词/模型/尺寸/种子/参考图)');
+  });
+
+  /* ③ 对比三模式 */
+  var stage = root.querySelector('#pv-stage');
+  var layA = root.querySelector('#pv-a');
+  var div = root.querySelector('#pv-div');
+  var tagA = root.querySelector('#pv-taga');
+  var tagB = root.querySelector('#pv-tagb');
+  var mode = 'slider';
+  var pos = 50;
+  var swap = false;
+  var left = { cls: 'pv-ph pv-ph-a2', icon: 'gift', label: 'A · 绿礼盒' };
+  var right = { cls: 'pv-ph pv-ph-b', icon: 'lamp', label: 'B · 红灯笼' };
+  function renderCompare() {
+    layA.innerHTML = '<div class="' + left.cls + '"><i data-lucide="' + left.icon + '" aria-hidden="true"></i><span>' + left.label + '</span></div>';
+    document.getElementById('pv-b').innerHTML = '<div class="' + right.cls + '"><i data-lucide="' + right.icon + '" aria-hidden="true"></i><span>' + right.label + '</span></div>';
+    tagA.textContent = left.label;
+    tagB.textContent = right.label;
+    if (window.lucide) window.lucide.createIcons({ attrs: { width: 34, height: 34 }, nameAttr: 'data-lucide' });
+  }
+  function applySlider() {
+    layA.style.clipPath = 'inset(0 ' + (100 - pos) + '% 0 0)';
+    layA.style.opacity = '1';
+    layA.style.width = '100%';
+    div.style.left = pos + '%';
+  }
+  function applyMode() {
+    stage.classList.toggle('m-side', mode === 'side');
+    div.style.display = mode === 'slider' ? 'block' : 'none';
+    if (mode === 'slider') applySlider();
+    if (mode === 'hover') { layA.style.clipPath = 'none'; layA.style.opacity = '0.5'; layA.style.width = '100%'; }
+    if (mode === 'side') { layA.style.clipPath = 'none'; layA.style.opacity = '1'; }
+  }
+  applyMode();
+  root.querySelector('#pv-modes').addEventListener('click', function (e) {
+    var b = e.target.closest('.pv-segb');
+    if (!b) return;
+    root.querySelectorAll('.pv-segb').forEach(function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    mode = b.getAttribute('data-m');
+    applyMode();
+  });
+  function setFromEvent(e) {
+    var r = stage.getBoundingClientRect();
+    var fx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    pos = Math.round(fx * 100);
+    if (mode === 'slider') applySlider();
+    if (mode === 'hover') layA.style.opacity = String(fx);
+  }
+  var dragging = false;
+  stage.addEventListener('pointerdown', function (e) { dragging = true; setFromEvent(e); });
+  window.addEventListener('pointermove', function (e) { if (dragging || mode === 'hover') setFromEvent(e); });
+  window.addEventListener('pointerup', function () { dragging = false; });
+  function doSwap() {
+    swap = !swap;
+    var t = left; left = right; right = t;
+    renderCompare();
+  }
+  root.querySelector('#pv-swap').addEventListener('click', doSwap);
+  window.addEventListener('keydown', function (e) {
+    if ((e.key === 'c' || e.key === 'C') && !e.ctrlKey && !e.metaKey && !/INPUT|TEXTAREA/.test((e.target.tagName || ''))) doSwap();
+  });
+
+  /* ④ 队列展开 */
+  root.querySelectorAll('.pv-qirow').forEach(function (row) {
+    row.addEventListener('click', function () {
+      var qi = row.parentElement;
+      qi.setAttribute('data-open', qi.getAttribute('data-open') === '1' ? '0' : '1');
+    });
+  });
+})();
+</script>
