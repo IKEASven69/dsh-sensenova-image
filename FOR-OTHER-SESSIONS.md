@@ -173,3 +173,13 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 - isStarred（client-v4.js:2909）改派生后零引用，刻意保留；要清就单独一批。
 - 全屏属性面板「删除」与画布 ActionBar「删除」直接删但有 pushUndo，不在 7 处原生 confirm 清单内，按改动最小化未加确认。
 - 本轮改动未 commit（工作区 client-v4.js、src/index.ts 处于 modified）；~/.dsh/storages 实况文件未触碰。
+
+## v11.1：手动连线编辑 + 相机补偿(2026-10-14,用户:"务必打磨到精品级")
+
+补上 v11 唯一 deferred 的功能缺口(P2-7 手动连线):
+- **边可交互**:edgeLayer 开 listening,线 hitStrokeWidth 加宽热区;hover 高亮(变粗变亮)/左键选中子节点/右键出菜单「断开连线」「选中子节点」。画布菜单本体补入模态栈(P0-4 栈注册)。
+- **端口拖拽改接**:每个 done 图节点右缘输出端口(拖出即改接目标 parentId)+左缘输入口(视觉)。拖拽中 fxLayer 画虚线贝塞尔+候选节点高亮框(合法=accent/成环=红),松手 drop,Esc 取消。防环:reachesUp 沿 parentId 向上探;undo 全程入栈。
+- **关键坑:Konva hitStrokeWidth/radius 是世界坐标**——相机 scale 0.3 时 14px 热区只剩 4.2 屏幕像素,低倍率下连线点不中、端口缩没。修复:全部按 `×(1/cam().scale)` 补偿并 clamp,滚轮缩放后 drawEdges() 重画。**教训:任何 Konva 交互件的尺寸都要想一句"这个数字是世界还是屏幕"。**
+- 顺手修存量缺口:节点 dragmove/transformend 现在实时重画边(此前边只在 renderAll 刷新,拖动中甩在原地)。
+- 引擎通知走 `opts.onNotify` 桥(Workbench 的 notify 不在 createEngine 作用域)。
+- 验证:linktest.js 真浏览器 5/5(右键菜单/断开/undo 恢复/端口改接/防环拒绝);full 静态门禁 0 违规。测试注意:底部 dock 画布只有 72px 高,边多半在可视区外——用左侧栏 snx-sidebtn 打开(右侧 dock 全高)再测;全屏画布 snx-fs 只铺满面板内部,不是视口。
