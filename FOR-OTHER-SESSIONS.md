@@ -183,3 +183,11 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 - 顺手修存量缺口:节点 dragmove/transformend 现在实时重画边(此前边只在 renderAll 刷新,拖动中甩在原地)。
 - 引擎通知走 `opts.onNotify` 桥(Workbench 的 notify 不在 createEngine 作用域)。
 - 验证:linktest.js 真浏览器 5/5(右键菜单/断开/undo 恢复/端口改接/防环拒绝);full 静态门禁 0 违规。测试注意:底部 dock 画布只有 72px 高,边多半在可视区外——用左侧栏 snx-sidebtn 打开(右侧 dock 全高)再测;全屏画布 snx-fs 只铺满面板内部,不是视口。
+
+## v11.2：双代理复审 22 条修复(2026-10-14,用户:"打磨到精品级,UI skill 用起来")
+
+两个只读复审(InvokeAI 增量对标 + 敌意代码审查)交出 25 条发现,主代理逐条裁决(驳回 2 条误报:菜单 fixed 被 container-type 收编在 Chromium 实测不成立——但 portal 化仍做,防 Firefox;热区无补偿是旧快照),合并成 REVIEW-v11.2.md 交实现代理批量修复。要点:
+- **模态栈 Esc 分发器**(capture 阶段,栈顶 onEsc 独占消费)——修 Esc 一键多消费;全屏画布以 **soft 条目**入栈(只消费 Esc 不算模态,`modalOpen()=some(!soft)`),否则全屏态画布快捷键全灭。坑:**分发器会吃掉 SnxSelect 自有 Esc**(下拉收不起反关整模态),分发器里 `if (document.querySelector('.snx-sel-pop')) return` 让路。
+- linkDrag window 级兜底(mouseup/pointercancel/blur)+ 外松手不再悬挂误改接;暂停期取消不再被复活;粘贴/拖入走 inline 上限;SnxConfirm 焦点安全(初始焦点=取消);画布双击=灯箱;灯箱快捷键 isTyping 设防;清空画布走确认;ContextMenu portal 化+全屏去重;GalContextMenu 隐形活模态自愈;端口抬到 portLayer(不再被自家图压半边);队列/版本树徽章中文;连线编辑进帮助与快捷键表;对比角标 A/B/C/D;暂停入队有告知;bsb 预览缩放改布局尺寸;混合模式中文;方向键 undo 合并;锁定节点不可 Del;undo/emit/boards 零星补全。
+- **测试坑两连**:①JS `.click()` 不走焦点链,焦点留在壳输入框 → isTyping 吞掉全部画布快捷键——测快捷键必须 page.mouse.click 真实坐标;②E2E 按固定分数坐标点画布节点,相机被其他测试会话 autosave 改过后全点空——按节点几何+实时相机算坐标。
+- 验证:full 门禁 0 违规;linktest 5/5;E2E 13/13;专项 3/3(portal 菜单在视口/Esc 关菜单/全屏 soft 模态键活)。deferred:对比模式循环/交换按钮、画廊拖拽自动滚边。

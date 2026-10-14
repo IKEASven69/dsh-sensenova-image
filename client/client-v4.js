@@ -292,10 +292,23 @@ window.__ModuleLoader__.load({
     // 灯箱/帮助/应用内确认弹窗等打开时入栈：画布 window keydown 见 modalOpen() 让路，Esc 只归栈顶。
     // 后续应用内确认弹窗的注册口：const entry = modalPush(() => onCancel())；关闭/卸载时 modalPop(entry)。
     const modalStack = []
-    function modalPush(onEsc) { const entry = { onEsc: onEsc || null }; modalStack.push(entry); return entry }
+    function modalPush(onEsc, opts) { const entry = { onEsc: onEsc || null, soft: !!(opts && opts.soft) }; modalStack.push(entry); return entry }
     function modalPop(entry) { const i = modalStack.indexOf(entry); if (i >= 0) modalStack.splice(i, 1) }
     function modalTop() { return modalStack.length ? modalStack[modalStack.length - 1] : null }
-    function modalOpen() { return modalStack.length > 0 }
+    // soft 条目（全屏画布）只消费 Esc，不算模态：画布快捷键在全屏态照常工作
+    function modalOpen() { return modalStack.some((e) => !e.soft) }
+    // ─── v11.2：模态栈 Esc 分发器（capture 阶段统一分发）───
+    // Esc 且栈顶带真实 onEsc → stopPropagation 独占消费：画布/灯箱/确认弹窗自带的 Esc 分支
+    // 不再收到同一事件（其分支保留为死代码可接受），修复一键多消费/双触发。
+    // 注册点：ContextMenu / GalContextMenu / HelpOverlay / Lightbox / 全屏画布(soft)。
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return
+        if (document.querySelector('.snx-sel-pop')) return   // SnxSelect 下拉展开：让它自己的 Esc 收起，别放大成关掉整个模态
+        const top = modalTop()
+        if (top && typeof top.onEsc === 'function') { e.stopPropagation(); top.onEsc() }
+      }, true)
+    }
 
     // ——— P1-3：浮层 portal 挂 body（右键菜单/批量确认/拖拽 ghost）———
     // .snx-pro 是 container-type 容器：position:fixed 的后代会被它收编为包含块，
@@ -323,7 +336,7 @@ window.__ModuleLoader__.load({
 /* ── 主题令牌（跟随 dsh 亮/暗主题；每个 var 第二参为旧宿主回退色 = 暗色观感）──
    单一强调色：宿主主色（DeepSeek 蓝）；错误/成功/警示用宿主状态色 */
 .snx-cv,.snx-pro,.snx-cfg,.snx-tv,.snx-lb,.snx-fs,.snx-help,.snx-bsb-preview,.snx-sidebtn,.snx-rb-title,
-.snx-gal-menu,.snx-gal-drag-ghost,.snx-cfm-backdrop{
+.snx-gal-menu,.snx-gal-drag-ghost,.snx-cfm-backdrop,.snx-cv-menu,.snx-sel-pop{
   --snx-accent:var(--dsw-alias-link,#7aaaff);
   --snx-accent-fill:var(--dsw-alias-button-info-fill,#7aaaff);
   --snx-accent-fill-hover:var(--dsw-alias-button-info-hover,#4176e6);
@@ -370,7 +383,9 @@ window.__ModuleLoader__.load({
 .snx-cv-zoom button:hover{color:var(--snx-accent);border-color:var(--snx-accent)}
 .snx-cv-zoom .pct{min-width:52px;display:flex;align-items:center;justify-content:center;font-size:11px;
   color:var(--dsw-alias-label-tertiary,#adb2b8);background:var(--dsw-alias-button-floating-fill,#2c2c2e);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:6px}
-.snx-cv-menu{position:fixed;z-index:400;background:var(--dsw-alias-bg-layer-3,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:8px;
+/* v11.2：portal 挂 body——z-index 抬到全屏画布(9998)/灯箱(9999)/帮助(10000)之上，
+   画布菜单在全屏态也能盖住（画廊菜单 10020 / 确认弹窗 10040 仍在其上）*/
+.snx-cv-menu{position:fixed;z-index:10010;background:var(--dsw-alias-bg-layer-3,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:8px;
   padding:4px;min-width:150px;box-shadow:0 12px 32px rgba(0,0,0,.28)}
 .snx-cv-menu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--dsw-alias-label-primary,#f9fafb);
   padding:7px 12px;font-size:12.5px;cursor:pointer;border-radius:5px;font-family:inherit}
@@ -1726,7 +1741,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
   padding:20px;min-height:0;
 }
 .snx-bsb-canvas img{
-  display:block;max-width:none;transition:transform .12s ease-out;
+  display:block;max-width:none;transition:width .12s ease-out,height .12s ease-out;
   box-shadow:0 8px 32px rgba(0,0,0,.28);
 }
 .snx-bsb-load,.snx-bsb-err{
@@ -1777,7 +1792,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-sel-btn{display:inline-flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;background:var(--dsw-alias-bg-module-platform,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:6px;color:var(--dsw-alias-label-primary,#f9fafb);font-size:11.5px;font-family:inherit;padding:5px 9px;cursor:pointer;justify-content:space-between}
 .snx-sel-btn:hover{border-color:var(--snx-accent)}
 .snx-sel-btn .lb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.snx-sel-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:320;min-width:100%;max-height:220px;overflow-y:auto;background:var(--dsw-alias-bg-layer-3,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.4);padding:4px}
+/* v11.2：定位(position/left/top/min-width)由组件内联 fixed 样式接管，这里只留观感与变量作用域
+   （弹层 portal 挂 body，脱离 .snx-pro，故已加入文件头部的主题令牌清单）*/
+.snx-sel-pop{z-index:320;max-height:220px;overflow-y:auto;background:var(--dsw-alias-bg-layer-3,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.4);padding:4px}
 .snx-sel-opt{display:flex;align-items:center;gap:6px;width:100%;text-align:left;background:none;border:none;color:var(--dsw-alias-label-secondary,#cfd3d6);font-size:11.5px;font-family:inherit;padding:6px 9px;border-radius:5px;cursor:pointer;white-space:nowrap}
 .snx-sel-opt:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--dsw-alias-label-primary,#f9fafb)}
 /* P1-4：键盘高亮项（aria-activedescendant 对应项，与 hover 同观感）*/
@@ -1927,15 +1944,15 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
    Tab 导航可见（鼠标点击不触发 :focus-visible）；文本输入类已有 :focus 描边样式故排除，
    range 滑块单列回来（无其他可见焦点指示）。选择器对齐顶部令牌根列表 + 各 portal 弹层根。 */
 :is(.snx-cv,.snx-pro,.snx-cfg,.snx-tv,.snx-lb,.snx-fs,.snx-help,.snx-bsb-preview,.snx-sidebtn,.snx-rb-title,
-.snx-gal-menu,.snx-gal-drag-ghost,.snx-cfm-backdrop,.snx-toasts,.snx-sel-pop) :focus-visible{
+.snx-gal-menu,.snx-gal-drag-ghost,.snx-cfm-backdrop,.snx-toasts,.snx-sel-pop,.snx-cv-menu) :focus-visible{
   outline:2px solid var(--snx-accent);outline-offset:1px;
 }
 :is(.snx-cv,.snx-pro,.snx-cfg,.snx-tv,.snx-lb,.snx-fs,.snx-help,.snx-bsb-preview,.snx-sidebtn,.snx-rb-title,
-.snx-gal-menu,.snx-gal-drag-ghost,.snx-cfm-backdrop,.snx-toasts,.snx-sel-pop) :is(input,textarea,select,[contenteditable]):focus-visible{
+.snx-gal-menu,.snx-gal-drag-ghost,.snx-cfm-backdrop,.snx-toasts,.snx-sel-pop,.snx-cv-menu) :is(input,textarea,select,[contenteditable]):focus-visible{
   outline:none;
 }
 :is(.snx-cv,.snx-pro,.snx-cfg,.snx-tv,.snx-lb,.snx-fs,.snx-help,.snx-bsb-preview,.snx-sidebtn,.snx-rb-title,
-.snx-gal-menu,.snx-gal-drag-ghost,.snx-cfm-backdrop,.snx-toasts,.snx-sel-pop) input[type="range"]:focus-visible{
+.snx-gal-menu,.snx-gal-drag-ghost,.snx-cfm-backdrop,.snx-toasts,.snx-sel-pop,.snx-cv-menu) input[type="range"]:focus-visible{
   outline:2px solid var(--snx-accent);outline-offset:1px;
 }
 `
@@ -2068,9 +2085,14 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       },
       removeSelected() {
         if (!this.sel.size) return
+        // v11.2：锁定节点不可删——从删除集合跳过 locked；全部锁定时提示而非静默不动
+        const removable = [...this.sel].filter((id) => { const n = this.node(id); return n && !n.locked })
+        if (!removable.length) { toastBus('锁定节点需先解锁再删除'); return }
         this.pushUndo()
-        this.doc.nodes = this.doc.nodes.filter((n) => !this.sel.has(n.id))
-        this.sel.clear(); this.emit(); autosave()
+        const rm = new Set(removable)
+        this.doc.nodes = this.doc.nodes.filter((n) => !rm.has(n.id))
+        this.sel = new Set([...this.sel].filter((id) => !rm.has(id)))
+        this.emit(); autosave()
       },
       duplicateSelected() {
         if (!this.sel.size) return
@@ -2333,6 +2355,17 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       } catch { /* 服务端不可达 → 调用方兜底 */ }
       return undefined
     }
+    // ── v11.2：拖入/粘贴入口的大图收口——超内联上限的 dataURL 先 persistRef 落盘成文件 URL
+    // （上传路由已有），失败才拒绝并提示。与 runOne 的 P2-9 拒收同思路：巨型内联数据不进文档，
+    // 否则 autosave 全量 PUT 必超 8MB 上限。
+    async function ingestDroppedImageSrc(src) {
+      if (!overInlineLimit('base64', src)) return src
+      const persisted = await persistRef(src)
+      if (persisted) return persisted
+      const mb = (String(src).length / 1024 / 1024).toFixed(1)
+      toastBus('图片约 ' + mb + 'MB 过大且落盘失败，已拒绝加入画布（请检查服务端存储后重试）', 'err')
+      return null
+    }
 
     // ——— 生成流程（右面板 / 悬浮 bar / 操作条共用）———
     // 在途任务注册表：nodeId -> AbortController（队列「取消」真正中断请求）
@@ -2365,6 +2398,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 
     async function runOne(nodeId, o) {
       await waitIfPaused()
+      // v11.2：暂停苏醒后先查取消——等待期间被用户取消（error/用户取消）的任务不再复活成 running，不发请求
+      if (isCancelled(nodeId)) return
       const { prompt, size = '2048x2048', model = '', reference, refs, upscale, negative, seed } = o
       store.updateNode(nodeId, { status: 'running', _startedAt: Date.now(), errMsg: '' })
       const ac = new AbortController()
@@ -2526,9 +2561,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       // v11.1：edgeLayer 开启命中——连线可 hover 高亮/右键断开/点击选中子节点
       const edgeLayer = new Konva.Layer({ listening: true })
       const mainLayer = new Konva.Layer()
+      // v11.2：portLayer 端口层——节点之上、框选矩形之下（此前端口混在 edgeLayer 里被节点图盖住半截）
+      const portLayer = new Konva.Layer({ listening: true })
       const fxLayer = new Konva.Layer({ listening: false })   // 框选矩形
       const trLayer = new Konva.Layer()
-      stage.add(edgeLayer); stage.add(mainLayer); stage.add(fxLayer); stage.add(trLayer)
+      stage.add(edgeLayer); stage.add(mainLayer); stage.add(portLayer); stage.add(fxLayer); stage.add(trLayer)
 
       const tr = new Konva.Transformer({
         rotateEnabled: true, anchorSize: 8, borderStroke: theme.accent,
@@ -2548,7 +2585,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const cam = () => store.doc.camera
       function applyCamera() {
         const c = cam()
-        for (const layer of [mainLayer, edgeLayer, trLayer]) {
+        for (const layer of [mainLayer, edgeLayer, portLayer, trLayer]) {
           layer.position({ x: c.x, y: c.y }); layer.scale({ x: c.scale, y: c.scale })
         }
         stageDiv.style.backgroundPosition = `${c.x}px ${c.y}px`
@@ -2593,7 +2630,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         }
         k.on('dragstart', () => { store.pushUndo(); k.setAttr('snxGroupBase', groupBase()) })
         // v11.1：拖动/变换时连线实时跟随（此前边只在 renderAll 时重画，拖动中甩在原地）
-        k.on('dragmove', () => drawEdges())
+        // v11.2：dragmove 重画 50ms 节流（时间戳比较）；dragend 后 updateNode→emit→renderAll 兜底全量重画
+        k.on('dragmove', () => {
+          const now = Date.now()
+          if (now - lastEdgeDrawAt < 50) return
+          lastEdgeDrawAt = now
+          drawEdges()
+        })
         k.on('transformend', () => drawEdges())
         k.on('dragend', () => {
           const nx = Math.round(k.x()), ny = Math.round(k.y())
@@ -2612,7 +2655,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           store.updateNode(docNode.id, { x: nx, y: ny, w, h: hh })
           applyGroupDelta(dx, dy)
         })
-        k.on('dblclick dbltap', () => { if (docNode.src) window.open(docNode.src, '_blank') })
+        // v11.2：双击=打开灯箱（带该节点）；「新标签打开」保留在右键菜单
+        k.on('dblclick dbltap', () => {
+          if (docNode.status !== 'done' || !docNode.src) return
+          if (opts.onLightbox) opts.onLightbox(docNode.id)
+          else window.open(docNode.src, '_blank')
+        })
         k.on('contextmenu', (e) => {
           e.evt.preventDefault(); e.cancelBubble = true
           if (!store.sel.has(docNode.id)) { store.sel = new Set([docNode.id]); syncTransformer(); store.emit() }
@@ -2674,6 +2722,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       // 树语义：子节点.parentId 指向父。连线可 hover 高亮/点击选中子节点/右键断开；
       // 每个 done 图节点右缘有输出端口，拖出→落到另一节点即改接其 parentId（防环 + undo）。
       let linkDrag = null   // { fromId } 拖拽改接进行中
+      let lastEdgeDrawAt = 0   // v11.2：dragmove 连线重画节流时间戳
       function reachesUp(fromId, ancestorId) {
         // 从 fromId 沿 parentId 向上走，能否到达 ancestorId（用于防环：新父在子的子树里则拒绝）
         let cur = store.node(fromId)
@@ -2713,7 +2762,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         stageDiv.style.cursor = 'default'
       }
       function linkDragDrop(wx, wy) {
-        const from = store.node(linkDrag.fromId)
+        // v11.2：兜底守卫——拖拽态已被取消/源节点已删时直接收线，不做任何改接
+        const from = store.node(linkDrag && linkDrag.fromId)
+        if (!from) { linkDragCancel(); return }
         let hit = null
         for (let i = store.doc.nodes.length - 1; i >= 0; i--) {
           const n = store.doc.nodes[i]
@@ -2737,10 +2788,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 
       function drawEdges() {
         edgeLayer.destroyChildren()
+        portLayer.destroyChildren()   // v11.2：端口移到独立 portLayer，同步重建
         // v11.1：交互件尺寸按相机倒数补偿——热区/端口在任何缩放下保持恒定屏幕大小
         const inv = 1 / Math.max(0.05, cam().scale)
         for (const n of store.doc.nodes) {
           if (!n.parentId) continue
+          if (n.hidden) continue   // v11.2：隐藏节点不画入边
           const p = store.node(n.parentId)
           if (!p) continue
           // v10：三阶贝塞尔（控制点水平外推），端点小圆点
@@ -2781,6 +2834,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             e.cancelBubble = true
             linkDrag = { fromId: n.id }
             stageDiv.style.cursor = 'crosshair'
+            // v11.2：兜底——指针在画布外松开/系统取消拖拽/窗口失焦都要收线，
+            // 不再依赖 stage mouseup（落到画布外就永远收不了线）。drop 先行时此处 no-op。
+            const cancel = () => { if (linkDrag) linkDragCancel() }
+            window.addEventListener('mouseup', cancel, { once: true })
+            window.addEventListener('pointercancel', cancel, { once: true })
+            window.addEventListener('blur', cancel, { once: true })
           })
           out.on('mouseenter', () => { stageDiv.style.cursor = 'crosshair' })
           out.on('mouseleave', () => { if (!linkDrag) stageDiv.style.cursor = 'default' })
@@ -2788,13 +2847,14 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             e.evt.preventDefault(); e.cancelBubble = true
             if (opts.onContext) opts.onContext(e.evt.clientX, e.evt.clientY, n.id)
           })
-          edgeLayer.add(out)
-          edgeLayer.add(new Konva.Circle({
+          portLayer.add(out)
+          portLayer.add(new Konva.Circle({
             x: n.x, y: n.y + n.h / 2, radius: Math.min(11, 3.5 * inv), listening: false,
             stroke: theme.accent, strokeWidth: 1.2 * inv, opacity: 0.55,
           }))
         }
         edgeLayer.batchDraw()
+        portLayer.batchDraw()
       }
 
       function renderAll() {
@@ -2809,6 +2869,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       // ——— 视口交互 ———
       stage.on('mousedown', (e) => {
         const evt = e.evt
+        if (linkDrag) return   // v11.2：拖线期间不再起框选/平移（窗口级 mouseup 兜底收线）
         if (evt.button === 1 || (spaceDown && evt.button === 0)) {
           panning = { px: evt.clientX, py: evt.clientY, cx: cam().x, cy: cam().y }
           stageDiv.style.cursor = 'grabbing'
@@ -3079,6 +3140,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const go = async () => {
         const p = text.trim()
         if (!p || busy) return
+        if (queuePaused) notify('队列已暂停，任务已入队等待恢复')   // v11.2：暂停期入队全局告知
         setBusy(true)
         try {
           const size = selDone ? sizeForAspect(selDone.w, selDone.h) : applyQuality(genPrefs.size || '2048x2048', genPrefs.quality || '2k')
@@ -3353,7 +3415,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     }
 
     // ——— 右键菜单 ———
-    function ContextMenu({ menu, engineRef, setMenu, busy, setBusy, onRestoreParams, onExportCanvas }) {
+    // v11.2：照 GalContextMenu 模式 portal 挂 body + 实测尺寸钳到视口（fixed 在 .snx-pro
+    // container-type 里会被收编为包含块，portal 后不再被画布容器裁剪）
+    function ContextMenu({ menu, engineRef, setMenu, busy, setBusy, onRestoreParams, onExportCanvas, onOpenLightbox, onClearAll }) {
+      const ref = useRef(null)
+      const [pos, setPos] = useState(null)   // null=首帧离屏，测完尺寸再就位防闪跳
       useEffect(() => {
         if (!menu) return
         const close = () => setMenu(null)
@@ -3361,6 +3427,24 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         window.addEventListener('click', close)
         window.addEventListener('resize', close)
         return () => { modalPop(entry); window.removeEventListener('click', close); window.removeEventListener('resize', close) }
+      }, [menu])
+      // 挂载后实测菜单尺寸，钳到视口（portal 降级时钳到 .snx-pro 容器）
+      useLayoutEffect(() => {
+        const el = ref.current
+        if (!menu || !el) return
+        const r = el.getBoundingClientRect()
+        if (reactDomPortal) {
+          setPos({
+            x: Math.max(8, Math.min(menu.x, window.innerWidth - r.width - 8)),
+            y: Math.max(8, Math.min(menu.y, window.innerHeight - r.height - 8)),
+          })
+        } else {
+          const hr = fixedOffsetHost()
+          setPos({
+            x: Math.max(8, Math.min(menu.x - hr.left, hr.right - hr.left - r.width - 8)),
+            y: Math.max(8, Math.min(menu.y - hr.top, hr.bottom - hr.top - r.height - 8)),
+          })
+        }
       }, [menu])
       if (!menu) return null
       const target = menu.nodeId ? store.node(menu.nodeId) : null
@@ -3382,7 +3466,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         })
         setBusy(false)
       }
-      return h('div', { className: 'snx-cv-menu', style: { left: menu.x, top: menu.y } },
+      return portalToBody(h('div', { className: 'snx-cv-menu', ref,
+        style: { left: (pos ? pos.x : -9999) + 'px', top: (pos ? pos.y : -9999) + 'px' } },
         // ── v11.1：连线右键——断开 / 选中子节点 ──
         edgeChild ? h('button', {
           onClick: act(() => {
@@ -3396,6 +3481,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           onClick: act(() => { store.sel = new Set([edgeChild.id]); if (engineRef.current) engineRef.current.syncTransformer(); store.emit() }),
         }, ic('mouse-pointer-click'), ' 选中子节点') : null,
         target && target.status === 'error' ? h('button', { onClick: retry, disabled: busy }, ic('rotate-ccw'), ' 重试生成') : null,
+        // v11.2：灯箱打开为主项，「新标签打开」保留为次项（A-P1-5：画布→灯箱链路）
+        target && target.status === 'done' ? h('button', { onClick: act(() => onOpenLightbox && onOpenLightbox(target)) }, ic('expand'), ' 灯箱打开') : null,
         target && target.status === 'done' ? h('button', { onClick: act(() => window.open(target.src, '_blank')) }, '新标签打开') : null,
         target && target.status === 'done' ? h('button', {
           onClick: act(() => {
@@ -3434,12 +3521,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         h('button', { onClick: act(() => engineRef.current && engineRef.current.fit()) }, ic('maximize'), ' 适应画面'),
         h('button', { onClick: act(() => onExportCanvas()), title: '全部可见图按布局合成一张 PNG' }, ic('image'), ' 导出画布 PNG'),
         !target && !edgeChild ? h('button', {
-          onClick: act(() => {
-            store.pushUndo(); store.doc.nodes = []
-            store.emit(); autosave()
-          }),
+          onClick: act(() => onClearAll && onClearAll()),
         }, ic('trash-2'), ' 清空画布') : null,
-      )
+      ))
     }
 
     // ── P1-3：画廊右键菜单（单选/多选两套）──
@@ -3452,7 +3536,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const [pos, setPos] = useState(null)   // null=首帧离屏，定位完成前不闪跳
       useEffect(() => {
         const self = modalPush(() => closeRef.current())
-        const close = (e) => { if (ref.current && !ref.current.contains(e.target)) closeRef.current() }
+        // v11.2：外点/resize 关闭不再被 ref 门死——菜单隐形（target 失效返回 null）时也必须能关
+        const close = (e) => { if (!ref.current || !ref.current.contains(e.target)) closeRef.current() }
         window.addEventListener('mousedown', close)
         window.addEventListener('resize', close)
         return () => {
@@ -3461,6 +3546,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           window.removeEventListener('resize', close)
         }
       }, [])
+      // v11.2：target 失效（节点被删/文档重载）→ 立即关闭，不留隐形活模态（占着 Esc 与外点通道）
+      useEffect(() => {
+        const t = menu && menu.nodeId ? store.node(menu.nodeId) : null
+        if (!t) closeRef.current()
+      })
       // 挂载后实测菜单尺寸，钳到视口（portal 降级时钳到 .snx-pro 容器）
       useLayoutEffect(() => {
         const el = ref.current
@@ -3529,8 +3619,14 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         const self = modalPush(() => cancelRef.current())
         const onKey = (e) => {
           if (modalTop() !== self) return
-          if (e.key === 'Escape') { e.preventDefault(); cancelRef.current() }
-          else if (e.key === 'Enter') { e.preventDefault(); confirmRef.current() }
+          if (e.key === 'Escape') { e.preventDefault(); cancelRef.current() }   // v11.2：分发器独占 Esc，此分支保留为死代码
+          else if (e.key === 'Enter') {
+            // v11.2（A-P1-4）：焦点在按钮上时让按钮原生激活（初始焦点在「取消」），
+            // 不强转 confirm——Enter 默认=取消，破坏性操作必须显式点击
+            const ae = document.activeElement
+            if (ae && ae.tagName === 'BUTTON') return
+            e.preventDefault(); confirmRef.current()
+          }
         }
         window.addEventListener('keydown', onKey)
         return () => { modalPop(self); window.removeEventListener('keydown', onKey) }
@@ -3540,8 +3636,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           h('div', { className: 'snx-cfm-t' }, ic('triangle-alert', 16), title),
           h('div', { className: 'snx-cfm-d' }, desc),
           h('div', { className: 'snx-cfm-btns' },
-            h('button', { type: 'button', className: 'snx-cfm-b', onClick: () => cancelRef.current() }, cancelLabel || '取消'),
-            h('button', { type: 'button', className: 'snx-cfm-b danger', onClick: () => confirmRef.current(), autoFocus: true },
+            h('button', { type: 'button', className: 'snx-cfm-b', onClick: () => cancelRef.current(), autoFocus: true }, cancelLabel || '取消'),
+            h('button', { type: 'button', className: 'snx-cfm-b danger', onClick: () => confirmRef.current() },
               confirmIcon ? ic(confirmIcon, 13) : null, confirmLabel || '确认'),
           ),
         ),
@@ -3836,7 +3932,27 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         return () => window.removeEventListener('snx:notify', onNotify)
       }, [])
       // ── P1-14：promise 化应用内确认（SnxConfirm 渲染在 return 末尾）──
-      const askConfirm = (opts) => new Promise((resolve) => setCfm(Object.assign({}, opts, { resolve })))
+      // v11.2（B-8）：覆盖守卫——已有确认弹窗在场时，后来的请求直接按取消返回，不静默顶掉前一个
+      const askConfirm = (opts) => new Promise((resolve) => {
+        if (cfm) { resolve(false); return }
+        setCfm(Object.assign({}, opts, { resolve }))
+      })
+      // v11.2（B-7/A-P2-4）：清空画布走应用内确认；有进行中任务时明示代价
+      const askClearCanvas = async () => {
+        const running = store.doc.nodes.filter((n) => n.status === 'pending' || n.status === 'running').length
+        const ok = await askConfirm({
+          title: '清空画布？',
+          confirmLabel: '清空画布', confirmIcon: 'trash-2',
+          desc: '将移除画布上全部 ' + store.doc.nodes.length + ' 个节点，可按 Ctrl+Z 撤销。'
+            + (running > 0 ? '注意：当前有 ' + running + ' 个进行中任务，清空后将白费 ' + running + ' 个进行中任务。' : ''),
+        })
+        if (!ok) return
+        store.pushUndo()
+        store.doc.nodes = []
+        store.sel = new Set()
+        store.emit(); autosave()
+        notify('画布已清空')
+      }
       const closeConfirm = (v) => setCfm((s) => { if (s) { try { s.resolve(v) } catch { } } return null })
       // ——— P1-3：画廊批量操作（批量条 / 右键菜单 / 拖拽归类共用；路径与灯箱删除/画板归属一致）———
       const moveNodesToBoard = (ids, boardId) => {
@@ -3884,6 +4000,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       }
       const toggleGalFav = (ids, on) => {
         const real = (ids || []).map((id) => store.node(id)).filter(Boolean)
+        store.pushUndo()   // v11.2：收藏/取消收藏入撤销栈
         real.forEach((n) => { n.favorite = !!on })
         store.emit(); autosave(); force((x) => x + 1)
         notify(on ? '已收藏 ' + real.length + ' 张' : '已取消收藏 ' + real.length + ' 张')
@@ -4012,12 +4129,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         ensureKonva().then(() => setReady(true)).catch((e) => setLoadErr(String((e && e.message) || e)))
       }, [])
 
-      // 全屏画布 Esc 退出（P0-4：上层还有灯箱/帮助等模态时让路，Esc 归栈顶）
+      // 全屏画布入模态栈（v11.2：onEsc 分发器统一处理 Esc 退出；soft 条目不算模态——
+      // modalOpen() 为假，画布快捷键（空格平移/Ctrl+Z/方向键/Del）在全屏态照常响应，
+      // 而 Esc 经分发器只退出全屏、不再同时清空选择——修复全屏 Esc 双消费）
       useEffect(() => {
         if (!fsCanvas) return
-        const onKey = (e) => { if (e.key === 'Escape' && !modalOpen()) setFsCanvas(false) }
-        window.addEventListener('keydown', onKey)
-        return () => window.removeEventListener('keydown', onKey)
+        const self = modalPush(() => setFsCanvas(false), { soft: true })
+        return () => modalPop(self)
       }, [fsCanvas])
 
       // v8：? 键打开快捷键速查 overlay
@@ -4060,6 +4178,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             get(CANVAS_ROUTE).then((r) => {
               if (dead || !r.doc || !Array.isArray(r.doc.nodes)) return
               store.doc.nodes = r.doc.nodes
+              store.doc.boards = r.doc.boards || store.doc.boards   // v11.2：画板列表一并跟随外部写入
               store.sel = new Set([...store.sel].filter((id) => store.node(id)))
               store.undoStack = [store.snapshot()]; store.redoStack = []
               if (activeEngine) activeEngine.renderAll()
@@ -4094,6 +4213,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           })
         })
         engine.opts.onNotify = notify   // v11.1：连线改接/防环提示走引擎 → toast
+        engine.opts.onLightbox = (id) => {   // v11.2：画布节点双击 → 灯箱（带该节点）
+          const n = store.node(id)
+          if (n && n.src) setLightbox(n)
+        }
         // 视口变化 → 重渲染（浮动操作条跟随节点/相机）
         const unView = engine.onViewChange(() => force((n) => n + 1))
 
@@ -4111,10 +4234,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             const r = new window.FileReader()
             r.onload = async () => {
               const pp = await parsePngParams(f)
-              loadImg(String(r.result)).then((im) => {
+              // v11.2：大图先落盘成文件 URL，失败拒绝入画布
+              const src = await ingestDroppedImageSrc(String(r.result))
+              if (!src) return
+              loadImg(src).then((im) => {
                 const fit = nodeFit(im, 480)
                 store.addNode({
-                  id: nid(), type: 'image', status: 'done', src: String(r.result),
+                  id: nid(), type: 'image', status: 'done', src,
                   x: Math.round(wx - fit.w / 2 + idx * 24), y: Math.round(wy - fit.h / 2 + idx * 24),
                   w: fit.w, h: fit.h,
                   prompt: pp ? pp.prompt : '', params: pp ? { model: pp.model, size: pp.size, seed: pp.seed } : {},
@@ -4144,11 +4270,14 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           const r = new window.FileReader()
           r.onload = async () => {
             const pp = await parsePngParams(f)
-            loadImg(String(r.result)).then((im) => {
+            // v11.2：大图先落盘成文件 URL，失败拒绝入画布
+            const src = await ingestDroppedImageSrc(String(r.result))
+            if (!src) return
+            loadImg(src).then((im) => {
               const fit = nodeFit(im, 480)
               const cc = engineRef.current ? engineRef.current.centerWorld() : { x: 0, y: 0 }
               store.addNode({
-                id: nid(), type: 'image', status: 'done', src: String(r.result),
+                id: nid(), type: 'image', status: 'done', src,
                 x: Math.round(cc.x - fit.w / 2), y: Math.round(cc.y - fit.h / 2),
                 w: fit.w, h: fit.h,
                 prompt: pp ? pp.prompt : '', params: pp ? { model: pp.model, size: pp.size, seed: pp.seed } : {},
@@ -4192,7 +4321,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             const d = e.shiftKey ? 10 : 1
             const dx = e.key === 'ArrowLeft' ? -d : e.key === 'ArrowRight' ? d : 0
             const dy = e.key === 'ArrowUp' ? -d : e.key === 'ArrowDown' ? d : 0
-            store.pushUndo()
+            pushUndoMerge()   // v11.2：方向键连按合并为一步 undo（800ms 窗口，同滑块先例）
             ns.forEach((n) => store.updateNode(n.id, { x: n.x + dx, y: n.y + dy }))
           }
           else if (e.key === 'Delete' || e.key === 'Backspace') { store.removeSelected() }
@@ -4519,6 +4648,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             store.pushUndo()   // P1-10：画板归属可撤销（此前绕过 undo）
             if (boardId) n.boardId = boardId
             else delete n.boardId
+            store.emit()   // v11.2：补 emit——画廊/画布同步重渲染
             autosave(); force((x) => x + 1)
             const b = (store.doc.boards || []).find((x) => x.id === boardId)
             notify && notify(boardId ? '已移入画板「' + b.name + '」' : '已移出画板')
@@ -4609,9 +4739,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             autosave()
             notify && notify('已生成调整版')
           },
-          // v8：收藏 toggle
+          // v8：收藏 toggle（v11.2：补 pushUndo + emit，与画廊收藏同链路）
           onToggleFavorite: (n) => {
+            store.pushUndo()
             n.favorite = !n.favorite
+            store.emit()
             force((x) => x + 1)
             autosave()
             notify && notify(n.favorite ? '已收藏' : '已取消收藏')
@@ -4641,8 +4773,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           toasts.length && !fsCanvas ? h('span', { style: { color: 'var(--dsw-alias-toast-label,#fff)' } }, toasts[toasts.length - 1].msg) : null,
           h('span', { id: 'snx-cv-save' }, ''),
         ) : null,
-        // ─── 上下文菜单 ───
-        h(ContextMenu, { menu, engineRef, setMenu, busy, setBusy, onRestoreParams, onExportCanvas }),
+        // ─── 上下文菜单（v11.2：portal 挂 body，全屏画布共用同一实例——删除 renderFsCanvas 里的第二个）───
+        h(ContextMenu, {
+          menu, engineRef, setMenu, busy, setBusy, onRestoreParams, onExportCanvas,
+          onOpenLightbox: (n) => setLightbox(n),
+          onClearAll: askClearCanvas,
+        }),
         // ─── P1-3：画廊右键菜单（单选/多选两套，portal 挂 body，外点关闭）───
         galMenu ? h(GalContextMenu, {
           menu: galMenu,
@@ -4848,6 +4984,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         const createBoard = () => {
           const name = bdName.trim()
           if (!name) return
+          store.pushUndo()   // v11.2：新建画板入撤销栈
           store.doc.boards = (store.doc.boards || []).concat([{ id: nid(), name }])
           autosave(); setGalBdName(''); setGalBdCreating(false); force((x) => x + 1)
         }
@@ -5464,7 +5601,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 ),
                 selNode.parentId ? h('div', { className: 'snx-fs-prop' },
                   h('div', { className: 'lb' }, '衍生自'),
-                  h('div', { className: 'val mono' }, selNode.parentId.slice(0, 12)),
+                  // v11.2（A-P2-8）：显示父图提示词前 14 字（title 带完整 id），不再只给一串不可读 id
+                  h('div', { className: 'val mono', title: selNode.parentId }, (() => {
+                    const p = store.node(selNode.parentId)
+                    return (p && p.prompt) ? String(p.prompt).replace(/^💬\s*/, '').slice(0, 14) : selNode.parentId.slice(0, 12)
+                  })()),
                 ) : null,
                 // v8：图层属性 — 混合模式 + 不透明度 + 锁定 + 可见性
                 h('div', { className: 'snx-fs-prop' },
@@ -5479,7 +5620,15 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                           engineRef.current && engineRef.current.refresh && engineRef.current.refresh()
                           force((x) => x + 1); autosave()
                         },
-                        options: ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten'].map((m) => ({ value: m, label: m })),
+                        options: [
+                          // v11.2（A-P2-8）：label 中文，value 保持英文
+                          { value: 'normal', label: '正常' },
+                          { value: 'multiply', label: '正片叠底' },
+                          { value: 'screen', label: '滤色' },
+                          { value: 'overlay', label: '叠加' },
+                          { value: 'darken', label: '变暗' },
+                          { value: 'lighten', label: '变亮' },
+                        ],
                       }),
                     ),
                   ),
@@ -5527,7 +5676,6 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               ),
             ),
           ),
-          h(ContextMenu, { menu, engineRef, setMenu, busy, setBusy, onRestoreParams, onExportCanvas }),
         )
       }
 
@@ -5679,6 +5827,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               h('div', null, h('span', { className: 'k' }, 'Ctrl + D'), h('span', { className: 'v' }, '复制选中节点')),
               h('div', null, h('span', { className: 'k' }, 'Ctrl + A'), h('span', { className: 'v' }, '画布全选')),
               h('div', null, h('span', { className: 'k' }, '方向键'), h('span', { className: 'v' }, '微调选中节点（Shift = 10px）')),
+              h('div', null, h('span', { className: 'k' }, '拖输出端口'), h('span', { className: 'v' }, '改接父图（拖到目标节点）')),
+              h('div', null, h('span', { className: 'k' }, '右键连线'), h('span', { className: 'v' }, '断开衍生关系 / 选中子节点')),
+              h('div', null, h('span', { className: 'k' }, 'Esc（拖线中）'), h('span', { className: 'v' }, '取消拖线')),
               h('div', null, h('span', { className: 'k' }, 'Ctrl + V / 拖入 PNG'), h('span', { className: 'v' }, '成节点，带参数自动读回')),
               h('div', null, h('span', { className: 'k' }, '?'), h('span', { className: 'v' }, '打开快捷键速查')),
             ),
@@ -6415,9 +6566,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               setScale((s) => Math.max(0.05, Math.min(8, s * (e.deltaY > 0 ? 0.9 : 1.1))))
             },
           },
+          // v11.2（A-P2-7）：缩放直写布局宽高（照灯箱 P0-3 同款），overflow:auto 的滚动范围
+          // 真正生效——transform:scale 不改变布局尺寸，放大后拖不到图外区域
           h('img', {
             src: src || path,
-            style: { transform: `scale(${scale})`, transformOrigin: 'center center' },
+            style: info
+              ? { width: Math.round(info.w * scale) + 'px', height: Math.round(info.h * scale) + 'px' }
+              : undefined,
           }),
         ),
       )
@@ -6462,8 +6617,14 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           ['Ctrl + D', '复制选中节点'],
           ['Ctrl + V / 拖入 PNG', '成节点，带 sensenova 参数自动读回'],
           ['左下角网格按钮', '按生成链整理布局'],
-          ['双击节点', '新标签打开原图'],
-          ['右键节点 / 空白', '菜单：重试 / 下载 / 回填参数 / 对齐 / 成组 / 置顶等 z 序…'],
+          ['双击节点', '打开灯箱（「新标签打开」在右键菜单）'],
+          ['右键节点 / 空白', '菜单：灯箱 / 重试 / 下载 / 回填参数 / 对齐 / 成组 / 置顶等 z 序…'],
+        ] },
+        // v11.2（A-P2-2）：连线编辑操作段
+        { title: '连线编辑', items: [
+          ['拖输出端口', '从图右缘圆点拖到目标节点 = 改接其父图（防环，可撤销）'],
+          ['右键连线', '断开衍生关系 / 选中子节点'],
+          ['Esc（拖线中）', '取消本次拖线'],
         ] },
         { title: '画廊', items: [
           ['单击', '选中（轻态，不再直接跳画布/灯箱）'],
@@ -6553,7 +6714,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         h('div', { className: 'snx-qi-body' },
           h('div', { className: 'snx-qi-pr' }, (node.prompt || '—').replace(/^💬\s*/, '').slice(0, 80)),
           h('div', { className: 'snx-qi-meta' },
-            h('span', { className: 'snx-qi-st' }, st),
+            h('span', { className: 'snx-qi-st' }, STATUS_ZH[st] || st),   // v11.2：徽章中文（uppercase 样式保留）
             meta.model ? h('span', null, ' · ' + meta.model) : null,
             meta.size ? h('span', null, ' · ' + meta.size) : null,
             node.errMsg ? h('span', { className: 'snx-qi-err-msg' }, ' · ' + node.errMsg.slice(0, 60)) : null,
@@ -6633,10 +6794,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     function CompareGrid({ items }) {
       const [focus, setFocus] = useState(items[0] && items[0].id)
       const big = items.find((n) => n.id === focus) || items[0]
+      // v11.2（A-P2-5 半）：角标改字母 A/B/C/D，与 ComparePair 的 A/B 对齐（模式循环/交换按钮 deferred）
+      const tagOf = (n) => 'ABCD'[items.indexOf(n)] || '?'
       return h('div', { className: 'snx-cmp-grid' },
         h('div', { className: 'snx-cmp-grid-big' },
           h('img', { src: big.src, alt: '' }),
-          h('div', { className: 'snx-cmp-tag l' }, big.id.slice(0, 6)),
+          h('div', { className: 'snx-cmp-tag l' }, tagOf(big)),
           h('div', { className: 'snx-cmp-grid-big-pr' }, (big.prompt || '').replace(/^💬\s*/, '').slice(0, 80)),
         ),
         h('div', {
@@ -6648,9 +6811,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             className: 'snx-cmp-grid-cell' + (n.id === focus ? ' on' : ''),
             onClick: () => setFocus(n.id),
             type: 'button',
+            title: '设为大图（' + tagOf(n) + '）',
           },
             h('img', { src: n.src, alt: '' }),
-            h('span', { className: 'snx-cmp-grid-cell-tag' }, n.id.slice(0, 4)),
+            h('span', { className: 'snx-cmp-grid-cell-tag' }, tagOf(n)),
           )),
         ),
       )
@@ -6783,7 +6947,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       useEffect(() => {
         const onKey = (e) => {
           if (modalTop() !== modalSelfRef.current) return   // 上层还有别的模态（如帮助）：让路
-          if (e.key === 'Escape') onCloseRef.current()
+          if (e.key === 'Escape') onCloseRef.current()   // v11.2：分发器已独占 Esc，此分支保留为死代码
+          else if (isTyping(e)) return   // v11.2（B-6）：输入态（标签框/滑块）不抢键——←/→ 调滑块不再连带翻页
           else if (e.key === '+' || e.key === '=') setZoom((s) => s * 1.25)
           else if (e.key === '-') setZoom((s) => s / 1.25)
           else if (e.key === '0') setScale(1)
@@ -6834,6 +6999,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         const t = tagDraft.trim().slice(0, 24)
         if (!t || !node) return
         if (!nodeTags.includes(t)) {
+          store.pushUndo()   // v11.2：标签增删入撤销栈
           node.tags = nodeTags.concat([t])
           store.emit()   // 驱动画布/画廊同步重渲染
           autosave()
@@ -6842,6 +7008,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       }
       const removeTag = (t) => {
         if (!node) return
+        store.pushUndo()   // v11.2：标签增删入撤销栈
         node.tags = nodeTags.filter((x) => x !== t)
         store.emit()
         autosave()
@@ -7113,7 +7280,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             h('div', { className: 'pr' }, (t.node.prompt || '—').slice(0, 32)),
             h('div', { className: 'sub' },
               t.node.id === currentId ? h('span', { className: 'snx-tree-curr' }, '当前') : null,
-              t.node.status !== 'done' ? h('span', null, t.node.status) : null,
+              t.node.status !== 'done' ? h('span', null, STATUS_ZH[t.node.status] || t.node.status) : null,   // v11.2：状态中文
             ),
           ),
           t.children.length ? h('span', { className: 'snx-tree-cnt' }, t.children.length) : null,
