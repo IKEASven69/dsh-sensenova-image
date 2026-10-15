@@ -25,7 +25,7 @@ window.__ModuleLoader__.load({
     const inject = ['slots', 'sessions', 'uiConversation', 'conversation', 'sidebarRightTabs', 'sidebarRight', 'layout']
 
     // ─── v10：内联 lucide 图标（ISC）——ic(name, size) 返回 currentColor 描边 SVG ───
-    const ICONS = {"align-center-horizontal":"<path d=\"M2 12h20\" /><path d=\"M10 16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4\" /><path d=\"M10 8V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v4\" /><path d=\"M20 16v1a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-1\" /><path d=\"M14 8V7c0-1.1.9-2 2-2h2a2 2 0 0 1 2 2v1\" />","align-center-vertical":"<path d=\"M12 2v20\" /><path d=\"M8 10H4a2 2 0 0 1-2-2V6c0-1.1.9-2 2-2h4\" /><path d=\"M16 10h4a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-4\" /><path d=\"M8 20H7a2 2 0 0 1-2-2v-2c0-1.1.9-2 2-2h1\" /><path d=\"M16 14h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1\" />","align-end-horizontal":"<rect width=\"6\" height=\"16\" x=\"4\" y=\"2\" rx=\"2\" /><rect width=\"6\" height=\"9\" x=\"14\" y=\"9\" rx=\"2\" /><path d=\"M22 22H2\" />","align-end-vertical":"<rect width=\"16\" height=\"6\" x=\"2\" y=\"4\" rx=\"2\" /><rect width=\"9\" height=\"6\" x=\"9\" y=\"14\" rx=\"2\" /><path d=\"M22 22V2\" />","align-horizontal-distribute-center":"<rect width=\"6\" height=\"14\" x=\"4\" y=\"5\" rx=\"2\" /><rect width=\"6\" height=\"10\" x=\"14\" y=\"7\" rx=\"2\" /><path d=\"M17 22v-5\" /><path d=\"M17 7V2\" /><path d=\"M7 22v-3\" /><path d=\"M7 5V2\" />","align-start-horizontal":"<rect width=\"6\" height=\"16\" x=\"4\" y=\"6\" rx=\"2\" /><rect width=\"6\" height=\"9\" x=\"14\" y=\"6\" rx=\"2\" /><path d=\"M22 2H2\" />","align-start-vertical":"<rect width=\"9\" height=\"6\" x=\"6\" y=\"14\" rx=\"2\" /><rect width=\"16\" height=\"6\" x=\"6\" y=\"4\" rx=\"2\" /><path d=\"M2 2v20\" />","align-vertical-distribute-center":"<path d=\"M22 17h-3\" /><path d=\"M22 7h-5\" /><path d=\"M5 17H2\" /><path d=\"M7 7H2\" /><rect x=\"5\" y=\"14\" width=\"14\" height=\"6\" rx=\"2\" /><rect x=\"7\" y=\"4\" width=\"10\" height=\"6\" rx=\"2\" />","arrow-down":"<path d=\"M12 5v14\" /><path d=\"m19 12-7 7-7-7\" />","arrow-up":"<path d=\"m5 12 7-7 7 7\" /><path d=\"M12 19V5\" />","arrow-up-right":"<path d=\"M7 7h10v10\" /><path d=\"M7 17 17 7\" />","brush":"<path d=\"m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08\" /><path d=\"M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z\" />","camera":"<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\" /><circle cx=\"12\" cy=\"13\" r=\"3\" />","check":"<path d=\"M20 6 9 17l-5-5\" />","chevron-down":"<path d=\"m6 9 6 6 6-6\" />","chevron-left":"<path d=\"m15 18-6-6 6-6\" />","chevron-right":"<path d=\"m9 18 6-6-6-6\" />","chevrons-down":"<path d=\"m7 6 5 5 5-5\" /><path d=\"m7 13 5 5 5-5\" />","chevrons-left-right":"<path d=\"m9 7-5 5 5 5\" /><path d=\"m15 7 5 5-5 5\" />","chevrons-up":"<path d=\"m17 11-5-5-5 5\" /><path d=\"m17 18-5-5-5 5\" />","circle-x":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m15 9-6 6\" /><path d=\"m9 9 6 6\" />","clipboard-copy":"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /><path d=\"M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2\" /><path d=\"M16 4h2a2 2 0 0 1 2 2v4\" /><path d=\"M21 14H11\" /><path d=\"m15 10-4 4 4 4\" />","clock":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><polyline points=\"12 6 12 12 16 14\" />","columns-2":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M12 3v18\" />","copy":"<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\" /><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\" />","corner-right-down":"<path d=\"m10 15 5 5 5-5\" /><path d=\"M4 4h7a4 4 0 0 1 4 4v12\" />","database":"<ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\" /><path d=\"M3 5V19A9 3 0 0 0 21 19V5\" /><path d=\"M3 12A9 3 0 0 0 21 12\" />","dices":"<rect width=\"12\" height=\"12\" x=\"2\" y=\"10\" rx=\"2\" ry=\"2\" /><path d=\"m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6\" /><path d=\"M6 18h.01\" /><path d=\"M10 14h.01\" /><path d=\"M15 6h.01\" /><path d=\"M18 9h.01\" />","download":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"7 10 12 15 17 10\" /><line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\" />","eraser":"<path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\" /><path d=\"M22 21H7\" /><path d=\"m5 11 9 9\" />","expand":"<path d=\"m21 21-6-6m6 6v-4.8m0 4.8h-4.8\" /><path d=\"M3 16.2V21m0 0h4.8M3 21l6-6\" /><path d=\"M21 7.8V3m0 0h-4.8M21 3l-6 6\" /><path d=\"M3 7.8V3m0 0h4.8M3 3l6 6\" />","eye-off":"<path d=\"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49\" /><path d=\"M14.084 14.158a3 3 0 0 1-4.242-4.242\" /><path d=\"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143\" /><path d=\"m2 2 20 20\" />","eye":"<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","film":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M7 3v18\" /><path d=\"M3 7.5h4\" /><path d=\"M3 12h18\" /><path d=\"M3 16.5h4\" /><path d=\"M17 3v18\" /><path d=\"M17 7.5h4\" /><path d=\"M17 16.5h4\" />","folder-plus":"<path d=\"M12 10v6\" /><path d=\"M9 13h6\" /><path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />","frame":"<line x1=\"22\" x2=\"2\" y1=\"6\" y2=\"6\" /><line x1=\"22\" x2=\"2\" y1=\"18\" y2=\"18\" /><line x1=\"6\" x2=\"6\" y1=\"2\" y2=\"22\" /><line x1=\"18\" x2=\"18\" y1=\"2\" y2=\"22\" />","git-fork":"<circle cx=\"12\" cy=\"18\" r=\"3\" /><circle cx=\"6\" cy=\"6\" r=\"3\" /><circle cx=\"18\" cy=\"6\" r=\"3\" /><path d=\"M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9\" /><path d=\"M12 12v3\" />","grid-2x2":"<path d=\"M12 3v18\" /><path d=\"M3 12h18\" /><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" />","image-plus":"<path d=\"M16 5h6\" /><path d=\"M19 2v6\" /><path d=\"M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" /><circle cx=\"9\" cy=\"9\" r=\"2\" />","image":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\" /><circle cx=\"9\" cy=\"9\" r=\"2\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" />","images":"<path d=\"M18 22H4a2 2 0 0 1-2-2V6\" /><path d=\"m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18\" /><circle cx=\"12\" cy=\"8\" r=\"2\" /><rect width=\"16\" height=\"16\" x=\"6\" y=\"2\" rx=\"2\" />","key-round":"<path d=\"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z\" /><circle cx=\"16.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","keyboard":"<path d=\"M10 8h.01\" /><path d=\"M12 12h.01\" /><path d=\"M14 8h.01\" /><path d=\"M16 12h.01\" /><path d=\"M18 8h.01\" /><path d=\"M6 8h.01\" /><path d=\"M7 16h10\" /><path d=\"M8 12h.01\" /><rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />","layers":"<path d=\"M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z\" /><path d=\"M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12\" /><path d=\"M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17\" />","library":"<path d=\"m16 6 4 14\" /><path d=\"M12 6v14\" /><path d=\"M8 8v12\" /><path d=\"M4 4v16\" />","list-ordered":"<path d=\"M10 12h11\" /><path d=\"M10 18h11\" /><path d=\"M10 6h11\" /><path d=\"M4 10h2\" /><path d=\"M4 6h1v4\" /><path d=\"M6 18H4c0-1 2-2 2-3s-1-1.5-2-1\" />","loader-circle":"<path d=\"M21 12a9 9 0 1 1-6.219-8.56\" />","lock-open":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 9.9-1\" />","lock":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 10 0v4\" />","maximize":"<path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /><path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /><path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /><path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" />","message-circle":"<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\" />","minus":"<path d=\"M5 12h14\" />","package":"<path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\" /><path d=\"M12 22V12\" /><path d=\"m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7\" /><path d=\"m7.5 4.27 9 5.15\" />","palette":"<circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\" /><path d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z\" />","pause":"<rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" /><rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" />","pen-line":"<path d=\"M12 20h9\" /><path d=\"M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z\" />","pen-tool":"<path d=\"M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z\" /><path d=\"m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18\" /><path d=\"m2.3 2.3 7.286 7.286\" /><circle cx=\"11\" cy=\"11\" r=\"2\" />","pin":"<path d=\"M12 17v5\" /><path d=\"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z\" />","play":"<polygon points=\"6 3 20 12 6 21 6 3\" />","plug":"<path d=\"M12 22v-5\" /><path d=\"M9 8V2\" /><path d=\"M15 8V2\" /><path d=\"M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z\" />","plus":"<path d=\"M5 12h14\" /><path d=\"M12 5v14\" />","rotate-ccw":"<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /><path d=\"M3 3v5h5\" />","save":"<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" /><path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" /><path d=\"M7 3v4a1 1 0 0 0 1 1h7\" />","scissors":"<circle cx=\"6\" cy=\"6\" r=\"3\" /><path d=\"M8.12 8.12 12 12\" /><path d=\"M20 4 8.12 15.88\" /><circle cx=\"6\" cy=\"18\" r=\"3\" /><path d=\"M14.8 14.8 20 20\" />","settings":"<path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","shuffle":"<path d=\"m18 14 4 4-4 4\" /><path d=\"m18 2 4 4-4 4\" /><path d=\"M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22\" /><path d=\"M2 6h1.972a4 4 0 0 1 3.6 2.2\" /><path d=\"M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45\" />","sliders-horizontal":"<line x1=\"21\" x2=\"14\" y1=\"4\" y2=\"4\" /><line x1=\"10\" x2=\"3\" y1=\"4\" y2=\"4\" /><line x1=\"21\" x2=\"12\" y1=\"12\" y2=\"12\" /><line x1=\"8\" x2=\"3\" y1=\"12\" y2=\"12\" /><line x1=\"21\" x2=\"16\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"3\" y1=\"20\" y2=\"20\" /><line x1=\"14\" x2=\"14\" y1=\"2\" y2=\"6\" /><line x1=\"8\" x2=\"8\" y1=\"10\" y2=\"14\" /><line x1=\"16\" x2=\"16\" y1=\"18\" y2=\"22\" />","sparkles":"<path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\" /><path d=\"M20 3v4\" /><path d=\"M22 5h-4\" /><path d=\"M4 17v2\" /><path d=\"M5 18H3\" />","star":"<path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" />","tag":"<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\" /><circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","trash-2":"<path d=\"M3 6h18\" /><path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /><path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /><line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /><line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />","triangle-alert":"<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /><path d=\"M12 9v4\" /><path d=\"M12 17h.01\" />","type":"<polyline points=\"4 7 4 4 20 4 20 7\" /><line x1=\"9\" x2=\"15\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"12\" y1=\"4\" y2=\"20\" />","upload":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"17 8 12 3 7 8\" /><line x1=\"12\" x2=\"12\" y1=\"3\" y2=\"15\" />","wand-sparkles":"<path d=\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72\" /><path d=\"m14 7 3 3\" /><path d=\"M5 6v4\" /><path d=\"M19 14v4\" /><path d=\"M10 2v2\" /><path d=\"M7 8H3\" /><path d=\"M21 16h-4\" /><path d=\"M11 3H9\" />","x":"<path d=\"M18 6 6 18\" /><path d=\"m6 6 12 12\" />","unlink":"<path d=\"m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71\" /><path d=\"m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71\" /><line x1=\"8\" x2=\"8\" y1=\"2\" y2=\"5\" /><line x1=\"2\" x2=\"5\" y1=\"8\" y2=\"8\" /><line x1=\"16\" x2=\"16\" y1=\"19\" y2=\"22\" /><line x1=\"19\" x2=\"22\" y1=\"16\" y2=\"16\" />","mouse-pointer-click":"<path d=\"M14 4.1 12 6\" /><path d=\"m5.1 8-2.9-.8\" /><path d=\"m6 12-1.9 2\" /><path d=\"M7.2 2.2 8 5.1\" /><path d=\"M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z\" />","zap":"<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\" />"};
+    const ICONS = {"align-center-horizontal":"<path d=\"M2 12h20\" /><path d=\"M10 16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4\" /><path d=\"M10 8V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v4\" /><path d=\"M20 16v1a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-1\" /><path d=\"M14 8V7c0-1.1.9-2 2-2h2a2 2 0 0 1 2 2v1\" />","align-center-vertical":"<path d=\"M12 2v20\" /><path d=\"M8 10H4a2 2 0 0 1-2-2V6c0-1.1.9-2 2-2h4\" /><path d=\"M16 10h4a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-4\" /><path d=\"M8 20H7a2 2 0 0 1-2-2v-2c0-1.1.9-2 2-2h1\" /><path d=\"M16 14h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1\" />","align-end-horizontal":"<rect width=\"6\" height=\"16\" x=\"4\" y=\"2\" rx=\"2\" /><rect width=\"6\" height=\"9\" x=\"14\" y=\"9\" rx=\"2\" /><path d=\"M22 22H2\" />","align-end-vertical":"<rect width=\"16\" height=\"6\" x=\"2\" y=\"4\" rx=\"2\" /><rect width=\"9\" height=\"6\" x=\"9\" y=\"14\" rx=\"2\" /><path d=\"M22 22V2\" />","align-horizontal-distribute-center":"<rect width=\"6\" height=\"14\" x=\"4\" y=\"5\" rx=\"2\" /><rect width=\"6\" height=\"10\" x=\"14\" y=\"7\" rx=\"2\" /><path d=\"M17 22v-5\" /><path d=\"M17 7V2\" /><path d=\"M7 22v-3\" /><path d=\"M7 5V2\" />","align-start-horizontal":"<rect width=\"6\" height=\"16\" x=\"4\" y=\"6\" rx=\"2\" /><rect width=\"6\" height=\"9\" x=\"14\" y=\"6\" rx=\"2\" /><path d=\"M22 2H2\" />","align-start-vertical":"<rect width=\"9\" height=\"6\" x=\"6\" y=\"14\" rx=\"2\" /><rect width=\"16\" height=\"6\" x=\"6\" y=\"4\" rx=\"2\" /><path d=\"M2 2v20\" />","align-vertical-distribute-center":"<path d=\"M22 17h-3\" /><path d=\"M22 7h-5\" /><path d=\"M5 17H2\" /><path d=\"M7 7H2\" /><rect x=\"5\" y=\"14\" width=\"14\" height=\"6\" rx=\"2\" /><rect x=\"7\" y=\"4\" width=\"10\" height=\"6\" rx=\"2\" />","arrow-down":"<path d=\"M12 5v14\" /><path d=\"m19 12-7 7-7-7\" />","arrow-up":"<path d=\"m5 12 7-7 7 7\" /><path d=\"M12 19V5\" />","arrow-up-right":"<path d=\"M7 7h10v10\" /><path d=\"M7 17 17 7\" />","arrow-left-right":"<path d=\"M8 3 4 7l4 4\" /><path d=\"M4 7h16\" /><path d=\"m16 21 4-4-4-4\" /><path d=\"M20 17H4\" />","brush":"<path d=\"m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08\" /><path d=\"M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z\" />","camera":"<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\" /><circle cx=\"12\" cy=\"13\" r=\"3\" />","check":"<path d=\"M20 6 9 17l-5-5\" />","chevron-down":"<path d=\"m6 9 6 6 6-6\" />","chevron-left":"<path d=\"m15 18-6-6 6-6\" />","chevron-right":"<path d=\"m9 18 6-6-6-6\" />","chevrons-down":"<path d=\"m7 6 5 5 5-5\" /><path d=\"m7 13 5 5 5-5\" />","chevrons-left-right":"<path d=\"m9 7-5 5 5 5\" /><path d=\"m15 7 5 5-5 5\" />","chevrons-up":"<path d=\"m17 11-5-5-5 5\" /><path d=\"m17 18-5-5-5 5\" />","circle-x":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m15 9-6 6\" /><path d=\"m9 9 6 6\" />","clipboard-copy":"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /><path d=\"M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2\" /><path d=\"M16 4h2a2 2 0 0 1 2 2v4\" /><path d=\"M21 14H11\" /><path d=\"m15 10-4 4 4 4\" />","clock":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><polyline points=\"12 6 12 12 16 14\" />","columns-2":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M12 3v18\" />","copy":"<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\" /><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\" />","corner-right-down":"<path d=\"m10 15 5 5 5-5\" /><path d=\"M4 4h7a4 4 0 0 1 4 4v12\" />","database":"<ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\" /><path d=\"M3 5V19A9 3 0 0 0 21 19V5\" /><path d=\"M3 12A9 3 0 0 0 21 12\" />","dices":"<rect width=\"12\" height=\"12\" x=\"2\" y=\"10\" rx=\"2\" ry=\"2\" /><path d=\"m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6\" /><path d=\"M6 18h.01\" /><path d=\"M10 14h.01\" /><path d=\"M15 6h.01\" /><path d=\"M18 9h.01\" />","download":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"7 10 12 15 17 10\" /><line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\" />","eraser":"<path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\" /><path d=\"M22 21H7\" /><path d=\"m5 11 9 9\" />","expand":"<path d=\"m21 21-6-6m6 6v-4.8m0 4.8h-4.8\" /><path d=\"M3 16.2V21m0 0h4.8M3 21l6-6\" /><path d=\"M21 7.8V3m0 0h-4.8M21 3l-6 6\" /><path d=\"M3 7.8V3m0 0h4.8M3 3l6 6\" />","eye-off":"<path d=\"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49\" /><path d=\"M14.084 14.158a3 3 0 0 1-4.242-4.242\" /><path d=\"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143\" /><path d=\"m2 2 20 20\" />","eye":"<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","film":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M7 3v18\" /><path d=\"M3 7.5h4\" /><path d=\"M3 12h18\" /><path d=\"M3 16.5h4\" /><path d=\"M17 3v18\" /><path d=\"M17 7.5h4\" /><path d=\"M17 16.5h4\" />","folder":"<path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />","folder-plus":"<path d=\"M12 10v6\" /><path d=\"M9 13h6\" /><path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />","frame":"<line x1=\"22\" x2=\"2\" y1=\"6\" y2=\"6\" /><line x1=\"22\" x2=\"2\" y1=\"18\" y2=\"18\" /><line x1=\"6\" x2=\"6\" y1=\"2\" y2=\"22\" /><line x1=\"18\" x2=\"18\" y1=\"2\" y2=\"22\" />","git-fork":"<circle cx=\"12\" cy=\"18\" r=\"3\" /><circle cx=\"6\" cy=\"6\" r=\"3\" /><circle cx=\"18\" cy=\"6\" r=\"3\" /><path d=\"M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9\" /><path d=\"M12 12v3\" />","grid-2x2":"<path d=\"M12 3v18\" /><path d=\"M3 12h18\" /><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" />","group":"<path d=\"M3 7V5c0-1.1.9-2 2-2h2\" /><path d=\"M17 3h2c1.1 0 2 .9 2 2v2\" /><path d=\"M21 17v2c0 1.1-.9 2-2 2h-2\" /><path d=\"M7 21H5c-1.1 0-2-.9-2-2v-2\" /><rect width=\"7\" height=\"5\" x=\"7\" y=\"7\" rx=\"1\" /><rect width=\"7\" height=\"5\" x=\"10\" y=\"12\" rx=\"1\" />","image-plus":"<path d=\"M16 5h6\" /><path d=\"M19 2v6\" /><path d=\"M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" /><circle cx=\"9\" cy=\"9\" r=\"2\" />","image":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\" /><circle cx=\"9\" cy=\"9\" r=\"2\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" />","images":"<path d=\"M18 22H4a2 2 0 0 1-2-2V6\" /><path d=\"m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18\" /><circle cx=\"12\" cy=\"8\" r=\"2\" /><rect width=\"16\" height=\"16\" x=\"6\" y=\"2\" rx=\"2\" />","key-round":"<path d=\"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z\" /><circle cx=\"16.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","keyboard":"<path d=\"M10 8h.01\" /><path d=\"M12 12h.01\" /><path d=\"M14 8h.01\" /><path d=\"M16 12h.01\" /><path d=\"M18 8h.01\" /><path d=\"M6 8h.01\" /><path d=\"M7 16h10\" /><path d=\"M8 12h.01\" /><rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />","layers":"<path d=\"M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z\" /><path d=\"M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12\" /><path d=\"M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17\" />","library":"<path d=\"m16 6 4 14\" /><path d=\"M12 6v14\" /><path d=\"M8 8v12\" /><path d=\"M4 4v16\" />","list-ordered":"<path d=\"M10 12h11\" /><path d=\"M10 18h11\" /><path d=\"M10 6h11\" /><path d=\"M4 10h2\" /><path d=\"M4 6h1v4\" /><path d=\"M6 18H4c0-1 2-2 2-3s-1-1.5-2-1\" />","loader-circle":"<path d=\"M21 12a9 9 0 1 1-6.219-8.56\" />","lock-open":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 9.9-1\" />","lock":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 10 0v4\" />","maximize":"<path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /><path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /><path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /><path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" />","message-circle":"<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\" />","minus":"<path d=\"M5 12h14\" />","package":"<path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\" /><path d=\"M12 22V12\" /><path d=\"m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7\" /><path d=\"m7.5 4.27 9 5.15\" />","palette":"<circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\" /><path d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z\" />","pause":"<rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" /><rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" />","pen-line":"<path d=\"M12 20h9\" /><path d=\"M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z\" />","pen-tool":"<path d=\"M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z\" /><path d=\"m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18\" /><path d=\"m2.3 2.3 7.286 7.286\" /><circle cx=\"11\" cy=\"11\" r=\"2\" />","pin":"<path d=\"M12 17v5\" /><path d=\"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z\" />","play":"<polygon points=\"6 3 20 12 6 21 6 3\" />","plug":"<path d=\"M12 22v-5\" /><path d=\"M9 8V2\" /><path d=\"M15 8V2\" /><path d=\"M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z\" />","plus":"<path d=\"M5 12h14\" /><path d=\"M12 5v14\" />","rotate-ccw":"<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /><path d=\"M3 3v5h5\" />","save":"<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" /><path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" /><path d=\"M7 3v4a1 1 0 0 0 1 1h7\" />","scissors":"<circle cx=\"6\" cy=\"6\" r=\"3\" /><path d=\"M8.12 8.12 12 12\" /><path d=\"M20 4 8.12 15.88\" /><circle cx=\"6\" cy=\"18\" r=\"3\" /><path d=\"M14.8 14.8 20 20\" />","settings":"<path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","shuffle":"<path d=\"m18 14 4 4-4 4\" /><path d=\"m18 2 4 4-4 4\" /><path d=\"M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22\" /><path d=\"M2 6h1.972a4 4 0 0 1 3.6 2.2\" /><path d=\"M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45\" />","sliders-horizontal":"<line x1=\"21\" x2=\"14\" y1=\"4\" y2=\"4\" /><line x1=\"10\" x2=\"3\" y1=\"4\" y2=\"4\" /><line x1=\"21\" x2=\"12\" y1=\"12\" y2=\"12\" /><line x1=\"8\" x2=\"3\" y1=\"12\" y2=\"12\" /><line x1=\"21\" x2=\"16\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"3\" y1=\"20\" y2=\"20\" /><line x1=\"14\" x2=\"14\" y1=\"2\" y2=\"6\" /><line x1=\"8\" x2=\"8\" y1=\"10\" y2=\"14\" /><line x1=\"16\" x2=\"16\" y1=\"18\" y2=\"22\" />","sparkles":"<path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\" /><path d=\"M20 3v4\" /><path d=\"M22 5h-4\" /><path d=\"M4 17v2\" /><path d=\"M5 18H3\" />","star":"<path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" />","tag":"<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\" /><circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","trash-2":"<path d=\"M3 6h18\" /><path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /><path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /><line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /><line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />","triangle-alert":"<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /><path d=\"M12 9v4\" /><path d=\"M12 17h.01\" />","type":"<polyline points=\"4 7 4 4 20 4 20 7\" /><line x1=\"9\" x2=\"15\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"12\" y1=\"4\" y2=\"20\" />","ungroup":"<rect width=\"8\" height=\"6\" x=\"5\" y=\"4\" rx=\"1\" /><rect width=\"8\" height=\"6\" x=\"11\" y=\"14\" rx=\"1\" />","upload":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"17 8 12 3 7 8\" /><line x1=\"12\" x2=\"12\" y1=\"3\" y2=\"15\" />","wand-sparkles":"<path d=\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72\" /><path d=\"m14 7 3 3\" /><path d=\"M5 6v4\" /><path d=\"M19 14v4\" /><path d=\"M10 2v2\" /><path d=\"M7 8H3\" /><path d=\"M21 16h-4\" /><path d=\"M11 3H9\" />","x":"<path d=\"M18 6 6 18\" /><path d=\"m6 6 12 12\" />","unlink":"<path d=\"m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71\" /><path d=\"m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71\" /><line x1=\"8\" x2=\"8\" y1=\"2\" y2=\"5\" /><line x1=\"2\" x2=\"5\" y1=\"8\" y2=\"8\" /><line x1=\"16\" x2=\"16\" y1=\"19\" y2=\"22\" /><line x1=\"19\" x2=\"22\" y1=\"16\" y2=\"16\" />","mouse-pointer-click":"<path d=\"M14 4.1 12 6\" /><path d=\"m5.1 8-2.9-.8\" /><path d=\"m6 12-1.9 2\" /><path d=\"M7.2 2.2 8 5.1\" /><path d=\"M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z\" />","zap":"<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\" />"};
     function ic(name, size) {
       return h('svg', {
         viewBox: '0 0 24 24', width: size || 14, height: size || 14, fill: 'none',
@@ -336,7 +336,7 @@ window.__ModuleLoader__.load({
 /* ── 主题令牌（跟随 dsh 亮/暗主题；每个 var 第二参为旧宿主回退色 = 暗色观感）──
    单一强调色：宿主主色（DeepSeek 蓝）；错误/成功/警示用宿主状态色 */
 .snx-cv,.snx-pro,.snx-cfg,.snx-tv,.snx-lb,.snx-fs,.snx-help,.snx-bsb-preview,.snx-sidebtn,.snx-rb-title,
-.snx-gal-menu,.snx-gal-drag-ghost,.snx-cfm-backdrop,.snx-cv-menu,.snx-sel-pop{
+.snx-gal-menu,.snx-gal-drag-ghost,.snx-cfm-backdrop,.snx-cv-menu,.snx-sel-pop,.snx-gen-decide{
   --snx-accent:var(--dsw-alias-link,#7aaaff);
   --snx-accent-fill:var(--dsw-alias-button-info-fill,#7aaaff);
   --snx-accent-fill-hover:var(--dsw-alias-button-info-hover,#4176e6);
@@ -438,8 +438,11 @@ window.__ModuleLoader__.load({
 .snx-ab{position:absolute;z-index:6;display:flex;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100% - 16px);gap:1px;background:var(--dsw-alias-button-floating-fill,#2c2c2e);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);
   border-radius:8px;padding:3px;box-shadow:0 8px 24px rgba(0,0,0,.22)}
 .snx-ab button{background:none;border:none;color:var(--dsw-alias-label-secondary,#cfd3d6);font-size:12.5px;padding:5px 7px;cursor:pointer;border-radius:5px;font-family:inherit;white-space:nowrap}
-.snx-ab button:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--snx-accent)}
-.snx-ab button.warn:hover{color:var(--snx-error)}
+.snx-ab button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--snx-accent)}
+.snx-ab button:disabled{opacity:.45;cursor:default}
+.snx-ab button.warn:hover:not(:disabled){color:var(--snx-error)}
+/* v11.2.1：多选操作条左侧计数标签 */
+.snx-ab-tag{display:inline-flex;align-items:center;font-size:11px;color:var(--dsw-alias-label-caption,#81858c);padding:0 7px;white-space:nowrap}
 .snx-pbar{position:absolute;top:12px;left:12px;right:12px;z-index:6;display:flex;align-items:center;gap:8px;
   background:var(--dsw-alias-button-floating-fill,#2c2c2e);border:1px solid color-mix(in srgb,var(--snx-accent) 30%,transparent);border-radius:10px;padding:7px 9px;
   box-shadow:0 10px 30px rgba(0,0,0,.22)}
@@ -714,6 +717,27 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
   border-radius:6px;padding:8px 10px;line-height:1.5;
 }
 
+/* ── v12：生成按钮决策面板（SPEC ①：按下之前就知道一切；portal 挂 body 防 container-type 收编）─── */
+.snx-gen-gowrap{position:relative}
+.snx-gen-decide{
+  position:fixed;z-index:330;width:320px;pointer-events:none;
+  background:var(--dsw-alias-bg-layer-3,#353638);
+  border:1px solid color-mix(in srgb,var(--snx-accent) 30%,var(--dsw-alias-border-l2,#ffffff1f));
+  border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.45);padding:10px 12px;
+  animation:snx-decide-in .15s ease-out;
+}
+@keyframes snx-decide-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.snx-gen-decide-strip{
+  margin:-10px -12px 8px;padding:5px 12px;border-radius:9px 9px 0 0;
+  background:color-mix(in srgb,var(--snx-error) 16%,transparent);color:var(--snx-error);
+  font-size:11px;font-weight:600;
+}
+.snx-gen-decide-r{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dsw-alias-label-secondary,#cfd3d6);padding:3px 0;line-height:1.5}
+.snx-gen-decide-r svg{flex:none;color:var(--snx-accent)}
+.snx-gen-decide-r b{color:var(--dsw-alias-label-primary,#f9fafb);font-weight:600;word-break:break-all}
+.snx-gen-decide-r.blk svg{color:var(--snx-error)}
+.snx-gen-decide-r.blk span{color:var(--dsw-alias-label-tertiary,#adb2b8)}
+
 /* 最近画廊 */
 .snx-gen-recent{display:flex;flex-direction:column;gap:8px;padding-top:6px;border-top:1px solid var(--dsw-alias-border-l2,#ffffff1f)}
 .snx-gen-recent .lb{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dsw-alias-label-tertiary,#adb2b8);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
@@ -792,8 +816,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 }
 .snx-pro-status span{display:inline-flex;align-items:center}
 
-/* ═══════ 全局轻提示（非画布模式 / 全屏画布下的 notify；P2-2 队列化）═══════
-   容器居中固定；内部多槽堆叠（上限 4），每条独立着色/计时/手关。 */
+/* ═══════ 全局轻提示（v11.2.1：全模式统一渲染，画布页不再例外；P2-2 队列化）═══════
+   容器底部居中固定；内部多槽堆叠（上限 4），每条独立着色/计时/手关。
+   bottom:56px 避让画布状态栏(28px)与左下缩放控件，顶部让给 GenBar/操作条。 */
 .snx-toasts{
   position:fixed;bottom:56px;left:50%;transform:translateX(-50%);z-index:10000;
   display:flex;flex-direction:column;align-items:center;gap:8px;
@@ -890,18 +915,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-lb-empty-t{line-height:1.6;word-break:break-word}
 
 .snx-lb-meta{display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto}
-.snx-lb-pr .lb{font-size:10.5px;color:var(--dsw-alias-label-tertiary,#adb2b8);letter-spacing:.06em;text-transform:uppercase;font-weight:600;margin-bottom:4px}
-.snx-lb-pr .val{
-  font-size:12.5px;color:var(--dsw-alias-label-primary,#f9fafb);line-height:1.55;
-  background:var(--dsw-alias-bg-module-platform,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:6px;padding:8px 10px;
-  max-height:80px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;
-}
-.snx-lb-params{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;
-}
-.snx-lb-params>div{display:flex;flex-direction:column;gap:2px;font-size:11px}
-.snx-lb-params .k{color:var(--dsw-alias-label-caption,#81858c);letter-spacing:.04em;text-transform:uppercase;font-size:10px}
-.snx-lb-params .v{color:var(--dsw-alias-label-primary,#f9fafb);font-weight:600;font-variant-numeric:tabular-nums}
+/* v12 清理（静态对账）：删除 .snx-lb-pr / .snx-lb-params 死样式——旧灯箱右栏「提示词/参数块」
+   已被 v12 参数清单（.snx-lb-rows / .snx-lb-row，JS :7324 起渲染）取代，全文件 JS 零引用 */
 .snx-lb-acts{
   display:flex;gap:6px;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--dsw-alias-border-l2,#ffffff1f);
 }
@@ -915,6 +930,33 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-lb-act.go:hover{background:color-mix(in srgb,var(--snx-accent) 25%,transparent)}
 .snx-lb-act.danger{color:var(--snx-error);border-color:color-mix(in srgb,var(--snx-error) 30%,transparent)}
 .snx-lb-act.danger:hover{background:color-mix(in srgb,var(--snx-error) 10%,transparent);color:var(--snx-error)}
+
+/* ─── v12:灯箱「参数清单」——InvokeAI ImageMetadataActions 式逐行参数 + 行级单键回填 ─── */
+.snx-lb-plist-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.snx-lb-plist-h .t{flex:1;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--dsw-alias-label-tertiary,#adb2b8);text-transform:uppercase}
+.snx-lb-plist-go{
+  display:inline-flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--snx-accent) 15%,transparent);
+  border:1px solid var(--snx-accent);color:var(--snx-accent);border-radius:6px;padding:5px 10px;
+  font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;
+}
+.snx-lb-plist-go:hover{background:color-mix(in srgb,var(--snx-accent) 25%,transparent)}
+.snx-lb-rows{display:flex;flex-direction:column;min-width:0}
+.snx-lb-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;
+  border-bottom:1px solid color-mix(in srgb,var(--dsw-alias-border-l2,#ffffff1f) 55%,transparent)}
+.snx-lb-row:last-child{border-bottom:none}
+.snx-lb-row .rl{flex:none;width:46px;font-size:11px;color:var(--dsw-alias-label-caption,#81858c)}
+.snx-lb-row .rv{flex:1;min-width:0;font-size:12px;line-height:1.5;color:var(--dsw-alias-label-secondary,#cfd3d6);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
+.snx-lb-row .rv.wrap{white-space:normal;max-height:72px;overflow-y:auto;word-break:break-word}
+.snx-lb-row .rv.mono{font-family:ui-monospace,Consolas,monospace;font-size:11px}
+.snx-lb-row .rb{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;
+  border-radius:6px;border:1px solid color-mix(in srgb,var(--snx-accent) 35%,transparent);
+  background:transparent;color:var(--snx-accent);cursor:pointer;
+}
+.snx-lb-row .rb:hover{background:color-mix(in srgb,var(--snx-accent) 15%,transparent);border-color:var(--snx-accent)}
+.snx-lb-row.fl{animation:snx-row-flash .55s ease-out}
+@keyframes snx-row-flash{from{background:color-mix(in srgb,var(--snx-accent) 22%,transparent)}to{background:transparent}}
 
 /* ─── i2i 锚点提示（GenForm 顶部）── */
 .snx-gen-anchor{
@@ -1098,11 +1140,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-queue-empty .t2{font-size:11px;color:var(--dsw-alias-label-caption,#81858c)}
 
 /* ─── 队列单项 ─── */
+/* v12：根改纵向容器（行 + 可展开详情），原横排样式挪到 .snx-qi-row */
 .snx-qi{
-  display:flex;align-items:center;gap:10px;padding:8px 10px;
+  display:flex;flex-direction:column;
   background:var(--dsw-alias-bg-module-platform,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:8px;
   cursor:default;transition:all .15s;
 }
+.snx-qi-row{display:flex;align-items:center;gap:10px;padding:8px 10px}
 .snx-qi-done{cursor:pointer}
 .snx-qi-done:hover{border-color:var(--snx-accent);background:var(--dsw-alias-bg-layer-3,#353638)}
 .snx-qi-error{border-color:color-mix(in srgb,var(--snx-error) 30%,transparent);background:color-mix(in srgb,var(--snx-error) 4%,transparent)}
@@ -1144,6 +1188,24 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-qi-act:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--dsw-alias-label-primary,#f9fafb)}
 .snx-qi-act.danger{color:var(--snx-error);border-color:color-mix(in srgb,var(--snx-error) 30%,transparent)}
 .snx-qi-act.danger:hover{background:color-mix(in srgb,var(--snx-error) 12%,transparent);color:var(--snx-error)}
+/* ── v12：行展开详情（SPEC ⑤：审讯队列——模型/尺寸/种子/负面词/错误全文/耗时两段）─── */
+.snx-qi-chev{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;
+  width:24px;height:24px;padding:0;background:none;border:none;border-radius:5px;
+  color:var(--dsw-alias-label-caption,#81858c);cursor:pointer;
+}
+.snx-qi-chev:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--dsw-alias-label-primary,#f9fafb)}
+.snx-qi-chev svg{transition:transform .15s ease-out}
+.snx-qi-chev.on svg{transform:rotate(180deg)}
+.snx-qi-detail{padding:2px 10px 10px;border-top:1px solid var(--dsw-alias-border-l2,#ffffff1f);cursor:default}
+.snx-qi-detail dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:8px 0 0;font-size:11.5px}
+.snx-qi-detail dt{color:var(--dsw-alias-label-caption,#81858c)}
+.snx-qi-detail dd{margin:0;color:var(--dsw-alias-label-secondary,#cfd3d6);word-break:break-all;line-height:1.5}
+.snx-qi-detail-err{
+  margin-top:8px;font-size:11.5px;line-height:1.55;color:var(--snx-error);
+  background:color-mix(in srgb,var(--snx-error) 8%,transparent);
+  border:1px solid color-mix(in srgb,var(--snx-error) 25%,transparent);border-radius:7px;padding:7px 10px;word-break:break-all;
+}
 
 /* ─── 队列 tab 角标（pulse 动画）── */
 .snx-pro-tabs button .cnt.pulse{
@@ -1176,7 +1238,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-cmp-empty .t1{font-size:13px;color:var(--dsw-alias-label-tertiary,#adb2b8);font-weight:600}
 .snx-cmp-empty .t2{font-size:11px;color:var(--dsw-alias-label-caption,#81858c)}
 
-/* ─── 两图 overlay slider ─── */
+/* ─── 两图三模式对比（滑块/并排/叠化；模式按钮组 CSS 见 v12 块）─── */
 .snx-cmp-pair{display:flex;flex-direction:column;gap:10px}
 .snx-cmp-stage{
   position:relative;background:var(--dsw-alias-bg-document-preview,#151517);border-radius:8px;overflow:hidden;
@@ -1851,9 +1913,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-gen-fneg{margin-top:10px;border-top:1px dashed var(--dsw-alias-border-l2,#ffffff1f);padding-top:8px}
 .snx-gen-fsize{margin-top:8px}
 .snx-help-g{font-size:11px;color:var(--snx-accent);letter-spacing:.08em;margin:12px 0 6px;font-weight:600}
-.snx-lb-pr{margin-bottom:10px}
-.snx-lb-pr .lb{font-size:11px;color:var(--dsw-alias-label-tertiary,#adb2b8);margin-bottom:5px}
-.snx-lb-pr .val{font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,#cfd3d6);max-height:110px;overflow-y:auto;word-break:break-all}
+/* v12 清理（静态对账）：此处旧版 .snx-lb-pr 三行随上一处一并删除，JS 零引用 */
 .snx-tree-node{margin:2px 0}
 
 /* ── v10.2：质感补课（品牌/主按钮/页签/对比手柄）─── */
@@ -1870,6 +1930,23 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-cmp-tag{padding:4px 10px;border-radius:6px;font-size:11px;backdrop-filter:blur(4px)}
 .snx-cmp-tag.l{border:1px solid rgba(255,255,255,.4);background:rgba(10,10,14,.6)}
 .snx-cmp-tag.r{border:1px solid color-mix(in srgb,var(--snx-accent) 60%,transparent)}
+/* v12：对比三模式顶栏（滑块/并排/叠化，当前高亮）+ 交换按钮（SPEC 三.3，对齐原型 pv-seg/pv-swap）*/
+.snx-cmp-modes{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.snx-cmp-mseg{display:inline-flex;border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:8px;overflow:hidden;
+  background:var(--dsw-alias-bg-layer-1,#232324)}
+.snx-cmp-mbtn{font-family:inherit;font-size:12px;padding:5px 14px;border:none;background:transparent;
+  color:var(--dsw-alias-label-caption,#81858c);cursor:pointer;transition:color .15s,background .15s}
+.snx-cmp-mbtn + .snx-cmp-mbtn{border-left:1px solid var(--dsw-alias-border-l2,#ffffff1f)}
+.snx-cmp-mbtn:hover{color:var(--dsw-alias-label-secondary,#cfd3d6);background:var(--dsw-alias-interactive-bg-hover,#ffffff14)}
+.snx-cmp-mbtn.on{background:color-mix(in srgb,var(--snx-accent) 18%,transparent);color:var(--snx-accent);font-weight:600}
+.snx-cmp-mswap{display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-size:12px;padding:5px 12px;
+  border:1px dashed var(--dsw-alias-border-l2,#ffffff1f);border-radius:8px;background:transparent;
+  color:var(--dsw-alias-label-secondary,#cfd3d6);cursor:pointer;transition:color .15s,border-color .15s}
+.snx-cmp-mswap:hover{color:var(--snx-accent);border-color:var(--snx-accent);border-style:solid}
+/* 并排模式：stage 变左右五五开网格，揭示层取消 clip 转静态列（宽高比改 2:1 让两半各自近方）*/
+.snx-cmp-stage.m-side{display:grid;grid-template-columns:1fr 1fr;aspect-ratio:2/1;cursor:default}
+.snx-cmp-stage.m-side .snx-cmp-base{border-right:1px solid var(--dsw-alias-border-l2,#ffffff1f)}
+.snx-cmp-stage.m-side .snx-cmp-clip{position:static;height:100%}
 
 /* ═══════ P1-3/P2-3：画廊点击语义分层 + hover 轻操作 + 批量条 + 右键菜单 + 拖拽归类 + 灯箱标签 ═══════ */
 /* 选中轻态（与 hover 区分：accent 描边环）*/
@@ -2379,7 +2456,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       if (ac) { try { ac.abort() } catch { } }
       const n = store.node(nodeId)
       if (n && (n.status === 'pending' || n.status === 'running')) {
-        n.status = 'error'; n.errMsg = '用户取消'
+        n.status = 'error'; n.errMsg = '用户取消'; n._endedAt = Date.now()   // v12：运行段停表（队列详情耗时两段）
         store.emit(); autosave()
       }
     }
@@ -2423,6 +2500,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           store.updateNode(nodeId, {
             status: 'error', error: '落盘失败：返回图过大（' + mb + 'MB）已拒收',
             errMsg: '图片生成成功但服务端落盘失败，返回了 ' + mb + 'MB 的内联数据；为避免撑爆画布文档已拒收，请检查服务端存储后重试。',
+            _endedAt: Date.now(),   // v12：队列详情耗时两段（运行段止点）
           })
           toastBus('生成结果 ' + mb + 'MB 落盘失败已拒收，未写入画布（可检查服务端存储后重试）', 'err')
           return
@@ -2433,13 +2511,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         // upscale 倍数 → 节点初始尺寸放大（与原图一致便于构图）
         const baseSize = upscale ? 480 * (upscale === 4 ? 2 : 1.5) : 480
         const fit = nodeFit(im, baseSize)
-        store.updateNode(nodeId, { status: 'done', src: value, w: fit.w, h: fit.h, error: '', errMsg: '', ts: Date.now() })
+        store.updateNode(nodeId, { status: 'done', src: value, w: fit.w, h: fit.h, error: '', errMsg: '', ts: Date.now(), _endedAt: Date.now() })   // v12：_endedAt 供队列详情耗时两段
       } catch (e) {
         const aborted = !!(e && (e.name === 'AbortError' || /abort/i.test(String((e && e.message) || e))))
         if (aborted || isCancelled(nodeId)) {
-          store.updateNode(nodeId, { status: 'error', error: '用户取消', errMsg: '用户取消' })
+          store.updateNode(nodeId, { status: 'error', error: '用户取消', errMsg: '用户取消', _endedAt: Date.now() })
         } else {
-          store.updateNode(nodeId, { status: 'error', error: String((e && e.message) || e).slice(0, 200) })
+          store.updateNode(nodeId, { status: 'error', error: String((e && e.message) || e).slice(0, 200), _endedAt: Date.now() })
         }
       } finally {
         if (inflightJobs.get(nodeId) === ac) inflightJobs.delete(nodeId)
@@ -2489,7 +2567,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             reference: keepShortRef(effRefs[0] && effRefs[0].src),
             refs: effRefs.map((r) => ({ src: keepShortRef(r.src), role: r.role || 'reference', strength: r.strength ?? 0.7 })),
             upscale,
-          }, ts: Date.now(),
+          }, ts: Date.now(), _queuedAt: Date.now(),   // v12：入队时刻（队列详情耗时两段，ts 在 done 时会被完成时间覆盖）
         })
       }
       store.emit(); autosave()
@@ -2579,6 +2657,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       let destroyed = false
       let marquee = null
       let panning = null
+      // v11.2.1：自实现双击检测（断裂 #1）——单击选中即 store.emit→renderAll 销毁重建全部
+      // Konva 实例（审计实测 instanceId 516→543），Konva dblclick 要求同一实例收到两次点击，
+      // 永远凑不齐。改记「上次点击的 snxId + 时间戳」，跨实例重建仍然有效。
+      let lastClick = { id: null, at: 0 }
       const opts = {}
       const viewHooks = new Set()   // 视口变化回调（操作条定位 / 蒙版重绘）
 
@@ -2615,6 +2697,21 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             else store.sel.add(docNode.id)
           } else if (!store.sel.has(docNode.id)) {
             store.sel = new Set([docNode.id])
+          }
+          // v11.2.1：双击=打开灯箱（带该节点）——自实现检测：同一节点 400ms 内第二次左击/轻点。
+          // 右键也会触发 Konva click（Konva 不按 button 过滤），这里只认非右键。
+          // 「新标签打开」保留在右键菜单；done 且有图才开。
+          if (!(e.evt && e.evt.button === 2)) {
+            const now = Date.now()
+            if (lastClick.id === docNode.id && now - lastClick.at < 400) {
+              lastClick = { id: null, at: 0 }
+              if (docNode.status === 'done' && docNode.src) {
+                if (opts.onLightbox) opts.onLightbox(docNode.id)
+                else window.open(docNode.src, '_blank')
+              }
+            } else {
+              lastClick = { id: docNode.id, at: now }
+            }
           }
           syncTransformer(); store.emit()
         })
@@ -2655,12 +2752,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           store.updateNode(docNode.id, { x: nx, y: ny, w, h: hh })
           applyGroupDelta(dx, dy)
         })
-        // v11.2：双击=打开灯箱（带该节点）；「新标签打开」保留在右键菜单
-        k.on('dblclick dbltap', () => {
-          if (docNode.status !== 'done' || !docNode.src) return
-          if (opts.onLightbox) opts.onLightbox(docNode.id)
-          else window.open(docNode.src, '_blank')
-        })
+        // v11.2.1：Konva dblclick 处理已删除——双击开灯箱改由 click/tap 内自实现检测（见上），
+        // 不再依赖「同一 Konva 实例收到两次点击」（renderAll 重建后该前提永不成立）。
         k.on('contextmenu', (e) => {
           e.evt.preventDefault(); e.cancelBubble = true
           if (!store.sel.has(docNode.id)) { store.sel = new Set([docNode.id]); syncTransformer(); store.emit() }
@@ -2864,7 +2957,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         drawEdges()
         syncTransformer()
         mainLayer.batchDraw()
-      }
+        mainLayer.drawHit()   // v12：同步重画命中图——batchDraw 是 rAF 延帧的,紧接着的第二次点击
+      }                        // 会命中已销毁的旧节点(事件已解绑),双击检测因此对快速双击失效
 
       // ——— 视口交互 ———
       stage.on('mousedown', (e) => {
@@ -2972,7 +3066,27 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       stage.on('contextmenu', (e) => {
         if (e.target !== stage) return
         e.evt.preventDefault()
-        if (opts.onContext) opts.onContext(e.evt.clientX, e.evt.clientY, null)
+        // v11.2.1（断裂 #4）：右键节点却退化成空画布菜单（删除/适应画面/导出/清空四项）——
+        // menu.nodeId 没到达。机制：每次选中/拖拽结束都 store.emit→renderAll destroyChildren
+        // 重建全部实例（审计实测 instanceId 516→543），Konva 命中画布要等下一帧 batchDraw 才
+        // 重画；紧跟着的右键落在空窗期时，Stage._contextmenu 的 getIntersection 读到已销毁实例
+        // 的颜色码（Konva 源码 Layer._getIntersection：查无注册形状→按抗锯齿继续螺旋外扩→
+        // 出界返回 null）→ 走 stage 级分支 target===stage，onContext 收到 null，节点项永不出现。
+        // 这里按文档几何补一次命中（与 linkDragDrop 同款 bbox 判定，文档顺序即 z 序从顶到底），
+        // 指针确实落在可见节点上就补选中并带 nodeId，只有真空白才出空画布菜单。
+        let hitId = null
+        const p = stage.getPointerPosition()
+        if (p) {
+          const c = cam()
+          const wx = (p.x - c.x) / c.scale, wy = (p.y - c.y) / c.scale
+          for (let i = store.doc.nodes.length - 1; i >= 0; i--) {
+            const n = store.doc.nodes[i]
+            if (n.hidden) continue
+            if (wx >= n.x && wx <= n.x + n.w && wy >= n.y && wy <= n.y + n.h) { hitId = n.id; break }
+          }
+        }
+        if (hitId && !store.sel.has(hitId)) { store.sel = new Set([hitId]); syncTransformer(); store.emit() }
+        if (opts.onContext) opts.onContext(e.evt.clientX, e.evt.clientY, hitId)
       })
 
       const onKeyDown = (e) => {
@@ -3175,8 +3289,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       )
     }
 
-    // ——— 浮动操作条（选中单 done 图时跟随）———
-    function ActionBar({ engineRef, busy, setBusy, notify, onInpaint, onErase, onOutpaint, viewTick }) {
+    // ——— 浮动操作条（选中时跟随；v11.2.1：sel.size>=2 渲染为多选操作条）———
+    function ActionBar({ engineRef, busy, setBusy, notify, multi: multiProp, onInpaint, onErase, onOutpaint, viewTick }) {
       const [fly, setFly] = useState(null)   // 'variant' | 'enhance' | 'cutout' | null
       const [vCount, setVCount] = useState(1)
       const [vAmp, setVAmp] = useState(45)
@@ -3189,15 +3303,38 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         const cand = store.node([...store.sel][0])
         if (cand && cand.status === 'done') node = cand
       }
+      // v11.2.1（断裂 #2）：挂载条件原为 sel.size===1，多选时整条不渲染——对齐/等距分布/
+      // 成组/解组用户从未见过。现 sel>=2 时渲染多选区；单选行为不变。
+      const multi = multiProp && multiProp.length >= 2 ? multiProp : null
       const wrapEl = engineRef.current ? engineRef.current.wrapEl : null
-      if (!node || !wrapEl) return null
+      if ((!node && !multi) || !wrapEl) return null
       const c = store.doc.camera
-      const sx = node.x * c.scale + c.x
-      const sy = node.y * c.scale + c.y
-      const barW = 520
+      // 锚点：单选=节点左上；多选=选区包围盒左上（放不下时翻到包围盒下方）
+      let sx, sy, anchorH
+      if (node) { sx = node.x * c.scale + c.x; sy = node.y * c.scale + c.y; anchorH = node.h * c.scale }
+      else {
+        let bx0 = Infinity, by0 = Infinity, by1 = -Infinity
+        for (const n of multi) { bx0 = Math.min(bx0, n.x); by0 = Math.min(by0, n.y); by1 = Math.max(by1, n.y + n.h) }
+        sx = bx0 * c.scale + c.x; sy = by0 * c.scale + c.y; anchorH = (by1 - by0) * c.scale
+      }
+      const barW = multi ? 560 : 520
       const left = Math.min(Math.max(8, sx), Math.max(8, wrapEl.clientWidth - barW - 8))
-      const top = sy > 70 ? sy - 48 : sy + node.h * c.scale + 12
+      const top = sy > 70 ? sy - 48 : sy + anchorH + 12
       const act = (fn) => () => { if (!busy) fn(node) }
+      // v11.2.1：多选区——复用 ContextMenu 同款词汇（对齐/等距分布/成组/解组），锁定节点由
+      // removeSelected 跳过。锚定在选区包围盒上，与单选条同一套 .snx-ab 定位。
+      const actM = (fn) => () => { if (!busy) fn() }
+      const MULTI_ALIGNS = [['align-start-vertical', 'left', '左对齐'], ['align-center-vertical', 'hcenter', '水平居中'], ['align-end-vertical', 'right', '右对齐'],
+        ['align-start-horizontal', 'top', '顶对齐'], ['align-center-horizontal', 'vcenter', '垂直居中'], ['align-end-horizontal', 'bottom', '底对齐']]
+      if (multi) return h('div', { className: 'snx-ab', style: { left, top } },
+        h('span', { className: 'snx-ab-tag' }, '已选 ' + multi.length + ' 张'),
+        MULTI_ALIGNS.map(([icn, mode, tip]) => h('button', { key: mode, title: tip, disabled: busy, onClick: actM(() => alignSel(mode)) }, ic(icn, 14))),
+        h('button', { title: '水平等距分布', disabled: busy, onClick: actM(() => alignSel('dist-h')) }, ic('align-horizontal-distribute-center', 14)),
+        h('button', { title: '垂直等距分布', disabled: busy, onClick: actM(() => alignSel('dist-v')) }, ic('align-vertical-distribute-center', 14)),
+        h('button', { title: '成组：成员拖拽/变换时一起移动', disabled: busy, onClick: actM(() => groupSel()) }, ic('group'), ' 成组'),
+        multi.some((n) => n.groupId) ? h('button', { title: '解组：取消一起移动', disabled: busy, onClick: actM(() => ungroupSel()) }, ic('ungroup'), ' 解组') : null,
+        h('button', { title: '删除（锁定节点会跳过）', className: 'warn', disabled: busy, onClick: actM(() => store.removeSelected()) }, ic('trash-2')),
+      )
       // v10：变化幅度 → 提示词强度词（SenseNova 无 denoise，用措辞近似）
       const ampSuffix = (amp) => amp <= 30 ? '，轻微变化，保持构图与色调基本不变'
         : amp <= 60 ? '，生成这张图的变化版本，保持主体与风格'
@@ -3231,7 +3368,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             model: (n.params && n.params.model) || genPrefs.model || '',
             quality: eQ, watermark: eWm, enhancePrompt: ep,
             reference: srcRef, upscale: eQ === '4k' ? 2 : 1.5,
-          }, ts: Date.now(),
+          }, ts: Date.now(), _queuedAt: Date.now(),
         })
         store.emit(); autosave()
         const ac = new AbortController()
@@ -3453,7 +3590,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const retry = async () => {
         const n = target; if (!n || busy) return
         setBusy(true); setMenu(null)
-        store.updateNode(n.id, { status: 'pending', error: '' })
+        store.updateNode(n.id, { status: 'pending', error: '', _queuedAt: Date.now() })   // v12：重试重新计时（队列详情耗时两段）
         const p = n.params || {}
         await runOne(n.id, {
           prompt: n.prompt,
@@ -3609,12 +3746,16 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 
     // ── P1-14：应用内确认弹窗 SnxConfirm（替代全部原生 confirm）──
     // portal 挂 body 防裁剪；入模态栈（打开时画布快捷键让路，Esc=取消、Enter=确认）；
-    // danger 配色确认键。promise 化：Workbench 的 askConfirm(opts) 返回 Promise<boolean>。
-    function SnxConfirm({ title, desc, confirmLabel, cancelLabel, confirmIcon, onConfirm, onCancel }) {
+    // danger 配色确认键。promise 化：Workbench 的 askConfirm(opts) 返回 Promise<boolean|'alt'>。
+    // v12：可选 altLabel/altIcon 渲染第三个按钮（中性色）——删画板双按钮
+    // 「仅删除画板(保留图)」/「连图一起删除(红)」（InvokeAI DeleteBoardModal 同款）；onAlt resolve 'alt'。
+    function SnxConfirm({ title, desc, confirmLabel, cancelLabel, confirmIcon, altLabel, altIcon, onConfirm, onAlt, onCancel }) {
       const cancelRef = useRef(onCancel)
       cancelRef.current = onCancel
       const confirmRef = useRef(onConfirm)
       confirmRef.current = onConfirm
+      const altRef = useRef(onAlt)
+      altRef.current = onAlt
       useEffect(() => {
         const self = modalPush(() => cancelRef.current())
         const onKey = (e) => {
@@ -3637,6 +3778,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           h('div', { className: 'snx-cfm-d' }, desc),
           h('div', { className: 'snx-cfm-btns' },
             h('button', { type: 'button', className: 'snx-cfm-b', onClick: () => cancelRef.current(), autoFocus: true }, cancelLabel || '取消'),
+            altLabel ? h('button', { type: 'button', className: 'snx-cfm-b', onClick: () => altRef.current() },
+              altIcon ? ic(altIcon, 13) : null, altLabel) : null,
             h('button', { type: 'button', className: 'snx-cfm-b danger', onClick: () => confirmRef.current() },
               confirmIcon ? ic(confirmIcon, 13) : null, confirmLabel || '确认'),
           ),
@@ -3967,15 +4110,18 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           : '已把 ' + real.length + ' 张移入画板「' + (b ? b.name : '?') + '」')
       }
       // P1-14：画廊删除收口到 SnxConfirm；被其他节点作父图引用时给警告文案（InvokeAI DeleteBoardModal 同思路）
+      // v12：被引用检查加一路——在对比选择（cmpSel）中的图也给警告行（删除后自动移出对比槽位）
       const askGalDelete = async (ids) => {
         if (!ids || !ids.length) return
         const idSet = new Set(ids)
         const parents = ids.filter((id) => store.doc.nodes.some((n) => n.parentId === id)).length
+        const inCmp = ids.filter((id) => cmpSel.has(id)).length
         const ok = await askConfirm({
           title: '删除 ' + ids.length + ' 张图？',
           confirmLabel: '删除', confirmIcon: 'trash-2',
           desc: '将从画廊与画布移除这些图，可回画布页按 Ctrl+Z 撤销。'
-            + (parents ? '注意：其中 ' + parents + ' 张是其他图的父图（衍生链起点），删除后对应「衍生自」链会断开，子图本身不受影响。' : ''),
+            + (parents ? '注意：其中 ' + parents + ' 张是其他图的父图（衍生链起点），删除后对应「衍生自」链会断开，子图本身不受影响。' : '')
+            + (inCmp ? '注意：其中 ' + inCmp + ' 张在对比选择中，删除后将自动移出对比。' : ''),
         })
         if (!ok) return
         store.pushUndo()
@@ -4039,11 +4185,40 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         setGalMenu({ x: e.clientX, y: e.clientY, nodeId: node.id, boardList: false })
       }
       // P1-3：拖图到画板 chip 归类（pointer 最小版：拖起 → chip 高亮 → 松手归类）
+      // v12：拖拽接近滚动容器（.snx-pro-main，画廊模式的实际滚动元素）上下缘 40px 内自动滚动——
+      // rAF 节流循环按纵深比例推进 scrollTop，指针离缘或松手（finish）即停
       const onGalItemPointerDown = (e, node) => {
         if (e.button !== 0) return
         const sx = e.clientX, sy = e.clientY
         const off = fixedOffsetHost()
-        const st = { ids: null, over: null, moved: false }
+        const st = { ids: null, over: null, moved: false, dir: 0, raf: 0 }
+        // —— 边缘自动滚动（rAF 节流）——
+        const scrollHost = () => document.querySelector('.snx-pro-main')
+        const EDGE = 40
+        const step = () => {
+          st.raf = 0
+          if (!st.dir) return
+          const el = scrollHost()
+          if (el) el.scrollTop += st.dir * st.speed
+          st.raf = requestAnimationFrame(step)
+        }
+        const kick = () => { if (st.dir && !st.raf) st.raf = requestAnimationFrame(step) }
+        const trackEdge = (y) => {
+          const el = scrollHost()
+          if (!el) { st.dir = 0; return }
+          const r = el.getBoundingClientRect()
+          let d = 0
+          let depth = 0
+          if (y < r.top + EDGE) { d = -1; depth = (r.top + EDGE - y) / EDGE }
+          else if (y > r.bottom - EDGE) { d = 1; depth = (y - (r.bottom - EDGE)) / EDGE }
+          st.dir = d
+          st.speed = 6 + 18 * Math.min(1, Math.max(0, depth))   // 6→24 px/帧，越贴近边缘越快
+          kick()
+        }
+        const stopEdge = () => {
+          st.dir = 0
+          if (st.raf) { cancelAnimationFrame(st.raf); st.raf = 0 }
+        }
         const onMove = (ev) => {
           if (ev.buttons !== 1) return
           if (!st.moved && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) < 6) return
@@ -4064,11 +4239,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           const chip = el && el.closest ? el.closest('[data-galboard]') : null
           if (chip) over = chip.getAttribute('data-galboard')
           if (over !== st.over) { st.over = over; setGalDragOver(over) }
+          trackEdge(ev.clientY)
         }
         const finish = () => {
           window.removeEventListener('pointermove', onMove)
           window.removeEventListener('pointerup', finish)
           window.removeEventListener('pointercancel', finish)
+          stopEdge()   // 松手停止自动滚动
           galDragRef.current = null
           if (st.moved && st.over) moveNodesToBoard(st.ids || [node.id], st.over)
           if (st.moved) {
@@ -4471,7 +4648,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           store.doc.nodes.push({
             id, type: 'image', status: 'pending', src: '', parentId: node.id,
             x: node.x + node.w + 60, y: node.y, w: 480, h: 480,
-            prompt: text, params: { size: sizeForAspect(node.w, node.h), model: genPrefs.model, reference: boardRef }, ts: Date.now(),
+            prompt: text, params: { size: sizeForAspect(node.w, node.h), model: genPrefs.model, reference: boardRef }, ts: Date.now(), _queuedAt: Date.now(),
           })
           store.emit(); autosave()
           cancelMask()
@@ -4497,7 +4674,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           store.doc.nodes.push({
             id, type: 'image', status: 'pending', src: '', parentId: node.id,
             x: node.x + node.w + 60, y: node.y, w: 480, h: 480,
-            prompt: '[扩图]', params: { size, model: genPrefs.model, reference: boardRef }, ts: Date.now(),
+            prompt: '[扩图]', params: { size, model: genPrefs.model, reference: boardRef }, ts: Date.now(), _queuedAt: Date.now(),
           })
           store.emit(); autosave()
           await runOne(id, { prompt: OUTPAINT_PROMPT, size, model: genPrefs.model, reference: boardRef || dataUrl })
@@ -4531,23 +4708,30 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         notify('已回填参数：提示词/负面/尺寸/模型/种子' + (detail.refs.length ? '/参考图×' + detail.refs.length : ''))
         force((x) => x + 1)
       }
-      // ── InvokeAI CurrentImageButtons 灵魂：行级单参数回填（Prompt/Seed/Size）──
-      // 只带对应字段的 detail，GenForm 侧只覆盖到场的字段，不动其余表单项
+      // ── InvokeAI CurrentImageButtons 灵魂：行级单参数回填（Prompt/Negative/Model/Seed/Size/Refs）──
+      // 只带对应字段的 detail，GenForm 侧只覆盖到场的字段，不动其余表单项。
+      // v12：行级回填改为停留灯箱（配合参数清单行高亮），不再关灯箱跳生图 tab——
+      // "看图偷参数"的主工作流是连续翻图逐项取用，回填结果以 toast 确认
       const onRestoreField = (n, field) => {
         if (!n || !field) return
         const p = n.params || {}
         const detail = {}
         if (field === 'prompt') detail.prompt = String(n.prompt || '').replace(/^💬\s*/, '')
+        else if (field === 'negPrompt') detail.negPrompt = p.negative || ''
+        else if (field === 'model') detail.model = p.model || ''
         else if (field === 'seed') detail.seed = typeof p.seed === 'number' ? p.seed : -1
         else if (field === 'size') detail.size = p.size || sizeForAspect(n.w || 1, n.h || 1)
+        else if (field === 'refs') detail.refs = (Array.isArray(p.refs) ? p.refs : [])
+          .filter((r) => r && r.src)
+          .map((r) => ({ src: r.src, role: r.role || 'reference', strength: r.strength ?? 0.7 }))
         if (detail.prompt !== undefined) genPrefs.prompt = detail.prompt
+        if (detail.negPrompt !== undefined) genPrefs.negPrompt = detail.negPrompt
+        if (detail.model !== undefined) genPrefs.model = detail.model
         if (detail.size !== undefined) genPrefs.size = detail.size
         if (detail.seed !== undefined) genPrefs.seed = detail.seed
+        if (detail.refs !== undefined) genPrefs.refs = detail.refs
         window.dispatchEvent(new CustomEvent('snx:restoreParams', { detail }))
-        setLightbox(null)
-        setFsCanvas(false)
-        setMode('gen')
-        notify('已回填' + ({ prompt: '提示词', seed: '种子', size: '尺寸' }[field] || '参数') + '（其余表单项保持不变）')
+        notify('已回填' + ({ prompt: '提示词', negPrompt: '负向词', model: '模型', size: '尺寸', seed: '种子', refs: '参考图' }[field] || '参数'))
         force((x) => x + 1)
       }
 
@@ -4575,6 +4759,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         const cand = store.node([...store.sel][0])
         if (cand && cand.status === 'done') selDone = cand
       }
+      // v11.2.1（断裂 #2）：多选集合——sel>=2 时画布条与全屏画布两处挂点都渲染多选操作条
+      const selMulti = (!maskId && store.sel.size >= 2) ? selNodes() : null
       // 队列长度（pending + running）
       let queueLen = 0
       for (const nn of store.doc.nodes) {
@@ -4687,12 +4873,15 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           onRestoreField,
           onDelete: async () => {
             // P1-14：原生 confirm → SnxConfirm；被其他节点作父图引用时给警告文案
+            // v12：在对比选择中时也加引用警告行（删除后自动移出对比槽位）
             const children = store.doc.nodes.filter((nn) => nn.parentId === lightbox.id).length
+            const inCmp = cmpSel.has(lightbox.id)
             const ok = await askConfirm({
               title: '删除这张图？',
               confirmLabel: '删除', confirmIcon: 'trash-2',
               desc: '将从画布与画廊移除这张图，可按 Ctrl+Z 撤销。'
-                + (children ? '注意：有 ' + children + ' 张图以它为父图（衍生链起点），删除后对应「衍生自」链会断开，子图本身不受影响。' : ''),
+                + (children ? '注意：有 ' + children + ' 张图以它为父图（衍生链起点），删除后对应「衍生自」链会断开，子图本身不受影响。' : '')
+                + (inCmp ? '注意：这张图在对比选择中，删除后将自动移出对比。' : ''),
             })
             if (!ok) return
             store.pushUndo()   // P1-10：灯箱删除入撤销栈（此前绕过 undo）
@@ -4757,9 +4946,14 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         // ─── 全屏画布 overlay ───
         fsCanvas ? renderFsCanvas() : null,
         showHelp ? h(HelpOverlay, { onClose: () => setShowHelp(false) }) : null,
-        // ─── 全局轻提示：非画布模式（生图/画廊/队列…）或全屏画布下，notify 也得看得见 ───
+        // ─── 全局轻提示（v11.2.1：画布页也渲染）───
+        // 当初排除画布页的理由：画布模式把最后一条 toast 写进底部状态栏兜底。实测等于不可见——
+        // 状态栏只有最后一条、无着色无关闭、5 秒即逝，连线「已改接」「会形成环」反馈用户从未
+        // 看到，防环拒绝=无声无效（第三方审计断裂 #3）。理由已失效：两处统一为浮动堆叠，
+        // 删除页脚回显。底部居中(bottom:56px)天然避让画布悬浮条（GenBar 顶部/缩放控件左下/
+        // 状态栏高 28px）。
         // P2-2：队列化多槽堆叠（上限 4），严重度着色，长文案换行，可手动关闭
-        (mode !== 'canvas' || fsCanvas) && toasts.length ? h('div', { className: 'snx-toasts' },
+        toasts.length ? h('div', { className: 'snx-toasts' },
           toasts.map((t) => h('div', { key: t.id, className: 'snx-toast', 'data-kind': t.kind, role: 'status' },
             h('span', { className: 'snx-toast-msg' }, t.msg),
             h('button', { type: 'button', className: 'snx-toast-x', title: '关闭', onClick: () => dismissToast(t.id) }, ic('x', 12)),
@@ -4770,7 +4964,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           h('span', null, `${store.doc.nodes.length} 张图 · 选中 ${store.sel.size}`),
           h('span', null, maskId ? '蒙版模式：在图上涂抹' : '滚轮缩放 / 空格平移'),
           h('div', { style: { flex: 1 } }),
-          toasts.length && !fsCanvas ? h('span', { style: { color: 'var(--dsw-alias-toast-label,#fff)' } }, toasts[toasts.length - 1].msg) : null,
+          // v11.2.1：页脚 toast 回显已删——浮动堆叠全模式统一渲染，不再两处显示
           h('span', { id: 'snx-cv-save' }, ''),
         ) : null,
         // ─── 上下文菜单（v11.2：portal 挂 body，全屏画布共用同一实例——删除 renderFsCanvas 里的第二个）───
@@ -4801,10 +4995,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           },
         }) : null,
         // ─── P1-14：应用内确认弹窗（promise 化，替换全部 7 处原生 confirm）───
+        // v12：altLabel/altIcon → 第三按钮（删画板「仅删除画板(保留图)」），onAlt resolve 'alt'
         cfm ? h(SnxConfirm, {
           title: cfm.title, desc: cfm.desc,
           confirmLabel: cfm.confirmLabel, confirmIcon: cfm.confirmIcon,
+          altLabel: cfm.altLabel, altIcon: cfm.altIcon,
           onConfirm: () => closeConfirm(true),
+          onAlt: () => closeConfirm('alt'),
           onCancel: () => closeConfirm(false),
         }) : null,
         // ─── P1-3：拖拽归类 ghost（跟随指针，portal 挂 body）───
@@ -4846,6 +5043,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           h(GenForm, {
             engineRef, busy, setBusy, notify,
             anchorInfo,
+            keyOk,   // v12：决策面板 blocker 清单（SPEC ①）；队列等待数由 GenForm 面板展开期间从 store 现算
             onClearAnchor: () => {
               store.sel = new Set()
               force((n) => n + 1)
@@ -4936,9 +5134,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             ) : null,
             // 蒙版工具条（P2-10：与全屏画布共用 renderMaskBar）
             maskId ? renderMaskBar() : null,
-            // 浮动操作条
-            selDone && engineRef.current ? h(ActionBar, {
-              engineRef, busy, setBusy, notify, viewTick: undefined,
+            // 浮动操作条（v11.2.1：单选 done 图或多选 ≥2 时都渲染）
+            (selDone || selMulti) && engineRef.current ? h(ActionBar, {
+              engineRef, busy, setBusy, notify, multi: selMulti, viewTick: undefined,
               onInpaint: (n) => enterMask(n),
               onErase: (n) => enterMask(n, true),
               onOutpaint: (n) => {
@@ -5028,21 +5226,39 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               key: b.id, className: 'chip' + (boardFilter === b.id ? ' on' : '') + (galDragOver === b.id ? ' droptgt' : ''), type: 'button',
               'data-galboard': b.id,
               onClick: () => setGalBoard(b.id),
-              title: '拖图到这里归入画板；右键删除画板（图保留，回到未分组）',
+              title: '拖图到这里归入画板；右键删除画板（可选仅删板保留图，或连图一起删除）',
               onContextMenu: async (e) => {
                 e.preventDefault()
-                // P1-14：原生 confirm → SnxConfirm；说明画板内有几张图受影响（图不删除）
-                const inBoard = store.doc.nodes.filter((nn) => nn.boardId === b.id).length
-                const ok = await askConfirm({
+                // v12（SPEC 三.4，对标 InvokeAI DeleteBoardModal）：确认列出「画板内 N 张图」+
+                // 双按钮「仅删除画板(保留图)」/「连图一起删除」(红)；板内图被板外节点作父图
+                // 引用时给警告行（连图删除会断衍生链）
+                const inNodes = store.doc.nodes.filter((nn) => nn.boardId === b.id)
+                const outsideRef = inNodes.filter((nn) => store.doc.nodes.some((m) => m.parentId === nn.id && m.boardId !== b.id)).length
+                const r = await askConfirm({
                   title: '删除画板「' + b.name + '」？',
-                  confirmLabel: '删除画板', confirmIcon: 'trash-2',
-                  desc: '画板本身删除，里面 ' + inBoard + ' 张图保留并回到未分组（不会删图）。'
-                    + (inBoard ? '这些图若被画布其他节点作父图引用，引用关系不受影响。' : ''),
+                  confirmLabel: '连图一起删除', confirmIcon: 'trash-2',
+                  altLabel: '仅删除画板（保留图）', altIcon: 'folder',
+                  desc: '画板内 ' + inNodes.length + ' 张图。'
+                    + (outsideRef ? '注意：其中 ' + outsideRef + ' 张被画板外的图作父图引用，「连图一起删除」会断开对应「衍生自」链。' : ''),
                 })
-                if (!ok) return
-                store.pushUndo()   // P1-10：删画板会清节点归属，入撤销栈
+                if (!r) return
+                store.pushUndo()   // P1-10：删画板（两种方式都动归属/节点）入撤销栈
                 store.doc.boards = boards.filter((x) => x.id !== b.id)
-                store.doc.nodes.forEach((nn) => { if (nn.boardId === b.id) delete nn.boardId })
+                if (r === true) {
+                  // 连图一起删除：板内图一并移除，画布选中/画廊多选/灯箱同步清理
+                  const idSet = new Set(inNodes.map((nn) => nn.id))
+                  store.doc.nodes = store.doc.nodes.filter((nn) => !idSet.has(nn.id))
+                  store.sel = new Set([...store.sel].filter((id) => !idSet.has(id)))
+                  setGalSel((prev) => new Set([...prev].filter((id) => !idSet.has(id))))
+                  if (galAnchor && idSet.has(galAnchor)) setGalAnchor(null)
+                  setLightbox((lb) => (lb && idSet.has(lb.id) ? null : lb))
+                  notify('已删除画板「' + b.name + '」及其中 ' + idSet.size + ' 张图')
+                  try { await put(CANVAS_ROUTE, { doc: store.doc }) } catch { }
+                } else {
+                  // 仅删除画板：图保留，回到未分组
+                  store.doc.nodes.forEach((nn) => { if (nn.boardId === b.id) delete nn.boardId })
+                  notify('已删除画板「' + b.name + '」，' + inNodes.length + ' 张图回到未分组')
+                }
                 if (galBoard === b.id) setGalBoard('')
                 autosave(); force((x) => x + 1)
               },
@@ -5220,7 +5436,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 })
                 if (!ok) return
                 errs.forEach((n) => {
-                  n.status = 'pending'; n.errMsg = ''
+                  n.status = 'pending'; n.errMsg = ''; n._queuedAt = Date.now()   // v12：重跑重新计时
                   runOne(n.id, {
                     prompt: n.prompt, size: (n.params && n.params.size) || '2048x2048',
                     model: (n.params && n.params.model) || '',
@@ -5298,7 +5514,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               },
               onOpen: () => setLightbox(n),
               onRetry: async () => {
-                n.status = 'pending'; n.errMsg = ''
+                n.status = 'pending'; n.errMsg = ''; n._queuedAt = Date.now()   // v12：重试重新计时
                 force((x) => x + 1); autosave()
                 const p = n.params || {}
                 try { await runOne(n.id, {
@@ -5317,7 +5533,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       }
 
       // ====================================================
-      // 子视图：COMPARE — 2-4 张图并排对比 + overlay slider
+      // 子视图：COMPARE — 2 图三模式对比（滑块/并排/叠化+交换，v12）+ 3-4 图网格
       // ====================================================
       function renderCompareMode() {
         // P1-13：对比独立选择集合 cmpSel——不借用/不回写画布 store.sel，也不自动抓最后两张；
@@ -5507,8 +5723,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 ) : null,
                 // 蒙版工具条（P2-10：与画布模式共用 renderMaskBar，全屏版此前缺画笔四滑块）
                 maskId ? renderMaskBar() : null,
-                selDone && engineRef.current ? h(ActionBar, {
-                  engineRef, busy, setBusy, notify, viewTick: undefined,
+                // v11.2.1（断裂 #2）：全屏画布挂点同画布条——sel>=2 也渲染多选操作条
+                (selDone || selMulti) && engineRef.current ? h(ActionBar, {
+                  engineRef, busy, setBusy, notify, multi: selMulti, viewTick: undefined,
                   onInpaint: (n) => enterMask(n),
                   onErase: (n) => enterMask(n, true),
                   onOutpaint: (n) => {
@@ -6015,7 +6232,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       { id: 'sensenova-u1.5-lite', label: 'sensenova-u1.5-lite · 当前可用（文生图/图生图）' },
       { id: 'sensenova-u1.5', label: 'sensenova-u1.5 · 控制台已开通时可用' },
     ]
-    function GenForm({ engineRef, busy, setBusy, notify, anchorInfo, onClearAnchor }) {
+    function GenForm({ engineRef, busy, setBusy, notify, anchorInfo, keyOk, onClearAnchor }) {
       const [prompt, setPrompt] = useState(genPrefs.prompt || '')
       const [negPrompt, setNegPrompt] = useState(genPrefs.negPrompt || '')
       const [size, setSize] = useState(genPrefs.size || '2048x2048')
@@ -6029,6 +6246,53 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       // 多参考图：refs = [{src, role, strength}] — 风格 / 角色 / 构图 / 参考
       const [refs, setRefs] = useState(genPrefs.refs || [])
       const [pickerOpen, setPickerOpen] = useState(false)
+      // ── v12：生成按钮决策面板（SPEC ①：按下之前就知道一切）───
+      // hover/focus 按钮包裹层即浮出（无延时+150ms 淡入，<300ms）；disabled 改列 blocker 清单；
+      // 队列暂停顶部红条。portal 挂 body 防 .snx-pro container-type 收编与滚动容器裁剪；面板只读。
+      const goRef = useRef(null)
+      const decideRef = useRef(null)
+      const [goShow, setGoShow] = useState(false)
+      const [goPos, setGoPos] = useState(null)   // {left,top} fixed 坐标；null=首帧离屏，实测尺寸再就位（SnxSelect 同款）
+      const [, setDecideTick] = useState(0)      // 队列暂停态 / store 变化时强制重渲染（重读模块级 queuePaused 与队列数）
+      const showDecide = () => { setGoPos(null); setGoShow(true) }
+      const hideDecide = () => setGoShow(false)
+      useEffect(() => {
+        const onP = () => setDecideTick((x) => x + 1)
+        window.addEventListener('snx:queuePaused', onP)
+        return () => window.removeEventListener('snx:queuePaused', onP)
+      }, [])
+      // 面板展开期间：store 变化（入队/完成/暂停）实时刷新内容；滚动/resize 使 fixed 坐标失效即收起
+      useEffect(() => {
+        if (!goShow) return
+        const close = () => setGoShow(false)
+        window.addEventListener('resize', close)
+        window.addEventListener('scroll', close, true)
+        return () => {
+          window.removeEventListener('resize', close)
+          window.removeEventListener('scroll', close, true)
+        }
+      }, [goShow])
+      useEffect(() => {
+        if (!goShow) return
+        return store.subscribe(() => setDecideTick((x) => x + 1))
+      }, [goShow])
+      useLayoutEffect(() => {
+        if (!goShow) return
+        const btn = goRef.current, el = decideRef.current
+        if (!btn || !el) return
+        const br = btn.getBoundingClientRect()
+        const pr = el.getBoundingClientRect()
+        const w = pr.width || 320, ph = pr.height || 120
+        const left = Math.max(8, Math.min(br.left + br.width / 2 - w / 2, window.innerWidth - w - 8))
+        const above = br.top - ph - 8
+        let top = above >= 8 ? above : Math.min(br.bottom + 8, window.innerHeight - ph - 8)
+        top = Math.max(8, top)
+        if (reactDomPortal) setGoPos({ left, top })
+        else {
+          const hr = fixedOffsetHost()   // portal 降级：换算 .snx-pro 包含块坐标（SnxSelect 同款）
+          setGoPos({ left: left - hr.left, top: top - hr.top })
+        }
+      }, [goShow])
       // P2-4：提示词库只在挂载时读一次 localStorage 进 state（此前每次渲染同步读 3 次：
       // isStarred 初值 + loadPromptLib().presets + prompt 变化时的 isStarred），
       // 之后任何写库（收藏/最近/设置页预设）经 snx:promptLibChanged 广播刷新这份 state。
@@ -6045,17 +6309,23 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       // v8：从提示词库加载
       useEffect(() => {
         const onUse = (e) => {
+          histExit()
           if (e && e.detail) setPrompt(e.detail)   // setPrompt 自身触发重渲染，无需 force（也避免引用未定义的 force）
         }
         window.addEventListener('snx:usePrompt', onUse)
         return () => window.removeEventListener('snx:usePrompt', onUse)
       }, [])
+      // v12：提示词历史翻阅（SPEC ⑥）——Ctrl+↑/↓ 在最近 10 条（lib.recents）间整套替换。
+      // idx=-1 表示不在历史态；进入时记下当前文本，第 1 条再按 ↓ 退出历史并还原
+      const histRef = useRef({ idx: -1, base: '' })
+      function histExit() { histRef.current.idx = -1 }
       // 参数回填（灯箱/右键菜单「回填参数」与灯箱行级回填 R/P/S/D 共用）：
       // detail 里到场的字段才覆盖——全量回填事件带全部键，行级事件只带单键，互不干扰
       useEffect(() => {
         const onRestore = (e) => {
           const d = e && e.detail
           if (!d) return
+          histExit()
           if (d.prompt !== undefined) setPrompt(d.prompt)
           if (d.negPrompt !== undefined) setNegPrompt(d.negPrompt)
           if (d.size !== undefined) setSize(d.size)
@@ -6088,6 +6358,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           setRefs((prev) => (prev.length >= 4 ? prev : [...prev, { src, role: 'reference', strength: 0.7 }]))
           const pp = await parsePngParams(f)
           if (pp) {
+            histExit()   // v12：提示词被 PNG 读回参数覆盖，同步退出历史态
             if (!genPrefs.prompt) { setPrompt(pp.prompt); genPrefs.prompt = pp.prompt }
             if (pp.model) genPrefs.model = pp.model
             if (pp.size) genPrefs.size = pp.size
@@ -6120,9 +6391,28 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         setSize(s.w + 'x' + s.h)
       }
 
+      // ── v12：决策面板内容 ── blocker 优先如实列出（Key 未配置时按钮虽可点但请求必失败，
+      // 与提示词为空一起列为「不能入队的原因」，对齐 InvokeAI 决策面板语义）
+      const decideBlockers = []
+      if (busy) decideBlockers.push('上一批生成还在进行中，完成后可继续')
+      if (!prompt.trim()) decideBlockers.push('提示词为空')
+      if (keyOk === false) decideBlockers.push('未配置 API Key，到设置页配置')
+      // 队列等待数现算（pending+running，与队列 tab 口径一致）：面板展开期间经 store.subscribe
+      // 重渲染实时刷新；不取 Workbench 的 prop——gen 模式下 Workbench 无 store 订阅会冻结
+      let decideQueueLen = 0
+      for (const nn of store.doc.nodes) {
+        if (nn.status === 'pending' || nn.status === 'running') decideQueueLen++
+      }
+      const decideModel = (() => {
+        const p = MODEL_PRESETS_FORM.find((x) => x.id === model)
+        if (!p) return model || '默认'
+        return (p.label.split('·')[0] || p.label).trim() || p.label
+      })()
+
       const gen = async () => {
         const p = prompt.trim()
         if (!p || busy) return
+        histExit()   // v12：提交即结束历史翻阅态，下次 Ctrl+↑ 从最新一条重新开始
         setErr(''); setBusy(true)
         try {
           const engine = engineRef.current
@@ -6145,7 +6435,27 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       }
 
       const onKey = (e) => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); gen() }
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); gen(); return }
+        // v12：Ctrl+↑/↓ 翻阅最近提示词（对齐 InvokeAI）——整套替换 + toast「历史 n/N」；
+        // ↑ 从当前文本进入历史取最新一条，再 ↑ 逐条向更旧翻；↓ 反向，越过最新条退出并还原进入前文本
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+          if (e.nativeEvent && e.nativeEvent.isComposing) return
+          const recents = lib.recents || []
+          if (!recents.length) { notify && notify('暂无提示词历史'); return }
+          e.preventDefault()
+          const st = histRef.current
+          if (e.key === 'ArrowUp') {
+            if (st.idx < 0) { st.base = prompt; st.idx = 0 }
+            else st.idx = Math.min(st.idx + 1, recents.length - 1)
+            setPrompt(recents[st.idx])
+            notify && notify('历史 ' + (st.idx + 1) + '/' + recents.length)
+          } else {
+            if (st.idx < 0) return   // 不在历史态，↓ 保持原生光标行为
+            st.idx -= 1
+            if (st.idx < 0) { setPrompt(st.base); notify && notify('已退出历史翻阅') }
+            else { setPrompt(recents[st.idx]); notify && notify('历史 ' + (st.idx + 1) + '/' + recents.length) }
+          }
+        }
       }
 
       return h('div', { className: 'snx-gen-form' },
@@ -6175,13 +6485,24 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 onClick: () => { toggleStar(prompt) },   // P2-4：写库后经 snx:promptLibChanged 刷新派生星标
                 title: starred ? '取消收藏' : '收藏到提示词库',
               }, ic('star', 12)),
+              // v12：历史下拉（星标旁）——最近 10 条截断展示，点击整套回填；生成后自动记录
+              h(SnxSelect, {
+                value: '',
+                width: 88,
+                popWidth: 280,
+                title: '最近提示词，点击回填（输入框内也可按上下方向键逐条翻阅）',
+                onChange: (p) => { histExit(); setPrompt(p) },
+                options: [{ value: '', label: lib.recents.length ? '历史' : '暂无历史' }].concat(
+                  lib.recents.map((p) => ({ value: p, label: p.length > 42 ? p.slice(0, 42) + '…' : p })),
+                ),
+              }),
               h('span', { className: 'cnt' }, String(prompt.length) + ' / 2000'),
               h('span', { className: 'hk' }, 'Ctrl / Cmd + Enter'),
             ),
           h('textarea', {
             className: 'snx-gen-ta',
             value: prompt,
-            onChange: (e) => setPrompt(e.target.value),
+            onChange: (e) => { histExit(); setPrompt(e.target.value) },   // v12：手动编辑即退出历史态
             onKeyDown: onKey,
             placeholder: anchor
               ? '描述要怎么改这张图，例如：换成夜间背景，增加雪…'
@@ -6412,15 +6733,48 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             ),
           ),
         ),
-        // ── 生成按钮 ──
-        h('button', {
-          className: 'snx-gen-go' + (busy ? ' busy' : '') + (!prompt.trim() ? ' disabled' : ''),
-          onClick: gen,
-          disabled: busy || !prompt.trim(),
-          type: 'button',
+        // ── 生成按钮 + 决策面板（v12：hover/focus 浮出「将生成 N 张 · 模型 · 尺寸 · 目标 · 队列等待」）──
+        h('div', {
+          className: 'snx-gen-gowrap',
+          onMouseEnter: showDecide,
+          onMouseLeave: hideDecide,
+          onFocus: showDecide,   // React onFocus=focusin：按钮获得键盘焦点同样浮出
+          onBlur: hideDecide,
         },
-          h('span', { className: 'ti' }, busy ? h('span', { className: 'snx-spinring' }) : ic('wand-sparkles')),
-          h('span', null, busy ? '生成中…' : (anchor ? '生成 i2i' : '生成到画布')),
+          h('button', {
+            ref: goRef,
+            className: 'snx-gen-go' + (busy ? ' busy' : '') + (!prompt.trim() ? ' disabled' : ''),
+            onClick: gen,
+            disabled: busy || !prompt.trim(),
+            type: 'button',
+          },
+            h('span', { className: 'ti' }, busy ? h('span', { className: 'snx-spinring' }) : ic('wand-sparkles')),
+            h('span', null, busy ? '生成中…' : (anchor ? '生成 i2i' : '生成到画布')),
+          ),
+          goShow ? portalToBody(h('div', {
+            className: 'snx-gen-decide', ref: decideRef,
+            style: {
+              position: 'fixed',
+              left: ((goPos && goPos.left) != null ? goPos.left : -9999) + 'px',
+              top: ((goPos && goPos.top) != null ? goPos.top : -9999) + 'px',
+            },
+          },
+            queuePaused ? h('div', { className: 'snx-gen-decide-strip' }, '队列已暂停 — 新任务将排队等待恢复') : null,
+            decideBlockers.length
+              ? decideBlockers.map((b, i) => h('div', { key: i, className: 'snx-gen-decide-r blk' }, ic('circle-x', 13), h('span', null, b)))
+              : [
+                h('div', { key: 'n', className: 'snx-gen-decide-r' }, ic('sparkles', 13),
+                  h('span', null, '将生成 ', h('b', null, String(count)), ' 张', anchor ? '（i2i 编辑）' : '')),
+                h('div', { key: 'm', className: 'snx-gen-decide-r' }, ic('image', 13),
+                  h('span', null, '模型 ', h('b', null, decideModel), ' · ', h('b', null, applyQuality(size, quality)))),
+                h('div', { key: 't', className: 'snx-gen-decide-r' }, ic('folder', 13),
+                  h('span', null, '目标：', h('b', null, '未分组'))),
+                h('div', { key: 'q', className: 'snx-gen-decide-r' }, ic('list-ordered', 13),
+                  decideQueueLen > 0
+                    ? h('span', null, '队列等待 ', h('b', null, String(decideQueueLen)), ' 个任务')
+                    : h('span', null, '队列空闲，提交后立即开始')),
+              ],
+          )) : null,
         ),
         err ? h('div', { className: 'snx-gen-err' }, err) : null,
       )
@@ -6692,6 +7046,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const st = node.status
       // 运行中每秒自更新，让 elapsed 秒数跳动（否则渲染时算一次、刷新前冻结）
       const [, tickT] = useState(0)
+      // v12：行展开详情（SPEC ⑤：审讯队列——模型/尺寸/种子/负面词/错误全文/耗时两段）
+      const [open, setOpen] = useState(false)
       useEffect(() => {
         if (st !== 'running') return
         const t = setInterval(() => tickT((x) => x + 1), 1000)
@@ -6701,70 +7057,172 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const startedAt = st === 'running' ? (node._startedAt || node.ts) : null
       const elapsed = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : null
       const meta = node.params || {}
+      // ── v12：耗时两段 = 排队(_queuedAt→_startedAt) + 运行(_startedAt→_endedAt/现在)。
+      // _queuedAt（v12 起创建/重试时落）缺失时回退 ts（pending/running/error 的 ts 即入队时刻）；
+      // 旧 done 节点 ts 已被完成时间覆盖，排队段如实显示缺失。_endedAt 缺失时 done 回退 ts、running 用当前时刻。
+      const fmtSec = (ms) => Math.max(0, Math.round(ms / 1000)) + 's'
+      const nowMs = Date.now()
+      const qAt = typeof node._queuedAt === 'number' ? node._queuedAt : (st !== 'done' && typeof node.ts === 'number' ? node.ts : null)
+      const sAt = typeof node._startedAt === 'number' ? node._startedAt : null
+      const eAt = typeof node._endedAt === 'number' ? node._endedAt
+        : (st === 'done' && typeof node.ts === 'number' ? node.ts : (st === 'running' ? nowMs : null))
+      let durText
+      if (st === 'pending') durText = '排队中 · 已等 ' + fmtSec(nowMs - (qAt != null ? qAt : nowMs))
+      else if (sAt) {
+        const segs = []
+        if (qAt != null) segs.push('排队 ' + fmtSec(sAt - qAt))
+        if (eAt != null) segs.push('运行 ' + fmtSec(eAt - sAt))
+        durText = segs.join(' + ') || '—'
+      } else durText = '未运行'
+      const errMsgFull = String(node.errMsg || node.error || '').trim()
+      const detailRows = [
+        ['模型', meta.model || '默认'],
+        ['尺寸', meta.size || '—'],
+        ['种子', typeof meta.seed === 'number' && meta.seed >= 0 ? String(meta.seed) : '随机'],
+        ['负面词', meta.negative ? String(meta.negative).slice(0, 80) : '—'],
+        ['耗时', durText],
+      ]
       return h('div', {
         className: ({ pending: 'snx-qi snx-qi-pending', running: 'snx-qi snx-qi-running', done: 'snx-qi snx-qi-done', error: 'snx-qi snx-qi-error' })[st] || 'snx-qi',
-        onClick: st === 'done' ? onOpen : undefined },
-        h('div', { className: 'snx-qi-img' },
-          st === 'done' ? h('img', { src: node.src, alt: '' }) :
-          st === 'error' ? h('span', { className: 'snx-qi-err-ico' }, ic('triangle-alert', 20)) :
-          h('div', { className: 'snx-qi-spin' },
-            h('div', { className: 'spin' }),
-            st === 'running' ? h('span', null, elapsed != null ? elapsed + 's' : '…') : h('span', null, '排队')),
-        ),
-        h('div', { className: 'snx-qi-body' },
-          h('div', { className: 'snx-qi-pr' }, (node.prompt || '—').replace(/^💬\s*/, '').slice(0, 80)),
-          h('div', { className: 'snx-qi-meta' },
-            h('span', { className: 'snx-qi-st' }, STATUS_ZH[st] || st),   // v11.2：徽章中文（uppercase 样式保留）
-            meta.model ? h('span', null, ' · ' + meta.model) : null,
-            meta.size ? h('span', null, ' · ' + meta.size) : null,
-            node.errMsg ? h('span', { className: 'snx-qi-err-msg' }, ' · ' + node.errMsg.slice(0, 60)) : null,
+      },
+        h('div', { className: 'snx-qi-row', onClick: st === 'done' ? onOpen : undefined },
+          h('div', { className: 'snx-qi-img' },
+            st === 'done' ? h('img', { src: node.src, alt: '' }) :
+            st === 'error' ? h('span', { className: 'snx-qi-err-ico' }, ic('triangle-alert', 20)) :
+            h('div', { className: 'snx-qi-spin' },
+              h('div', { className: 'spin' }),
+              st === 'running' ? h('span', null, elapsed != null ? elapsed + 's' : '…') : h('span', null, '排队')),
           ),
-        ),
-        h('div', { className: 'snx-qi-acts' },
-          st === 'done' ? h('button', { className: 'snx-qi-act', onClick: onOpen, type: 'button' }, ic('maximize')) : null,
-          (st === 'pending' || st === 'running') ? h('button', {
-            className: 'snx-qi-act danger',
-            onClick: (e) => { e.stopPropagation(); onCancel() },
+          h('div', { className: 'snx-qi-body' },
+            h('div', { className: 'snx-qi-pr' }, (node.prompt || '—').replace(/^💬\s*/, '').slice(0, 80)),
+            h('div', { className: 'snx-qi-meta' },
+              h('span', { className: 'snx-qi-st' }, STATUS_ZH[st] || st),   // v11.2：徽章中文（uppercase 样式保留）
+              meta.model ? h('span', null, ' · ' + meta.model) : null,
+              meta.size ? h('span', null, ' · ' + meta.size) : null,
+              node.errMsg ? h('span', { className: 'snx-qi-err-msg' }, ' · ' + node.errMsg.slice(0, 60)) : null,
+            ),
+          ),
+          h('div', { className: 'snx-qi-acts' },
+            st === 'done' ? h('button', { className: 'snx-qi-act', onClick: onOpen, type: 'button' }, ic('maximize')) : null,
+            (st === 'pending' || st === 'running') ? h('button', {
+              className: 'snx-qi-act danger',
+              onClick: (e) => { e.stopPropagation(); onCancel() },
+              type: 'button',
+              title: '取消',
+            }, ic('x', 12)) : null,
+            st === 'error' ? h('button', {
+              className: 'snx-qi-act',
+              onClick: (e) => { e.stopPropagation(); onRetry() },
+              type: 'button',
+              title: '重试',
+            }, ic('rotate-ccw', 12)) : null,
+          ),
+          h('button', {
+            className: 'snx-qi-chev' + (open ? ' on' : ''),
+            onClick: (e) => { e.stopPropagation(); setOpen(!open) },
             type: 'button',
-            title: '取消',
-          }, ic('x', 12)) : null,
-          st === 'error' ? h('button', {
-            className: 'snx-qi-act',
-            onClick: (e) => { e.stopPropagation(); onRetry() },
-            type: 'button',
-            title: '重试',
-          }, ic('rotate-ccw', 12)) : null,
+            title: open ? '收起详情' : '展开详情',
+            'aria-expanded': open,
+          }, ic('chevron-down', 14)),
         ),
+        open ? h('div', { className: 'snx-qi-detail' },
+          st === 'error' && errMsgFull ? h('div', { className: 'snx-qi-detail-err' }, errMsgFull) : null,
+          h('dl', null,
+            detailRows.map(([k, v]) => [
+              h('dt', { key: k + '-k' }, k),
+              h('dd', { key: k + '-v', title: String(v) }, String(v)),
+            ]),
+          ),
+        ) : null,
       )
     }
 
-    // ── 对比：2 张 overlay slider ──
+    // ── 对比：2 张三模式对比 ──
+    // v12（SPEC 三.3，对标 InvokeAI ImageComparison）：顶栏模式按钮组——
+    // 滑块（clipPath 揭示，原有能力）/ 并排（左右五五开）/ 叠化（上层 opacity 随指针横向位置），
+    // 当前高亮；+ 交换按钮（A/B 互换，内容换位、字母随图走，原型同款语义）+ C 键热键
+    // （输入态 / 模态上层在场 / 下拉展开时不触发）。3-4 图仍走 CompareGrid 网格。
     function ComparePair({ a, b }) {
       const [pos, setPos] = useState(50)
+      const [mode, setMode] = useState('slider')   // 'slider' | 'side' | 'fade'
+      const [swapped, setSwapped] = useState(false)
+      // 交换 = 两层内容互换；A/B 字母与说明栏跟着内容走（底层/揭示层的角色不变）
+      const la = swapped ? b : a
+      const lb = swapped ? a : b
+      // C 键交换热键：输入态不触发；灯箱/确认弹窗等模态上层与 SnxSelect 下拉在场时让路
+      useEffect(() => {
+        const onKey = (e) => {
+          if (e.key !== 'c' && e.key !== 'C') return
+          if (e.ctrlKey || e.metaKey || e.altKey) return
+          if (isTyping(e) || modalOpen() || document.querySelector('.snx-sel-pop')) return
+          setSwapped((s) => !s)
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+      }, [])
+      // 叠化：指针在 stage 上的横向位置 → 上层透明度（悬停即跟随，无需按住；pointer 事件兼容触摸）
+      const trackFade = (e) => {
+        if (mode !== 'fade') return
+        const rect = e.currentTarget.getBoundingClientRect()
+        const fx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+        setPos(Math.round(fx * 100))
+      }
+      const infoLb = mode === 'side' ? ['A · 左', 'B · 右']
+        : mode === 'fade' ? ['A · 底', 'B · 叠化层'] : ['A · 底', 'B · 上']
       return h('div', { className: 'snx-cmp-pair' },
-        h('div', { className: 'snx-cmp-stage', onMouseDown: startDrag, onTouchStart: startDrag, onDoubleClick: () => setPos(50) },
-          h('img', { className: 'snx-cmp-base', src: a.src, alt: 'A', draggable: false }),
-          h('div', { className: 'snx-cmp-clip', style: { clipPath: 'inset(0 ' + (100 - pos) + '% 0 0)' } },
-            h('img', { src: b.src, alt: 'B', draggable: false }),
+        // 顶栏：三模式按钮组 + 交换
+        h('div', { className: 'snx-cmp-modes' },
+          h('div', { className: 'snx-cmp-mseg', role: 'group', 'aria-label': '对比模式' },
+            [['slider', '滑块', '拖分割线揭示上层'], ['side', '并排', '左右各半对照'], ['fade', '叠化', '上层透明度随指针横向位置']]
+              .map(([m, label, tip]) => h('button', {
+                key: m, type: 'button',
+                className: 'snx-cmp-mbtn' + (mode === m ? ' on' : ''),
+                title: tip,
+                onClick: () => setMode(m),
+              }, label)),
           ),
-          h('div', {
+          h('button', {
+            type: 'button', className: 'snx-cmp-mswap',
+            title: '交换 A/B（热键 C，输入态不触发）',
+            onClick: () => setSwapped((s) => !s),
+          }, ic('arrow-left-right', 12), ' 交换（C）'),
+        ),
+        h('div', {
+          className: 'snx-cmp-stage' + (mode === 'side' ? ' m-side' : ''),
+          onMouseDown: mode === 'slider' ? startDrag : undefined,
+          onTouchStart: mode === 'slider' ? startDrag : undefined,
+          onPointerMove: trackFade,
+          onDoubleClick: mode === 'slider' ? () => setPos(50) : undefined,
+        },
+          h('img', { className: 'snx-cmp-base', src: la.src, alt: 'A', draggable: false }),
+          mode === 'side' ? h('div', { className: 'snx-cmp-clip' },
+            h('img', { src: lb.src, alt: 'B', draggable: false }),
+          ) : h('div', {
+            className: 'snx-cmp-clip',
+            style: mode === 'fade'
+              ? { clipPath: 'none', opacity: pos / 100 }
+              : { clipPath: 'inset(0 ' + (100 - pos) + '% 0 0)' },
+          },
+            h('img', { src: lb.src, alt: 'B', draggable: false }),
+          ),
+          mode === 'slider' ? h('div', {
             className: 'snx-cmp-handle',
             style: { left: pos + '%' },
           },
             h('div', { className: 'snx-cmp-handle-bar' }),
             h('div', { className: 'snx-cmp-handle-knob' }, ic('chevrons-left-right', 16)),
-          ),
+          ) : null,
           h('div', { className: 'snx-cmp-tag l' }, 'A'),
           h('div', { className: 'snx-cmp-tag r' }, 'B'),
         ),
         h('div', { className: 'snx-cmp-info' },
           h('div', { className: 'snx-cmp-info-c' },
-            h('div', { className: 'lb' }, 'A · 底'),
-            h('div', { className: 'pr' }, (a.prompt || '').replace(/^💬\s*/, '').slice(0, 80)),
+            h('div', { className: 'lb' }, infoLb[0]),
+            h('div', { className: 'pr' }, (la.prompt || '').replace(/^💬\s*/, '').slice(0, 80)),
           ),
           h('div', { className: 'snx-cmp-info-c' },
-            h('div', { className: 'lb' }, 'B · 上'),
-            h('div', { className: 'pr' }, (b.prompt || '').replace(/^💬\s*/, '').slice(0, 80)),
+            h('div', { className: 'lb' }, infoLb[1]),
+            h('div', { className: 'pr' }, (lb.prompt || '').replace(/^💬\s*/, '').slice(0, 80)),
           ),
         ),
       )
@@ -6954,14 +7412,15 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           else if (e.key === '0') setScale(1)
           else if (e.key === 'ArrowLeft' && onNav) onNav(-1)
           else if (e.key === 'ArrowRight' && onNav) onNav(1)
-          // 回填热键组（InvokeAI CurrentImageButtons 灵魂）：R=全参数 / P=提示词 / S=种子 / D=尺寸。
+          // 回填热键组（InvokeAI CurrentImageButtons 灵魂）：R=整套回填 / P=提示词 / S=种子 / D=尺寸。
+          // P/S/D 与参数清单行按钮同链路：只覆盖该字段、停留灯箱、对应行高亮闪一下；
           // 输入态（标签输入框等）与带修饰键的组合不触发，避免抢 Ctrl+P/S/D 等浏览器快捷键
           else if (!e.ctrlKey && !e.metaKey && !e.altKey && !isTyping(e)) {
             const k = String(e.key || '').toLowerCase()
             if (k === 'r') { e.preventDefault(); onRestoreParams && onRestoreParams(node) }
-            else if (k === 'p') { e.preventDefault(); onRestoreField && onRestoreField(node, 'prompt') }
-            else if (k === 's') { e.preventDefault(); onRestoreField && onRestoreField(node, 'seed') }
-            else if (k === 'd') { e.preventDefault(); onRestoreField && onRestoreField(node, 'size') }
+            else if (k === 'p') { e.preventDefault(); doRestoreField('prompt') }
+            else if (k === 's') { e.preventDefault(); doRestoreField('seed') }
+            else if (k === 'd') { e.preventDefault(); doRestoreField('size') }
           }
         }
         window.addEventListener('keydown', onKey)
@@ -6992,6 +7451,18 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const tree = useMemo(() => buildVersionTree(node, store), [node, store.doc.nodes.length])
       // v8：fav 状态
       const fav = node && node.favorite
+      // v12：参数清单行级回填——行高亮闪一下（flash {field,n}；n 递增换行 key 强制重放动画）。
+      // 行按钮与 P/S/D 热键共用同一入口，广播由 Workbench onRestoreField 完成（只覆盖该字段）
+      const [flash, setFlash] = useState(null)
+      const flashSeqRef = useRef(0)
+      const doRestoreField = (field) => {
+        if (!onRestoreField) return
+        onRestoreField(node, field)
+        flashSeqRef.current += 1
+        setFlash({ field, n: flashSeqRef.current })
+      }
+      // 换图（翻页/版本树跳转）清掉上一张的行高亮
+      useEffect(() => { setFlash(null) }, [node && node.id])
       // P2-3：标签编辑（输入+回车写 node.tags，删 tag 同步；画廊标签筛选读同一条链路）
       const [tagDraft, setTagDraft] = useState('')
       const nodeTags = node && Array.isArray(node.tags) ? node.tags : []
@@ -7032,6 +7503,37 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           notify && notify('导出失败：' + String((e && e.message) || e))
         }
       }
+      // v12：参数清单行集（InvokeAI ImageMetadataActions 式逐行）——
+      // 基础 7 行常驻（提示词/负向词/模型/尺寸/种子/画板/创建时间），有参考图/滤镜再加行；
+      // 值缺失显示「—」且不出回填按钮；画板/创建/调整为纯信息行，永不带按钮
+      const ROLE_LB = { reference: '参考', style: '风格', character: '角色', composition: '构图' }
+      const pRefs = Array.isArray(params.refs) ? params.refs.filter((r) => r && r.src) : []
+      const pSeed = typeof params.seed === 'number' ? params.seed : null
+      const pAdj = params.adjusted && typeof params.adjusted === 'object' ? params.adjusted : null
+      const adjTxt = pAdj ? ADJ_SPECS
+        .map(([k, lb]) => ({ lb, v: Math.round(Number(pAdj[k]) || 0) }))
+        .filter((x) => x.v !== 0)
+        .map((x) => x.lb + ' ' + (x.v > 0 ? '+' : '') + x.v)
+        .join(' · ') : ''
+      const boardName = node && node.boardId
+        ? (((boards || []).find((b) => b.id === node.boardId) || {}).name || (node.boardId || '').slice(0, 8))
+        : '未分组'
+      const plRows = [
+        // v12.1（静态对账）：cls:'wrap'/'mono' 动态拼类名导致 CSS 对账看不见 .wrap——
+        // 改为布尔标记，消费端拼字面量 'rv wrap'/'rv mono'，行为不变
+        { k: 'prompt', label: '提示词', val: String(node && node.prompt || '').replace(/^💬\s*/, ''), btn: true, wrap: true },
+        { k: 'negPrompt', label: '负向词', val: params.negative || '', btn: true },
+        { k: 'model', label: '模型', val: params.model || '', btn: true, mono: true },
+        { k: 'size', label: '尺寸', val: params.size ? params.size.replace('x', '×') : (node && node.w ? node.w + '×' + node.h : ''), btn: true, mono: true },
+        { k: 'seed', label: '种子', val: pSeed === null ? '' : (pSeed < 0 ? '随机' : String(pSeed)), btn: pSeed !== null, mono: true },
+        { k: 'board', label: '画板', val: boardName },
+        { k: 'created', label: '创建', val: date },
+        pRefs.length ? {
+          k: 'refs', label: '参考图', btn: true,
+          val: pRefs.length + ' 张' + (pRefs.some((r) => ROLE_LB[r.role]) ? ' · ' + [...new Set(pRefs.map((r) => ROLE_LB[r.role] || '参考'))].join('/') : ''),
+        } : null,
+        adjTxt ? { k: 'adjusted', label: '调整', val: adjTxt } : null,
+      ].filter(Boolean)
       return h('div', { className: 'snx-lb-backdrop', onClick: onClose },
         h('div', { className: 'snx-lb', onClick: (e) => e.stopPropagation() },
           // 顶栏
@@ -7126,18 +7628,35 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                   }, ic('check'), ' 应用'),
                 ),
               ) : null,
+              // v12：参数清单（InvokeAI ImageMetadataActions 式逐行 + 行级单键回填；整套回填主按钮置顶）
               h('div', { className: 'snx-lb-meta' },
-                h('div', { className: 'snx-lb-pr' },
-                  h('div', { className: 'lb' }, '提示词'),
-                  h('div', { className: 'val' }, (node && node.prompt || '—').replace(/^💬\s*/, '')),
+                h('div', { className: 'snx-lb-plist-h' },
+                  h('span', { className: 't' }, '参数清单'),
+                  h('button', {
+                    type: 'button', className: 'snx-lb-plist-go',
+                    title: '整套回填：提示词/负向词/尺寸/模型/种子/参考图一次填回生图表单（热键 R）',
+                    onClick: () => onRestoreParams && onRestoreParams(node),
+                  }, ic('wand-sparkles', 12), '整套回填'),
                 ),
-                h('div', { className: 'snx-lb-params' },
-                  h('div', null, h('span', { className: 'k' }, '模型'), h('span', { className: 'v' }, params.model || '—')),
-                  h('div', null, h('span', { className: 'k' }, '尺寸'), h('span', { className: 'v' }, params.size || ((node && node.w) + '×' + (node && node.h)) || '—')),
-                  params.seed !== undefined ? h('div', null, h('span', { className: 'k' }, '种子'), h('span', { className: 'v' }, String(params.seed))) : null,
-                  node && node.parentId ? h('div', null, h('span', { className: 'k' }, '衍生自'), h('span', { className: 'v' }, node.parentId.slice(0, 8))) : null,
-                  params.refs && params.refs.length ? h('div', null, h('span', { className: 'k' }, '参考'), h('span', { className: 'v' }, params.refs.length + ' 张')) : null,
-                  node && node.params && node.params.fromChat ? h('div', null, h('span', { className: 'k' }, '来源'), h('span', { className: 'v' }, '聊天生成')) : null,
+                h('div', { className: 'snx-lb-rows' },
+                  plRows.map((r) => {
+                    const flashing = flash && flash.field === r.k
+                    const hasVal = !!(r.val && r.val !== '—')
+                    return h('div', {
+                      key: r.k + (flashing ? ':' + flash.n : ''),
+                      className: 'snx-lb-row' + (flashing ? ' fl' : ''),
+                      onAnimationEnd: () => setFlash((f) => (f && f.field === r.k ? null : f)),
+                    },
+                      h('span', { className: 'rl' }, r.label),
+                      h('span', { className: r.wrap ? 'rv wrap' : r.mono ? 'rv mono' : 'rv', title: r.wrap ? undefined : (r.val || '—') }, r.val || '—'),
+                      r.btn && hasVal ? h('button', {
+                        type: 'button', className: 'rb',
+                        title: '只回填「' + r.label + '」到生图表单，其余不动'
+                          + ({ prompt: '（热键 P）', seed: '（热键 S）', size: '（热键 D）' }[r.k] || ''),
+                        onClick: () => doRestoreField(r.k),
+                      }, ic('corner-right-down', 13)) : null,
+                    )
+                  }),
                 ),
               ),
               // P2-3：标签编辑（写入 node.tags；画廊筛选条即时同步）
@@ -7177,27 +7696,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 hasImg ? h('button', { className: 'snx-lb-act go', type: 'button', onClick: onUseAsAnchor }, ic('image-plus'), ' 作为参考图') : null,
                 h('button', { className: 'snx-lb-act', type: 'button', onClick: onEdit }, ic('pen-tool'), ' 画布编辑'),
                 h('button', { className: 'snx-lb-act', type: 'button', onClick: onCopyParams }, ic('clipboard-copy'), ' 复制参数'),
-                // 回填热键组（InvokeAI CurrentImageButtons：Remix 全参数 + 行级 Prompt/Seed/Size）
-                h('button', {
-                  className: 'snx-lb-act go', type: 'button',
-                  title: '回填全部生成参数（提示词/负面/尺寸/模型/种子/参考图）到生图表单（热键 R）',
-                  onClick: () => onRestoreParams && onRestoreParams(node),
-                }, ic('corner-right-down'), ' 回填全部'),
-                h('button', {
-                  className: 'snx-lb-act', type: 'button',
-                  title: '仅回填提示词，其余表单项不动（热键 P）',
-                  onClick: () => onRestoreField && onRestoreField(node, 'prompt'),
-                }, ic('type'), ' 提示词'),
-                h('button', {
-                  className: 'snx-lb-act', type: 'button',
-                  title: '仅回填种子；原种子缺失时回填 -1（随机）（热键 S）',
-                  onClick: () => onRestoreField && onRestoreField(node, 'seed'),
-                }, ic('dices'), ' 种子'),
-                h('button', {
-                  className: 'snx-lb-act', type: 'button',
-                  title: '仅回填比例/尺寸；参数缺失时按图片比例取已验证档（热键 D）',
-                  onClick: () => onRestoreField && onRestoreField(node, 'size'),
-                }, ic('frame'), ' 尺寸'),
+                // v12：回填入口收拢进「参数清单」面板（整套回填在面板顶部，行级回填在各行尾），
+                // 操作区不再重复堆 P/S/D 单字段按钮；R/P/S/D 热键保持可用
                 hasImg ? h('button', { className: 'snx-lb-act', type: 'button', onClick: onDownload }, ic('download'), ' 原始下载') : null,
                 hasImg ? h('button', { className: 'snx-lb-act', type: 'button', onClick: () => setExportOpen(!exportOpen) }, ic('package'), ' 导出…') : null,
                 h('button', { className: 'snx-lb-act danger', type: 'button', onClick: onDelete }, ic('trash-2'), ' 删除'),

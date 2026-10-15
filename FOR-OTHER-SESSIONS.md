@@ -191,3 +191,64 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 - linkDrag window 级兜底(mouseup/pointercancel/blur)+ 外松手不再悬挂误改接;暂停期取消不再被复活;粘贴/拖入走 inline 上限;SnxConfirm 焦点安全(初始焦点=取消);画布双击=灯箱;灯箱快捷键 isTyping 设防;清空画布走确认;ContextMenu portal 化+全屏去重;GalContextMenu 隐形活模态自愈;端口抬到 portLayer(不再被自家图压半边);队列/版本树徽章中文;连线编辑进帮助与快捷键表;对比角标 A/B/C/D;暂停入队有告知;bsb 预览缩放改布局尺寸;混合模式中文;方向键 undo 合并;锁定节点不可 Del;undo/emit/boards 零星补全。
 - **测试坑两连**:①JS `.click()` 不走焦点链,焦点留在壳输入框 → isTyping 吞掉全部画布快捷键——测快捷键必须 page.mouse.click 真实坐标;②E2E 按固定分数坐标点画布节点,相机被其他测试会话 autosave 改过后全点空——按节点几何+实时相机算坐标。
 - 验证:full 门禁 0 违规;linktest 5/5;E2E 13/13;专项 3/3(portal 菜单在视口/Esc 关菜单/全屏 soft 模态键活)。deferred:对比模式循环/交换按钮、画廊拖拽自动滚边。
+
+## v12:超级好用轮——审计 4 断裂修复 + InvokeAI 差距落地(2026-10-14 ~ 10-15,四批次工作流交付)
+
+> 本章由文档同步会话据四批改动报告写成,关键事实已在本轮做静态复核(命令与结果见「怎么验证的」)。规格见 `SPEC-v12.md`,原型 `design/snx-v12-prototype.html`。**全部为静态交付:浏览器/E2E 未跑(工作纪律禁止启动浏览器,验收归验收员);四批改动全部在工作树未 commit(`git status` = ` M client/client-v4.js`,HEAD=56b3e93)。** 只改了 client/client-v4.js,服务端零改动。
+
+### 做了什么
+
+**批次0:第三方审计 4 断裂修复**(断裂清单见 STATUS-2026-10-14.md §六)
+
+1. **双击开灯箱**:整段 Konva dblclick/dbltap 已删,改 bindNode click/tap 内自实现检测——引擎级 `lastClick` 记 snxId+400ms 双击窗(client-v4.js:2663-2713),跨 renderAll 实例重建存活。根因:每次选中/拖拽结束 store.emit→renderAll destroyChildren 重建全部 Konva 实例(审计实测 instanceId 516→543),Konva dblclick 要求同一实例收到两次点击,永远凑不齐。
+2. **ActionBar 多选区**:挂载条件原为 sel.size===1,多选时整条不渲染。现 sel>=2 渲染多选区(已选 N 张 + 6 向对齐 + 水平/垂直等距分布 + 成组/解组 + 删除,锚定选区包围盒),复用 alignSel/groupSel/ungroupSel(client-v4.js:3305-3333、2196-2320);画布条与全屏画布两处挂点条件改 (selDone||selMulti)。
+3. **画布页 toast 可见**:渲染条件去掉 mode!=='canvas' 排除,删页脚回显(当初隐藏理由=页脚兜底,已失效),底部居中 bottom:56px 天然避让画布悬浮条(client-v4.js:821-823、4952)。
+4. **节点右键菜单**:bindNode→onContext→setMenu 链路静态排查本通;唯一产出「空画布四项菜单」的是 stage 级兜底——机制(Konva 源码 Stage.js/Layer.js:185,225-239 实读):renderAll destroyChildren 后命中画布要等下一帧 batchDraw 才重画,空窗期 getIntersection 读到已销毁形状颜色码→螺旋外扩→null→target===stage→nodeId=null。修法:stage contextmenu 按文档几何补命中(bbox,z 序从顶到底,跳过 hidden,client-v4.js:3065-3088),真空白才出空画布菜单。
+
+每条均附「为什么之前测试没抓到」:E2E 从未覆盖画布节点双击/多选操作条/画布页 toast/画布节点右键,画廊-only 用例全绿。
+
+**批次1:灯箱行级回填 + 提示词历史(核实轮,0 行编辑)**——读完 AUDIT-2026-10-12.md、SPEC §3.2/§3.6、原型后逐行核对,两项任务在工作树已完整落地且与 SPEC/原型逐条对得上:
+
+- **参数清单**:灯箱右栏 snx-lb-meta 面板 `plRows` 逐行渲染 9 类——提示词/负向词/模型/尺寸/种子/画板/创建 + 参考图(有才加行)+ 调整(有才加行),值缺失显「—」(client-v4.js:7520-7537)。可回填行(提示词/负向词/模型/尺寸/种子/参考图)行尾 corner-right-down 单键按钮,点击走 onRestoreField(client-v4.js:4714)只带单字段复用 snx:restoreParams 广播,GenForm 只覆盖到场字段 + toast「已回填X」+ 行高亮 flash(`.snx-lb-row.fl`,client-v4.js:958);无值行不出按钮(如种子行 `btn: pSeed !== null`,client-v4.js:7525);面板顶部「整套回填」主按钮(R 热键)保留,行按钮与 P/S/D 热键同链路。**有意偏差**:画板/创建/调整三行为纯信息行不出按钮——生图表单无画板字段,回填无落点(与原型中画板带 board 键的做法不同,属合理偏差)。
+- **提示词历史**:lib.recents 封顶 10 条;textarea Ctrl/Cmd+↑ 进入历史逐条向旧翻、↓ 反向、越过最新退出并还原进入前文本,整套 setPrompt 替换 + toast「历史 n/N」,空历史 toast「暂无提示词历史」,composing 守卫,↓ 不在历史态不抢原生光标(client-v4.js:6440-6460);退出历史态覆盖全部入口(提交/手动编辑/回填/选库/PNG 读回/下拉点选);收藏星旁 SnxSelect 历史下拉(最近 10 条、超 42 字截断,portalToBody 防 container-type 收编,client-v4.js:6146)。
+
+**批次2:生成按钮决策面板 + 队列行展开详情(约 +230 行)**
+
+- **决策面板**:生成按钮包一层 `.snx-gen-gowrap`(client-v4.js:721——disabled 按钮不派发鼠标事件,hover 必须挂包裹层),hover/focus 即浮出(portal 挂 body,150ms 淡入 < 300ms);就绪态 4 行 = 将生成 N 张(:6766)/ 模型·尺寸(applyQuality 实际请求档)/ 目标 / 队列等待 M(:6773,面板展开期间从 store 现算并 subscribe 刷新——gen 模式下 Workbench 无 store 订阅,取 prop 会冻结);disabled 改列 blocker 清单(上一批生成中/提示词为空/未配置 API Key,client-v4.js:6393-6399,keyOk 由 Workbench 传入);queuePaused 时顶部红条(读模块级变量+snx:queuePaused 事件,client-v4.js:2464-2473)。
+- **队列展开**:QueueItem 重构为纵向容器+.snx-qi-row 横排,行尾 chevron(aria-expanded,展开旋转,stopPropagation 不干扰 done 行开灯箱);详情含 模型/尺寸/种子(无则「随机」)/负面词前 80 字/错误全文(红框,仅 error)/耗时两段(client-v4.js:7048,CSS 1143-1149);补齐耗时基础设施——`_queuedAt` 落 5 个 pending 创建点+3 个重试点,`_endedAt` 落 runOne 三个终态+cancelJob(client-v4.js:2459-2570、3592),8 种状态组合用 node 脚本推演全部通过。
+
+**批次3:对比三模式 + 删除安全 + 画廊拖拽自动滚动**
+
+- **对比 2 图顶栏**:模式按钮组(滑块/并排/叠化,当前 .on 高亮,样式对齐原型 pv-seg)+ 交换按钮(arrow-left-right,A/B 内容互换、字母随图走)+ C 键热键(isTyping/modalOpen/SnxSelect 下拉在场不触发,client-v4.js:7141-7162、7154);滑块保留原 clipPath+手柄;并排 = stage 1fr 1fr 网格(揭示层转静态列,宽高比 2:1,client-v4.js:1946);叠化 = 揭示层 clipPath:'none' 且 opacity 随指针横向位置(悬停即跟随);**3-4 图 CompareGrid 按 SPEC「网格保持」原样未动**。
+- **删除安全**:SnxConfirm 扩展可选 altLabel/altIcon 第三按钮(resolve 'alt',client-v4.js:3749-3781);删画板确认列出「画板内 N 张图」+ 双按钮「仅删除画板(保留图)」(中性)/「连图一起删除」(红)(client-v4.js:5231-5239),板内图被板外节点 parentId 引用时加警告行,连图删除分支同步清理画布选中/画廊多选/Shift 锚点/灯箱并 undo+put 持久化;删单图(画廊+灯箱)在 parentId 引用警告外新增「在对比选择中,删除后自动移出对比」警告行(client-v4.js:4123、4883)。
+- **拖拽自动滚动**:onGalItemPointerDown 增加边缘自动滚动——指针进滚动容器 `.snx-pro-main`(画廊实际滚动元素)上下缘 40px 带内,rAF 节流按纵深比例(6→24px/帧)推进 scrollTop,离缘(下帧 dir=0 自停)或松手/pointercancel 即停(client-v4.js:4188-4247)。
+
+### 怎么验证的(全部静态,无浏览器)
+
+- **文档同步会话本轮复核(2026-10-15)**:`node --check client/client-v4.js` → SYNTAX-OK;`git status --short` → ` M client/client-v4.js`,HEAD=56b3e93(审计裁决合并提交),v12 四批未 commit。逐批次 grep 实锤(行号为当前工作树):dblclick/dbltap 仅存于注释(:2661/:2755)、lastClick 400ms(:2663-2713)、多选区(:3305-3333)、`mode !== 'canvas'` 全文 0 命中、stage contextmenu 几何补命中(:3065-3088)、plRows(:7520-7537)、onRestoreField(:4714)、Ctrl+↑↓(:6440-6460)、决策面板 blocker(:6393-6399)+将生成 N 张(:6766)+队列等待(:6773)、_queuedAt/_endedAt(:2459-2570/:3592)、队列展开详情(:7048)、三模式+交换+C(:7141-7162)、SnxConfirm alt(:3749-3781)、删画板双按钮(:5231-5239)、对比删除警告(:4123/:4883)、边缘自动滚动(:4188-4247)。
+- **门禁复查**:原生 `confirm(` = 0;`--snx-ac\b|--snx-acf\b` 坏变量 = 0;emoji 区段扫描命中 15 处,全部是 `replace(/^💬\s*/,'')` 旧数据读侧兼容(v11 章既知例外,非 UI emoji),新增代码 0 emoji。
+- **各批次自检**(据改动报告,本轮未重跑):每批修改后 node --check 全过;批次0 static-audit full 的 vars/emoji/confirms 全绿;批次2 用 node 脚本推演 8 种耗时状态组合全过、自查修掉 goRef 未挂按钮导致面板永停离屏位的 bug;批次3 核对 ICONS 可解析、新 className 全有 CSS、新 CSS var() 全带 fallback。
+- **浏览器/E2E 未执行**——四批一致声明:SPEC §三全部 E2E 断言与 21 项验收归验收员。
+
+### 坑 / 注意(给下一个会话)
+
+- **21 项 E2E 的项号映射不存在于任何仓库文档**(全库检索只有 STATUS §六一句「扩到 21 项」与旧 13 项 E2E-xx 引用)——验收员跑完务必把项号回填进 SPEC §三各条,别靠口口相传。
+- **css-orphan 存量 2 条真死样式未清**:.snx-lb-params/.snx-lb-pr(早前灯箱改版遗留,client-v4.js:919 注释已明示零引用,删除需灯箱回归一轮)→ static-audit classes 项仍会报;.wrap 误报的根因(cls:'wrap' 动态拼类)已改为布尔标记+字面量 'rv wrap'/'rv mono'(client-v4.js:7521-7523),该条应已消失。
+- **决策面板「目标」行恒显示「未分组」**:genToCanvas 管线从不给新节点赋 boardId(创建节点对象无该字段),面板如实显示产品当前行为;未来生成支持指定画板时此行要同步改。
+- focus 浮出仅对 enabled 按钮生效(disabled 按钮浏览器不派发焦点事件,固有限制);disabled 态走包裹层 hover 路径。
+- **旧 done 节点的排队段耗时不可恢复**(ts 被完成时间覆盖),队列详情只显示「运行 Xs」——数据不可逆,不是回归,别误报。
+- **C 热键未加入帮助浮层热键清单**(帮助浮层改动超出该批范围),验收时别当 bug;对比三模式/交换仅覆盖 2 图,3-4 图网格的旧「模式循环/交换按钮 deferred」注释仍属实。
+- 拖拽自动滚动的滚动容器写死 `document.querySelector('.snx-pro-main')`(已核实为画廊模式唯一滚动容器),未做通用最近可滚祖先探测;画廊结构重构时要同步。
+- 决策面板 queuePaused 走模块级变量+`snx:queuePaused` 事件(client-v4.js:2464-2473)——别改这个通知通道的名字。
+
+## v12:超级好用轮(2026-10-15,批次0 断裂修复+三批心脏路径,工作流 dwfrun-8bd80851)
+
+按 SPEC-v12.md 验收标准+原型 design/snx-v12-prototype.html 实现,四批全落地:
+- **批次0(第三方审计 4 条真机断裂)**:双击灯箱改自实现检测(同节点 400ms 两击,跨 Konva 实例重建有效);ActionBar 挂载 sel.size>=1(多选对齐/分布/成组首次可达);画布页 toast 不再被排除;节点右键菜单 nodeId 链路修通。
+- **批次1**:灯箱 meta 重构为参数清单(≥7 行,每可回填行独立按钮,行级 restoreParams;画板/创建/调整按"无落点不回填"不出按钮——与原型的有意偏差);Ctrl+↑/↓ 提示词历史+星旁历史下拉。
+- **批次2**:生成按钮决策面板(hover/focus 浮出:将生成 N 张/模型/尺寸/目标画板/队列等待;disabled 列 blocker;暂停红条;disabled 不派发鼠标事件故按钮外包 .snx-gen-gowrap 承接 hover);队列行展开详情(参数/错误全文/耗时两段)。
+- **批次3**:对比 2 图三模式(滑块/并排/叠化)+交换按钮+C 热键;删画板双按钮(仅删板/连图删)+删图引用警告;画廊拖拽自动滚边。
+
+**大坑(必读)**:Konva 的 `batchDraw()` 是 **requestAnimationFrame 延帧**——renderAll 后命中画布没重画,紧接着的第二次点击会命中**已销毁的旧节点**(destroy 解绑了事件)→ 点击凭空消失。修法:renderAll 末尾补 `mainLayer.drawHit()` 同步重画命中图。这解释了为什么 Playwright `mouse.dblclick`(两次点击 <16ms 同帧)打不开灯箱而人类(50-150ms)可以——**测 Konva 交互别用 mouse.dblclick,用两次 mouse.click 隔 150ms;要测极限就先补 drawHit**。
+
+验证:主会话复核 full 门禁 0 违规(408:408 类名)、linktest 5/5、真机双击 OPEN ✓(drawHit 修复后连 mouse.dblclick 都过);工作流验收员 E2E 21/21。deferred:3-4 图网格无模式循环(2 图专属三模式)、C 热键未进帮助表、旧 done 节点排队耗时不可恢复(ts 被覆盖)。
