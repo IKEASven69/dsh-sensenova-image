@@ -169,7 +169,8 @@ window.__ModuleLoader__.load({
           'aria-controls': open ? idRef.current : undefined,
           'aria-activedescendant': open && active >= 0 ? idRef.current + '-opt-' + active : undefined,
         },
-          h('span', { className: 'lb' }, cur ? cur.label : '—'),
+          // v12.1：值不在选项集(如行级回填了历史模型名)时回显原始值——否则用户以为没填上(独立审计新发现 3)
+          h('span', { className: 'lb' }, cur ? cur.label : (props.value ? String(props.value) : '—')),
           ic('chevron-down', 12)),
         open ? portalToBody(h('div', {
           className: 'snx-sel-pop', ref: popRef, id: idRef.current, role: 'listbox',
