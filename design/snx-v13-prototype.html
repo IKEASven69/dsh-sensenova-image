@@ -1,0 +1,210 @@
+<div id="snxv13" class="pv-root viz-dotted-background">
+  <div class="pv-caption">① 对话 · 等待态 —— 转圈 + 已耗时实时跳动(演示自动从等待切到完成)</div>
+  <div class="pv-frame pv-chat">
+    <div class="pv-turnhd">会话消息流(示意)</div>
+    <div class="pv-card" id="pv-card"></div>
+  </div>
+
+  <div class="pv-caption">② 对话 · 完成卡动作行 —— 看完图的下一步:回填参数 / 设为参考图 / 重抽 / 复制提示词(点按钮试)</div>
+  <div class="pv-frame pv-chat">
+    <div class="pv-turnhd">会话消息流(示意)</div>
+    <div class="pv-card">
+      <button type="button" class="pv13-img"><div class="pv-ph pv-ph-a"><i data-lucide="dog" aria-hidden="true"></i><span>2048×1152</span></div></button>
+      <div class="pv13-prompt">戴墨镜的柴犬坐在月球表面,4K,电影感…<button type="button" class="pv13-copy" title="复制完整提示词"><i data-lucide="clipboard-copy" aria-hidden="true"></i></button></div>
+      <div class="pv13-acts">
+        <button type="button" class="pv13-act pv13-acc" id="pv13-recall"><i data-lucide="corner-right-down" aria-hidden="true"></i>回填参数</button>
+        <button type="button" class="pv13-act" id="pv13-ref"><i data-lucide="image-plus" aria-hidden="true"></i>设为参考图</button>
+        <button type="button" class="pv13-act" id="pv13-retry"><i data-lucide="dices" aria-hidden="true"></i>同参数重抽</button>
+        <button type="button" class="pv13-act"><i data-lucide="pin" aria-hidden="true"></i>插入画布</button>
+        <button type="button" class="pv13-act"><i data-lucide="download" aria-hidden="true"></i>下载</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pv-caption">③ 对话 · 灯箱升级 —— 左图右参数清单(与工作台同款),底部下一步动作;回合尾多图带 x/N 角标</div>
+  <div class="pv-frame pv-lb">
+    <div class="pv-lb-img"><div class="pv-ph pv-ph-a" style="width:78%"><i data-lucide="dog" aria-hidden="true"></i><span>点击区域 = 原图</span></div></div>
+    <div class="pv-lb-side">
+      <div class="pv-lb-h"><span>参数清单</span><button type="button" class="pv13-remix"><i data-lucide="wand-sparkles" aria-hidden="true"></i>整套回填</button></div>
+      <div class="pv-rows">
+        <div class="pv-row"><span class="pv-rl">提示词</span><span class="pv-rv" style="white-space:normal">戴墨镜的柴犬坐在月球表面,4K,电影感</span><button type="button" class="pv-rb" title="回填提示词"><i data-lucide="corner-right-down" aria-hidden="true"></i></button></div>
+        <div class="pv-row"><span class="pv-rl">模型</span><span class="pv-rv pv-mono">sensenova-u1.5-lite</span><button type="button" class="pv-rb" title="回填模型"><i data-lucide="corner-right-down" aria-hidden="true"></i></button></div>
+        <div class="pv-row"><span class="pv-rl">尺寸</span><span class="pv-rv pv-mono">2048×1152(16:9)</span><button type="button" class="pv-rb" title="回填尺寸"><i data-lucide="corner-right-down" aria-hidden="true"></i></button></div>
+        <div class="pv-row"><span class="pv-rl">种子</span><span class="pv-rv pv-mono">184322101</span><button type="button" class="pv-rb" title="回填种子"><i data-lucide="corner-right-down" aria-hidden="true"></i></button></div>
+      </div>
+      <div class="pv-lb-acts">
+        <button type="button" class="pv13-act pv13-acc"><i data-lucide="image-plus" aria-hidden="true"></i>设为参考图</button>
+        <button type="button" class="pv13-act"><i data-lucide="dices" aria-hidden="true"></i>同参数重抽</button>
+        <button type="button" class="pv13-act"><i data-lucide="download" aria-hidden="true"></i>下载</button>
+      </div>
+    </div>
+    <div class="pv-toast" id="pv13-toast"></div>
+  </div>
+  <div class="pv-frame pv-tail">
+    <div class="pv-tailhd">回合尾 · 本回合 3 张</div>
+    <div class="pv-tailgrid">
+      <div class="pv-tailimg"><div class="pv-ph pv-ph-a" style="width:100%;height:100%"><span></span></div><span class="pv-idx">1 / 3</span></div>
+      <div class="pv-tailimg"><div class="pv-ph pv-ph-b" style="width:100%;height:100%"><span></span></div><span class="pv-idx">2 / 3</span></div>
+      <div class="pv-tailimg"><div class="pv-ph pv-ph-c" style="width:100%;height:100%"><span></span></div><span class="pv-idx">3 / 3</span></div>
+    </div>
+  </div>
+
+  <div class="pv-caption">④ 工作台 · 决策面板目标行真实化 —— 生成可选入板,「回填参数→生成回同一画板」闭环(点目标行切换)</div>
+  <div class="pv-frame pv-gen">
+    <div class="pv-gorow2">
+      <div class="pv-decide2">
+        <div class="pv-dc-r"><i data-lucide="sparkles" aria-hidden="true"></i><span>将生成 <b>2 张</b> · <b>2048×1152</b>(16:9)</span></div>
+        <button type="button" class="pv-dc-r pv-dc-btn" id="pv13-target"><i data-lucide="folder" aria-hidden="true"></i><span>目标:<b id="pv13-targetname">画板「雪夜灯笼」</b> ▾</span></button>
+        <div class="pv-dc-pop" id="pv13-bpop" hidden>
+          <button type="button" class="pv-dc-opt" data-v="none">未分组</button>
+          <button type="button" class="pv-dc-opt on" data-v="雪夜灯笼">画板「雪夜灯笼」</button>
+          <button type="button" class="pv-dc-opt" data-v="月面系列">画板「月面系列」</button>
+        </div>
+        <div class="pv-dc-r"><i data-lucide="list-ordered" aria-hidden="true"></i><span>队列空闲,提交后立即开始</span></div>
+      </div>
+      <button type="button" class="pv-go"><i data-lucide="sparkles" aria-hidden="true"></i>生成到画布</button>
+    </div>
+    <div class="pv-note2">选中的画板将同时作用于:对话生成的节点归属 + 灯箱「回填参数」后的下一次生成——回填参数→生成回同一画板的闭环。</div>
+  </div>
+</div>
+
+<style>
+#snxv13 { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; color: var(--foreground); padding: 4px 2px 12px; }
+#snxv13 .pv-caption { font-size: 13px; font-weight: 500; margin: 18px 2px 8px; }
+#snxv13 .pv-frame { --b1:#232324; --b2:#2c2c2e; --b3:#353638; --t1:#f9fafb; --t2:#cfd3d6; --t3:#adb2b8; --t4:#81858c; --acc:#7aaaff; --ok:#22c55e; --warn:#f7ad31; --err:#f25a5a; --bd:rgba(255,255,255,.12);
+  background: var(--b1); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; position: relative;
+  max-width: 860px; margin: 0 auto 12px; box-shadow: 0 12px 40px rgba(0,0,0,.35); color: var(--t1); text-align: left; }
+#snxv13 .pv-turnhd, #snxv13 .pv-tailhd { padding: 8px 14px; font-size: 11px; color: var(--t4); border-bottom: 1px solid rgba(255,255,255,.05); letter-spacing: .06em; }
+/* ① 等待/完成卡 */
+#snxv13 .pv-card { padding: 14px; }
+#snxv13 .pv-wait { display: flex; align-items: center; gap: 12px; padding: 6px 2px; }
+#snxv13 .pv-spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(122,170,255,.2); border-top-color: var(--acc); animation: pv13spin .8s linear infinite; flex: none; }
+@keyframes pv13spin { to { transform: rotate(360deg); } }
+#snxv13 .pv-wt { font-size: 13px; color: var(--t2); }
+#snxv13 .pv-wt b { color: var(--t1); font-variant-numeric: tabular-nums; }
+#snxv13 .pv-ws { font-size: 11px; color: var(--t4); margin-top: 3px; }
+#snxv13 .pv-img { display: block; width: 100%; border: none; background: none; padding: 0; cursor: interaction; }
+#snxv13 .pv-ph { border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: rgba(255,255,255,.85); font-size: 12px; }
+#snxv13 .pv-ph svg { width: 30px; height: 30px; opacity: .8; }
+#snxv13 .pv-ph-a { background: radial-gradient(circle at 60% 40%, #3f8f7a, #1e3f4d 72%); aspect-ratio: 16/9; width: 100%; }
+#snxv13 .pv-ph-b { background: radial-gradient(circle at 50% 45%, #d86a3a, #4d2417 75%); aspect-ratio: 1; }
+#snxv13 .pv-ph-c { background: radial-gradient(circle at 45% 55%, #5a63d8, #23244d 75%); aspect-ratio: 4/3; }
+#snxv13 .pv13-prompt { font-size: 12.5px; color: var(--t2); margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+#snxv13 .pv13-copy { flex: none; display: inline-flex; border: 1px solid var(--bd); background: none; color: var(--t3); border-radius: 6px; padding: 3px 6px; cursor: interaction; }
+#snxv13 .pv13-copy svg { width: 12px; height: 12px; }
+#snxv13 .pv13-acts { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+#snxv13 .pv13-act { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 11.5px; color: var(--t2); background: var(--b3); border: 1px solid var(--bd); border-radius: 7px; padding: 5px 10px; cursor: interaction; }
+#snxv13 .pv13-act svg { width: 12px; height: 12px; }
+#snxv13 .pv13-act:hover { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 40%, transparent); }
+#snxv13 .pv13-acc { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 40%, transparent); background: rgba(122,170,255,.1); }
+/* ③ 灯箱 */
+#snxv13 .pv-lb { display: flex; min-height: 300px; }
+#snxv13 .pv-lb-img { flex: 1; display: flex; align-items: center; justify-content: center; background: #151517; }
+#snxv13 .pv-lb-side { width: 330px; flex: none; border-left: 1px solid var(--bd); background: var(--b1); display: flex; flex-direction: column; }
+#snxv13 .pv-lb-h { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--bd); font-size: 12px; font-weight: 600; color: var(--t3); }
+#snxv13 .pv13-remix { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 11px; font-weight: 600; color: var(--acc); background: rgba(122,170,255,.12); border: 1px solid color-mix(in srgb, var(--acc) 40%, transparent); border-radius: 7px; padding: 4px 9px; cursor: interaction; }
+#snxv13 .pv13-remix svg { width: 12px; height: 12px; }
+#snxv13 .pv-rows { overflow-y: auto; flex: 1; }
+#snxv13 .pv-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.05); }
+#snxv13 .pv-rl { width: 44px; flex: none; font-size: 11px; color: var(--t4); }
+#snxv13 .pv-rv { flex: 1; font-size: 12px; color: var(--t2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#snxv13 .pv-mono { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+#snxv13 .pv-rb { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--acc) 35%, transparent); background: transparent; color: var(--acc); cursor: interaction; }
+#snxv13 .pv-rb svg { width: 13px; height: 13px; }
+#snxv13 .pv-lb-acts { display: flex; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--bd); flex-wrap: wrap; }
+#snxv13 .pv-toast { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%) translateY(6px); background: var(--b3); border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent); color: var(--t1); font-size: 12px; padding: 7px 14px; border-radius: 8px; opacity: 0; pointer-events: none; transition: all .18s ease-out; z-index: 6; }
+#snxv13 .pv-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* 回合尾 */
+#snxv13 .pv-tailgrid { display: flex; gap: 10px; padding: 12px 14px; }
+#snxv13 .pv-tailimg { position: relative; width: 31%; }
+#snxv13 .pv-tailimg .pv-ph { font-size: 11px; }
+#snxv13 .pv-idx { position: absolute; top: 8px; left: 8px; font-size: 10.5px; font-weight: 600; color: #fff; background: rgba(0,0,0,.55); padding: 2px 8px; border-radius: 999px; }
+/* ④ 决策面板目标 */
+#snxv13 .pv-gen { padding: 16px 14px; }
+#snxv13 .pv-gorow2 { position: relative; }
+#snxv13 .pv-decide2 { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 360px; background: var(--b2); border: 1px solid color-mix(in srgb, var(--acc) 30%, var(--bd)); border-radius: 10px; padding: 10px 12px; box-shadow: 0 14px 40px rgba(0,0,0,.5); z-index: 5; }
+#snxv13 .pv-dc-r { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--t2); padding: 4px 0; }
+#snxv13 .pv-dc-r svg { width: 13px; height: 13px; color: var(--acc); flex: none; }
+#snxv13 .pv-dc-r b { color: var(--t1); font-weight: 600; }
+#snxv13 .pv-dc-btn { width: 100%; text-align: left; background: var(--b3); border: 1px solid var(--bd); border-radius: 7px; padding: 6px 9px; margin: 2px 0; cursor: interaction; }
+#snxv13 .pv-dc-btn:hover { border-color: color-mix(in srgb, var(--acc) 40%, transparent); }
+#snxv13 .pv-dc-pop { margin: 2px 0 4px; border: 1px solid var(--bd); border-radius: 7px; overflow: hidden; }
+#snxv13 .pv-dc-opt { display: block; width: 100%; text-align: left; font: inherit; font-size: 12px; color: var(--t2); background: var(--b1); border: none; padding: 6px 10px; cursor: interaction; }
+#snxv13 .pv-dc-opt:hover { background: rgba(122,170,255,.12); color: var(--acc); }
+#snxv13 .pv-dc-opt.on { color: var(--acc); background: rgba(122,170,255,.1); }
+#snxv13 .pv-go { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; font: inherit; font-size: 13px; font-weight: 600; color: #fff; background: linear-gradient(180deg, #5a9bff, #3f7ef0); border: none; border-radius: 9px; cursor: interaction; }
+#snxv13 .pv-note2 { font-size: 11.5px; color: var(--t4); margin-top: 10px; line-height: 1.6; }
+</style>
+
+<script>
+(function () {
+  var root = document.getElementById('snxv13');
+  if (!root) return;
+
+  /* ① 等待态:转圈+计时,12s 后自动切完成卡 */
+  var card = root.querySelector('#pv-card');
+  var waitStart = Date.now();
+  function renderWait() {
+    var s = Math.floor((Date.now() - waitStart) / 1000);
+    card.innerHTML =
+      '<div class="pv-wait"><div class="pv-spin"></div><div><div class="pv-wt">SenseNova 生成中… 已 <b>' + s + 's</b></div>' +
+      '<div class="pv-ws">完成后图片直接显示在这里,可回填参数 / 设为参考图 / 同参数重抽</div></div></div>';
+  }
+  renderWait();
+  var waitTimer = setInterval(renderWait, 500);
+  var switchTimer = setTimeout(function () {
+    clearInterval(waitTimer);
+    card.innerHTML =
+      '<button type="button" class="pv-img"><div class="pv-ph pv-ph-a"><i data-lucide="dog" aria-hidden="true"></i><span>2048×1152 · 生成于 12s</span></div></button>' +
+      '<div class="pv13-prompt">戴墨镜的柴犬坐在月球表面,4K,电影感…<button type="button" class="pv13-copy" title="复制完整提示词"><i data-lucide="clipboard-copy" aria-hidden="true"></i></button></div>' +
+      '<div class="pv13-acts">' +
+      '<button type="button" class="pv13-act pv13-acc"><i data-lucide="corner-right-down" aria-hidden="true"></i>回填参数</button>' +
+      '<button type="button" class="pv13-act"><i data-lucide="image-plus" aria-hidden="true"></i>设为参考图</button>' +
+      '<button type="button" class="pv13-act"><i data-lucide="dices" aria-hidden="true"></i>同参数重抽</button>' +
+      '<button type="button" class="pv13-act"><i data-lucide="pin" aria-hidden="true"></i>插入画布</button>' +
+      '<button type="button" class="pv13-act"><i data-lucide="download" aria-hidden="true"></i>下载</button></div>';
+    if (window.lucide) window.lucide.createIcons({ attrs: { width: 12, height: 12 }, nameAttr: 'data-lucide' });
+  }, 12000);
+
+  /* ② 动作行/toast 反馈 */
+  var toast = root.querySelector('#pv13-toast');
+  var toastTimer = null;
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 1400);
+  }
+  var clickMsg = {
+    'pv13-recall': '已回填全部参数到生图表单(prompt/模型/尺寸/种子)',
+    'pv13-ref': '已设为参考图——已切到工作台生图表单',
+    'pv13-retry': '已按同参数重新入队(拦截演示,未触真实 API)',
+  };
+  ['pv13-recall', 'pv13-ref', 'pv13-retry'].forEach(function (id) {
+    var b = root.querySelector('#' + id);
+    if (b) b.addEventListener('click', function () { showToast(clickMsg[id]); });
+  });
+  root.querySelectorAll('.pv13-copy').forEach(function (b) {
+    b.addEventListener('click', function () { showToast('完整提示词已复制到剪贴板'); });
+  });
+
+  /* ④ 目标画板切换 */
+  var targetBtn = root.querySelector('#pv13-target');
+  var pop = root.querySelector('#pv13-bpop');
+  var nameEl = root.querySelector('#pv13-targetname');
+  targetBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    pop.hidden = !pop.hidden;
+  });
+  pop.addEventListener('click', function (e) {
+    var opt = e.target.closest('.pv-dc-opt');
+    if (!opt) return;
+    pop.querySelectorAll('.pv-dc-opt').forEach(function (x) { x.classList.remove('on'); });
+    opt.classList.add('on');
+    var v = opt.getAttribute('data-v');
+    nameEl.textContent = v === 'none' ? '未分组' : '画板「' + v + '」';
+    pop.hidden = true;
+    showToast('生成目标已切换:' + nameEl.textContent);
+  });
+})();
+</script>
