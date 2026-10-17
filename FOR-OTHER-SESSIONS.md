@@ -252,3 +252,61 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 **大坑(必读)**:Konva 的 `batchDraw()` 是 **requestAnimationFrame 延帧**——renderAll 后命中画布没重画,紧接着的第二次点击会命中**已销毁的旧节点**(destroy 解绑了事件)→ 点击凭空消失。修法:renderAll 末尾补 `mainLayer.drawHit()` 同步重画命中图。这解释了为什么 Playwright `mouse.dblclick`(两次点击 <16ms 同帧)打不开灯箱而人类(50-150ms)可以——**测 Konva 交互别用 mouse.dblclick,用两次 mouse.click 隔 150ms;要测极限就先补 drawHit**。
 
 验证:主会话复核 full 门禁 0 违规(408:408 类名)、linktest 5/5、真机双击 OPEN ✓(drawHit 修复后连 mouse.dblclick 都过);工作流验收员 E2E 21/21。deferred:3-4 图网格无模式循环(2 图专属三模式)、C 热键未进帮助表、旧 done 节点排队耗时不可恢复(ts 被覆盖)。
+
+## v13:两轴并行第一轮——对话轴显示面 + 工作台轴管理面(2026-10-16 ~ 10-17,三批次工作流交付)
+
+> 本章由文档同步会话据三批改动报告写成,关键事实已在本轮做静态复核(命令与行号见「怎么验证的」)。规格 `SPEC-13.md`(对话=显示,工作台=管理+编辑),原型 `design/snx-v13-prototype.html`。**三批全部只改 client/client-v4.js,服务端零改动;全部为静态交付:浏览器/E2E 未跑(纪律归验收员)。改动在工作树未 commit(`git status --short` = ` M client/client-v4.js`,HEAD=5d1f75b)。**
+
+### 做了什么
+
+**批次A(对话轴:pending 卡 + 完成卡动作行 + 跨树通道)**
+
+- **pending 卡 SnxToolPending**(:4118):`.snx-tv-run` 内 CSS spin ring(复用既有 snx-spin keyframes,CSS :487/:497,挂点 :4126)+「SenseNova 生成中 · 已 Ns」实时计时(setInterval 500ms,useEffect 清理函数卸载即清)+一行说明,布局照原型①。
+- **完成卡动作行扩容**(照原型②):[回填参数(主行动高亮)/设为参考图/同参数重抽/插入画布/下载],复制提示词钮放 48 字截断文本尾部。
+- **回填参数** = `snxRestoreAllParams`(:3910,从 SnxToolCard 原实现提取,卡片与灯箱共用):复用 snx:restoreParams 广播 + genPrefs 冷启动兜底,经新模块级 `openWbTab` 通道(:3968,apply 时注入 ctx.sidebarRight.openTab、退路 layout.openRightbar,:8523-8525)打开工作台。**种子如实**:工具入参与结果 JSON 均无 seed(已核 src/index.ts:832-850 工具 parameters、907-921 返回体)——回填落 seed=-1(=随机,与工作台全量回填缺种子同语义,toast 注「种子(随机)」,:3923)。
+- **设为参考图** `snxSetReference`(:3926):新广播 snx:setRef{src},GenForm 监听追加(上限 4 张与 pickRef/uploadRef 同款,满 4 张如实不追加并告知),同时打开工作台生图视图。
+- **同参数重抽** `snxRerollDirect`(:3942):参照 doEnhance 直连模式 POST /api/sensenova/generate,成功后经服务端 /api/sensenova/canvas/nodes 追加 done 节点(parentId 不设、SSE canvas:update 刷新);**不带 seed(服务端随机)**,「同参数」实际=提示词/尺寸/模型,按钮 title 如实说明;按钮四态防连点(idle/busy/ok/err)。
+- **复制提示词** `copyTextToClipboard`(:3979):navigator.clipboard.writeText 全文,失败降级隐藏 textarea+execCommand 选中复制(copyTextViaSelection)。
+- **跨树冷启动竞态**:模块级 `pendingGenFocus`(:3972-3978)兜底——广播时记 {gen,toast},Workbench 挂载时补消费(切 gen 视图+补发 toast,:4399/:4632),已挂载时事件监听器当场消费并清空,两路只走其一;toasts 全走既有 toastBus→snx:notify 队列。
+
+**批次B(对话轴:TvLightbox 升级 + 回合尾编号)**
+
+- **TvLightbox** 从简版(图+提示词+插入/下载)升级为**左图右参数清单**(:4008 起):右栏复用工作台灯箱行级回填组件与样式(.snx-lb-rows/.snx-lb-row/.rb/.snx-row-flash 行高亮/.snx-lb-plist-go,CSS :1836 起),头部「整套回填」共用 snxRestoreAllParams,每可回填行(提示词/模型/尺寸/种子)独立按钮走 snx:restoreParams 单键 detail + genPrefs 兜底,行为与工作台 v12 行级回填一致(停留灯箱、只覆盖该字段)。**行集如实**:snxParseResult 解析不到的行不渲染,seed 仅结果/argsRaw 里确实是数字才出行,一行都没有时右栏只剩动作行、不出「参数清单」头;尺寸行展示 2048×1152(×)、回填传原始 2048x1152(x)。底部动作行 设为参考图/同参数重抽/下载/插入画布,前两者与卡片动作行共用 snxSetReference/snxRerollDirect。灯箱改 portalToBody 挂 body(对话轴浮层纪律),`.snx-tvlb` 加入主题令牌 scope(portal 后 --snx-accent/--snx-error 可用);两个调用方(SnxToolCard/TailImage)均改传整包 parsed info。
+- **回合尾编号**:SnxMediaTail 传 idx/total,hits.length>1 时每张 TailImage 左上角渲染 x/N 角标(:4275,`.snx-tail-idx` CSS :1868),样式对齐 v11 对比角标 .snx-cmp-tag(黑底白字圆角);单图不显示。
+
+**批次C(工作台轴:生成入板路由 + 队列全历史 + 对比 3-4 图)**
+
+- **生成入板路由**(审计 Top5 第 3 条,就此关闭):genPrefs 加 `targetBoard`(:3231-3232,''=未分组);生图表单比例/尺寸行下方新增「目标画板」SnxSelect(未分组/各画板,实时写偏好 :6614/:6725/:7092-7093);genToCanvas 创建节点按它赋 boardId(:2607,未分组不赋)——表单/悬浮条/重绘增强等所有入口同路;决策面板「目标」行由写死「未分组」改为如实显示所选(选板显示板名,悬空 id 兜底显示未分组,:6795-6796);工作台灯箱参数清单「画板」行恢复行级回填按钮(:7955,回填写 targetBoard 经 snx:restoreParams 广播给 GenForm,:5066-5074,未归板图回填为未分组);删画板同步清 targetBoard 防悬空落板(:5606)。**范围说明**:两处「整套回填」(工作台 onRestoreParams/对话轴 snxRestoreAllParams)未加画板字段——ask 只要求「画板」行级按钮,整套回填保持原样;对话轴灯箱参数清单本无「画板」行(行集仅 prompt/model/size/seed,图源走服务端管线无 boardId),非遗漏。
+- **队列全历史**:队列页头部(flex 占位后、暂停按钮前)加「显示全部历史」toggle(:5771-5775,aria-pressed+.on 态,CSS :1127-1134);关=原单遍倒序过滤逐字保留(:2505/:5732),开=进行中任务之外列出全部 done/error 按完成时间戳倒序;QueueItem 新增 hist 入参(:5874),全历史态下无 _startedAt/_queuedAt 的旧 done 节点耗时如实显示「未运行(历史)」(:7484-7485,不用被完成时刻覆盖的 ts 编数字);行展开详情不受影响。
+- **对比 3-4 图**:CompareGrid 顶栏补与 2 图一致的模式按钮组——并排默认可用(网格本身即并排),滑块/叠化 disabled+aria-disabled+tooltip「仅支持 2 张对比」,禁用态无 hover 反馈、光标 not-allowed(:1980-1981)。**未加「交换」按钮**——ask 只要求模式按钮组,3-4 图交换语义未定义。
+
+### 怎么验证的(全部静态,无浏览器)
+
+- **文档同步会话本轮复核(2026-10-17)**:`node --check client/client-v4.js` → FINAL-SYNTAX-OK;`git status --short` → ` M client/client-v4.js`,HEAD=5d1f75b(v13 未 commit)。关键符号 grep 全部在位:SnxToolPending(:4118)、pendingGenFocus(:3972-3978,挂载消费 :4399/:4632)、openWbTab(:3968/:8523-8525)、snxRestoreAllParams(:3910,seed=-1+「种子(随机)」:3923)、snxSetReference(:3926,4 张上限+genPrefs.refs 兜底)、snxRerollDirect(:3942,POST /api/sensenova/generate + /api/sensenova/canvas/nodes)、copyTextToClipboard(:3979)、TvLightbox(:4008)、targetBoard 全链(:3231-3232/:2607/:5606/:6614/:6725/:6795-6796/:6811/:7092-7093/:7955/:5066-5074)、snx-queue-hist(CSS :1127-1134,toggle :5771-5775,hist :5874,「未运行(历史)」:7484-7485)、snx-tail-idx(CSS :1868,渲染 :4275)、snx-cmp-mbtn:disabled(:1980-1981)。
+- **种子无中生有防线**:`sed -n '832,850p' src/index.ts | grep -c seed` → 0,`sed -n '907,921p' src/index.ts | grep -c seed` → 0(工具入参与返回体确无 seed),批次A「如实落 -1」的前提成立。
+- **旧类名清零**:`grep -c "snx-tvlb-bar\|snx-tvlb-prompt"` → 0(批次B 声称的死类名零残留,本轮复核)。
+- **批次自检(据改动报告,本轮未重跑)**:三批各自 node --check 全过(批次A 输出 FINAL-SYNTAX-OK、批次B/C SYNTAX_OK);批次B grep 确认 .snx-tvlb-bar/.snx-tvlb-prompt 零残留;批次C grep 对账 history 图标已入 ICONS、snx-queue-hist 三条 CSS、.snx-cmp-mbtn:disabled 两条规则、新 CSS var() 全带 fallback、boardId/targetBoard/decideTarget/d.board/hist 各链路接线齐全。
+- **E2E/浏览器未执行**——三批一致声明归验收员。SPEC-13 §一 5 条 + §二 3 条验收的实现部分已完成,全部 E2E 断言未跑;§四「E2E 23+ 项」套件尚未编写,项号无法预分配,验收员编写/跑完后回填 SPEC-13 各条。
+
+### 坑 / 注意(给下一个会话)
+
+- **种子语义别「修好」**:回填 seed=-1=随机(与工作台全量回填缺种子同语义),重抽不带 seed(服务端随机)——「同参数」=提示词/尺寸/模型。服务端工具本来就没有 seed 参数,别在前端伪造种子显示。
+- **pending 计时起点=卡片组件挂载时刻**(原型同款):dsh 会话折叠/展开导致重挂时计时从 0 重数——block 上无可靠起始时间戳可用,未伪造;这不是 bug,要修先给 block 加起始时间戳(动宿主,超出插件边界)。
+- **跨树通道三件套**:openWbTab(模块级,apply 时注入 :8523-8525,卡片在工作台 React 树之外只能走它)、pendingGenFocus(事件+挂载消费双路兜底,两路只走其一)、snx:setRef(GenForm 监听)。工作台 tab 未激活时宿主是否卸载组件属 dsh 宿主行为,无法在本仓库验证——双路兜底覆盖两种情况,别拆掉任一路。
+- **toast 丢失是已知形态**:重抽成功 toast「结果见工作台」走 snx:notify,工作台从未挂载时无接收方——结果已落画布文档,打开即见;重抽成功**不**自动打开工作台视图(ask 只要求 toast,与回填/设参考图两动作不同,未擅自加),别当 bug 补。
+- **对话轴灯箱行级回填 = 工作台 v12 语义**:停留灯箱不跳工作台,工作台未挂载时广播无人接、靠 genPrefs 兜底,toast 文案注明「打开工作台生图表单可见」。参数清单行数取决于 snxParseResult(结果 JSON + call.argsRaw 回退链),解析不到的卡只见提示词行甚至只剩动作行——如实渲染,非缺陷。
+- **尺寸双格式**:清单展示 2048×1152(×),回填传原始 2048x1152(x),别「统一」。
+- **TvLightbox 是 portalToBody 挂 body**:`.snx-tvlb` 已加入主题令牌 scope(portal 后 --snx-accent/--snx-error 仍可用);改回非 portal 会丢变量、被 .snx-pro container-type 收编。
+- **对比 3-4 图只有模式按钮组**,没有「交换」按钮(语义未定义);滑块/叠化禁用+tooltip,禁用态无 hover 反馈是设计不是漏样式。
+- ~/.dsh/storages 实况文件未触碰;v12 章「E2E 项号映射不存在于仓库文档」的提醒对 v13 同样成立(23+ 项套件未编写),验收员跑完务必回填项号。
+
+## v13:两轴并行第一轮(2026-10-17,工作流 dwfrun-c629a15f;E2E 32/32)
+
+按 PRODUCT.md 两轴模型(对话=显示,工作台=管理+编辑)落地:
+- **对话轴**:pending 卡换 SnxToolPending(CSS spin+已耗时秒数,500ms interval,组件卸载清理;计时起点=卡片挂载,折叠重挂会重数——block 无可靠起始时间戳,未伪造);完成卡动作行 [回填参数/设为参考图/同参数重抽/复制提示词/插入画布/下载],跨树通信全走 window 事件(snx:restoreParams 已有 + 新增 snx:setRef / snx:notify);冷启动(工作台未挂载)用 pendingGenFocus 兜底(事件+挂载消费双路)。同参数重抽=doEnhance 同款直连 POST,结果落画布文档;种子如实:工具入参与结果 JSON 均无 seed,回填落 -1(随机)并在 toast 注明。
+- **对话灯箱**:TvLightbox 升级左图右参数清单(行集取决于 snxParseResult 解析结果,解析不到的行不渲染);回合尾多图 x/N 角标。
+- **工作台轴**:genPrefs.targetBoard(生成入板路由,genToCanvas 赋 boardId,决策面板目标行如实);队列「显示全部历史」toggle(旧 done 耗时显示"未运行(历史)");对比 3-4 图模式按钮组(滑块/叠化禁用带 tooltip)。
+
+**坑**:①跨树通信冷启动——对话卡在工作台 React 树外,广播事件时工作台可能未挂载(宿主折叠/未打开),必须事件+挂载消费双路兜底;②tool 入参与结果 JSON 都没有 seed 字段(src/index.ts:832-921),"同参数"实际=提示词/尺寸/模型,按钮 title 如实;③dsh agent 单轮串行工具调用是宿主行为,对话路径的并发显示已支持但触发不可控(已记 SPEC-13 边界)。
+
+验证:主会话复核 full 门禁 0 违规(418:418)+linktest 5/5;工作流验收员 E2E 32/32(旧 22+新 10:等待生命感/回填/参考图/重抽/剪贴板/对话灯箱/编号/入板/全历史/3 图对比)。deferred:重抽成功不自动切工作台视图(按 ask 口径);3-4 图交换语义未定义未做;画板行级回填未进"整套回填"。
