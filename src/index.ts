@@ -21,20 +21,29 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import z from 'zod'
+
 import schemastery from '@deepseek-ai/schemastery'
 
 export const name = 'dsh-sensenova-image'
-export const inject = ['tools', 'webServer']
+export const inject = ['tools', 'webServer', 'settings']
 
-export const Config = z.object({
-  apiKey: z.string().optional().describe('SenseNova API Key（platform.sensenova.cn → 控制台 → 管理中心 → API-Key 管理 → 创建，sk-...）'),
-  baseUrl: z.string().default('https://token.sensenova.cn/v1').describe('OpenAI-compatible baseUrl（固定 https://token.sensenova.cn/v1）'),
-  model: z.string().default('sensenova-u1.5-lite').describe('模型 id（控制台模型广场确认，U1.5 可填 sensenova-u1.5 / sensenova-u1.5-lite）'),
-  timeoutMs: z.number().min(3000).max(120000).default(60000).describe('单次请求超时 ms'),
+// v13.1：Config 必须是 schemastery——dsh 0.2.1 设置页从插件 Config schema 自动生成
+// 表单并持久化到 profile 条目（zod schema 会被宿主当作"不可配置"直接忽略）
+// .volatile() 链式方法只在 dsh 内嵌 fork 上存在;插件树的 schemastery 没有——
+// 直接写 meta.volatile 标记(dsh-settings 的 volatileForm 只认这个标记,见其 lib/index.js:123)
+const live = (s: schemastery.Schema): schemastery.Schema => {
+  (s.meta ||= { description: '' });
+  (s.meta as { volatile?: boolean }).volatile = true
+  return s
+}
+export const Config = schemastery.object({
+  apiKey: live(schemastery.string().role('secret').description('SenseNova API Key（platform.sensenova.cn → 控制台 → 管理中心 → API-Key 管理 → 创建，sk-...；留空=用环境变量 SENSENOVA_API_KEY）')),
+  baseUrl: live(schemastery.string().default('https://token.sensenova.cn/v1').description('OpenAI-compatible baseUrl（固定 https://token.sensenova.cn/v1）')),
+  model: live(schemastery.string().default('sensenova-u1.5-lite').description('模型 id（控制台模型广场确认，U1.5 可填 sensenova-u1.5 / sensenova-u1.5-lite）')),
+  timeoutMs: live(schemastery.number().min(3000).max(120000).default(60000).description('单次请求超时 ms')),
 })
 
-export type Config = z.infer<typeof Config>
+export type Config = { apiKey?: string; baseUrl: string; model: string; timeoutMs: number }
 
 // ——— 内部：OpenAI-compatible 调用 ———
 async function callChatCompletions(opts: {
@@ -204,52 +213,22 @@ function describeRefs(metas: Array<{ role?: string; strength?: number } | null>)
 
 // ——— 插件 ———
 export function apply(ctx: Context, rawConfig: Config) {
-  const config = Config.parse(rawConfig)
+  const config = (Config as unknown as (v: unknown) => Config)(rawConfig ?? {})
 
-  // ——— 设置区块（dsh 0.1.2 内联模式，参照 dshmarket settings.js）———
-  // 0.1.2-alpha.1 删除了 installSettingsSection/settingsNamespace 两个包装，
-  // 但 settings.register(ns, schema, { base }) 服务本身从未变——这里内联同样的
-  // inject + register + watch + unload。namespace 规则：小写连字符。
-  const SETTINGS_NS = 'dsh-sensenova-image'
-  let settingsScope: { update: (patch: unknown) => void } | null = null
-  const SettingsSchema = schemastery.object({
-    apiKey: schemastery.string(),
-    baseUrl: schemastery.string(),
-    model: schemastery.string(),
-    timeoutMs: schemastery.number(),
-  })
-
-  function installSettings(ctx: Context, resolved: Config): void {
-    const entry = {
-      apiKey: resolved.apiKey ?? '',
-      baseUrl: resolved.baseUrl, model: resolved.model, timeoutMs: resolved.timeoutMs,
-    }
-    let source = () => entry
-    // 命名空间只写自己拥有的字段；apiKey 为空不覆盖（保留 env/入口配置的 key）
-    const applySettings = (): void => {
-      if (source().apiKey) resolved.apiKey = source().apiKey
-      resolved.baseUrl = source().baseUrl
-      resolved.model = source().model
-      resolved.timeoutMs = source().timeoutMs
-    }
-    // inject 是优雅降级边界：宿主没有 settings 服务（0.1.0-rc.7 之前的所有 dsh）
-    // 时回调不运行，入口配置原样生效——无需版本检查
-    console.log('[sensenova-image] settings wiring: inject entered')
-    ctx.inject(['settings'], (scopedCtx: {
-      settings: { register: (ns: string, schema: unknown, opts?: { base?: unknown }) => { get: () => Record<string, unknown>; update: (patch: unknown) => void; watch: (cb: () => void) => void } }
-      effect: (fn: () => void) => void
-    }) => {
-      console.log('[sensenova-image] settings service visible, registering namespace')
-      const scope = scopedCtx.settings.register(SETTINGS_NS, SettingsSchema, { base: entry })
-      console.log('[sensenova-image] namespace registered OK')
-      settingsScope = scope
-      source = () => scope.get() as Record<string, unknown>
-      scopedCtx.effect(() => () => { source = () => entry; applySettings() })
-      applySettings()
-      scope.watch(applySettings)
-    })
-  }
-  installSettings(ctx, config)
+  // ——— 设置持久化（v13.1 重写）———
+  // 0.2.1-alpha.2 起 settings 服务不再暴露 register（旧内联注册抛 "register is not a function"
+  // 且被 inject 运行器吞掉 → 设置页持久化静默失效,独立审计发现）。新模型:插件声明
+  // schemastery Config（见文件头）,宿主设置页自动生成表单并持久化到 profile 条目;
+  // 改动经 cordis 热重载回到 apply()。此处不再注册任何东西。
+  console.log('[sensenova-image] settings: Config schema declared; persistence via host settings page')
+  setTimeout(() => {
+    try {
+      const svc = (ctx as unknown as { settings: { describe: (o?: unknown) => Array<{ ns: string }> } }).settings
+      const d = svc.describe()
+      const ok = d.some((x) => x.ns === 'sensenova-image')
+      console.log('[sensenova-image] settings namespace', ok ? 'registered OK (host settings page live-edit enabled)' : 'ABSENT — persistence disabled')
+    } catch (e) { console.error('[sensenova-image] v13.1 verify ERR:', String(e).slice(0, 200)) }
+  }, 4000)
 
   // ——— HTTP 路由：用户可见的生图面板（web 客户端模块调用）———
   const sendJson = (res: { writeHead: (c: number, h?: Record<string, string>) => void; end: (b?: string) => void }, code: number, payload: unknown): void => {
@@ -280,8 +259,9 @@ export function apply(ctx: Context, rawConfig: Config) {
         if (typeof body.apiKey === 'string' && body.apiKey.trim()) { config.apiKey = body.apiKey.trim(); patch.apiKey = body.apiKey.trim() }
         if (typeof body.baseUrl === 'string' && body.baseUrl.trim()) { config.baseUrl = body.baseUrl.trim(); patch.baseUrl = body.baseUrl.trim() }
         if (typeof body.model === 'string' && body.model.trim()) { config.model = body.model.trim(); patch.model = body.model.trim() }
-        if (settingsScope) { try { settingsScope.update(patch) } catch { } }
-        sendJson(res, 200, { ok: true, persisted: Boolean(settingsScope) })
+        // v13.1：settingsScope 已废弃——POST 只对本会话内存生效;持久化走宿主设置页(profile 条目)
+        for (const [k, v] of Object.entries(patch)) (config as Record<string, unknown>)[k] = v
+        sendJson(res, 200, { ok: true, persisted: false, note: '已对本会话生效;持久化请在宿主 设置 → SenseNova 生图 修改并保存' })
       } catch (e) {
         sendJson(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) })
       }

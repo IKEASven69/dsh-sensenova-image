@@ -310,3 +310,11 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 **坑**:①跨树通信冷启动——对话卡在工作台 React 树外,广播事件时工作台可能未挂载(宿主折叠/未打开),必须事件+挂载消费双路兜底;②tool 入参与结果 JSON 都没有 seed 字段(src/index.ts:832-921),"同参数"实际=提示词/尺寸/模型,按钮 title 如实;③dsh agent 单轮串行工具调用是宿主行为,对话路径的并发显示已支持但触发不可控(已记 SPEC-13 边界)。
 
 验证:主会话复核 full 门禁 0 违规(418:418)+linktest 5/5;工作流验收员 E2E 32/32(旧 22+新 10:等待生命感/回填/参考图/重抽/剪贴板/对话灯箱/编号/入板/全历史/3 图对比)。deferred:重抽成功不自动切工作台视图(按 ask 口径);3-4 图交换语义未定义未做;画板行级回填未进"整套回填"。
+
+## v13.1:设置持久化断裂修复(2026-10-17,第三任独立审计发现)
+
+第三任审计(8/8 真、零功能虚报、0 配额消耗)同时抓出两个非 v13 引入的真问题:
+1. **设置持久化静默失效**:dsh 0.2.1-alpha.2 的 settings 服务不再暴露 register(旧内联注册抛 "register is not a function" 被 inject 运行器吞掉),设置页填的 apiKey/baseUrl 重启即丢(env key 兜底才没暴露)。**新模型**:插件声明 schemastery Config → 宿主设置页自动生成表单并持久化到 profile 条目。迁移要点:①Config 必须是 **@deepseek-ai/schemastery** schema(zod 会被当"不可配置"忽略);②字段要被设置页收录必须带 **meta.volatile=true**(标记免重启实时编辑)——`.volatile()` 链式方法只在 dsh 内嵌 fork 上存在,插件树的 schemastery v3.18.2 没有,直接写 `(s.meta).volatile = true`;③宿主从 `entry.fiber.runtime.Config` 读 schema(有 toJSON 即可);④`ctx.settings` 属性访问需在插件 `inject` 数组声明 'settings';⑤POST /config 降级为"仅本会话生效+如实提示"(persisted:false + note),客户端保存 toast 同步注明。自检:启动 4s 后 describe 日志 `settings namespace registered OK`。
+2. **回合完成后图片默认被宿主折叠**(过程区收进"已完成,用时 Ns")——对话=看图入口的最大体验折扣。PRODUCT.md"折叠遵从宿主"仍成立,非虚报;解法需宿主能力(如消息级交付),已记下轮调研。
+
+**Konva/宿主 API 两连坑(本轮新知)**:①cordis `ctx.<service>` 属性访问必须在该插件 inject 数组声明,否则抛 "cannot get property without inject";②探测宿主服务形状时,describe() 返回**数组**而非 {namespaces:[…]}——按后者解构会得到假 ABSENT。

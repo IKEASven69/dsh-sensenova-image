@@ -4602,7 +4602,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           setKeyDraft('')
           const s = await get(STATUS_ROUTE).catch(() => ({}))
           setKeyOk(!!s.keyConfigured)
-          notify('Key 已保存并立即生效')
+          // v13.1：POST 只对本会话生效;持久化已迁移到宿主设置页（profile 条目）
+          notify(r.persisted === false ? 'Key 已生效（本会话）；跨重启持久化请在宿主 设置 → SenseNova 生图 修改并保存' : 'Key 已保存并立即生效')
         } catch (e) { notify('保存失败：' + String((e && e.message) || e)) }
         finally { setKeySaving(false) }
       }
