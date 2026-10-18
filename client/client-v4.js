@@ -6808,7 +6808,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     const MODEL_PRESETS_FORM = [
       { id: '', label: '默认（配置中的模型）' },
       { id: 'sensenova-u1.5-lite', label: 'sensenova-u1.5-lite · 当前可用（文生图/图生图）' },
-      { id: 'sensenova-u1.5-fast', label: 'sensenova-u1.5-fast · 官方文档在列（文生图/图生图，未真机验证）' },
+      { id: 'sensenova-u1.5-fast', label: 'sensenova-u1.5-fast · 真机已验证（文生图/图生图）' },
       { id: 'sensenova-u1.5', label: 'sensenova-u1.5 · 控制台已开通时可用' },
     ]
     function GenForm({ engineRef, busy, setBusy, notify, anchorInfo, keyOk, onClearAnchor }) {
@@ -8610,7 +8610,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     const MODEL_PRESETS = [
       { id: '__keep__', label: '— 保留当前 —', desc: '不修改此项（保存时不发送）' },
       { id: 'sensenova-u1.5-lite', label: 'sensenova-u1.5-lite（当前可用·文生图/图生图）', desc: '2026-10 实测 /v1/models 可见；走 images/generations。旧的 u1-fast 已下线。' },
-      { id: 'sensenova-u1.5-fast', label: 'sensenova-u1.5-fast（官方文档在列·文生图/图生图，未真机验证）', desc: '2026-10-17 官方文档新增 U1.5 Fast（同步生成/编辑同构）；模型 id 按 lite 命名规则推断为 sensenova-u1.5-fast，实际 id 以控制台模型广场为准。' },
+      { id: 'sensenova-u1.5-fast', label: 'sensenova-u1.5-fast（官方文档在列·文生图/图生图，未真机验证）', desc: '2026-10-18 真机验证通过：生成+参考图编辑均出图（id 实测有效，/v1/models 不列出图像模型属正常）。' },
       { id: 'sensenova-u1.5', label: 'sensenova-u1.5（U1.5 多模态，已开通时）', desc: '走 chat/completions，支持图像编辑/增强/扩图（画布"增强"入口专用）。' },
       { id: '__custom__', label: '自定义…', desc: '手动填入控制台模型广场实际可见的 id。' },
     ]
