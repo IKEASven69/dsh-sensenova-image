@@ -318,3 +318,63 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 2. **回合完成后图片默认被宿主折叠**(过程区收进"已完成,用时 Ns")——对话=看图入口的最大体验折扣。PRODUCT.md"折叠遵从宿主"仍成立,非虚报;解法需宿主能力(如消息级交付),已记下轮调研。
 
 **Konva/宿主 API 两连坑(本轮新知)**:①cordis `ctx.<service>` 属性访问必须在该插件 inject 数组声明,否则抛 "cannot get property without inject";②探测宿主服务形状时,describe() 返回**数组**而非 {namespaces:[…]}——按后者解构会得到假 ABSENT。
+
+## v14:两轴并行第二轮——折叠调研+缓解 / 右键菜单丰富度 / 并发写保护 / 队列·对比操作(2026-10-17 ~ 10-18,三批次工作流交付)
+
+> 本章由文档同步会话据三批改动报告写成,关键事实已在本轮做静态复核(命令与结果见「怎么验证的」;宿主豁免集合为本轮一手抽验)。规格 `SPEC-14.md`(行为/基础设施轮,无新视觉表面,原型豁免),验收条目已逐条标注(含 E2E 预分配编号)。**批次1/2 只改 client/client-v4.js;批次3 改 client/client-v4.js + src/index.ts(已 npm run build,dist/index.js 52.0kb)。全部为静态交付:浏览器/E2E 未跑(纪律归验收员);改动在工作树未 commit(`git status --short` = ` M SPEC-13.md`/` M client/client-v4.js`/` M src/index.ts`,HEAD=8b2c9f9)。**
+
+### 做了什么
+
+**批次1(回合尾折叠:调研 + 缓解加固,第三任审计点名的「最大体验折扣」就此关闭)**
+
+调研结论(批次1 报告原文,按要求收录):
+
+> 宿主 0.2.1-alpha.2(本地 C:/Users/20369/.version-fox/.../@deepseek-ai/dsh@0.2.1-alpha.2 即运行版本)的回合折叠并未吞掉 turnTail 座位——「已完成,用时 Ns」折叠控制只隐藏过程成员节点,turn-tail 明确在豁免集合内,官方 ui-deliverables/ui-plan 也注册在同一个座位;v9 注释方向正确,审计的「尾图在 DOM 但 0 高度」与宿主折叠代码矛盾,真正的机制性成因是插件侧 TailImage 的 img 无预留尺寸且 loading:lazy——图片未加载完(懒加载未触发/加载失败)时 img 为 0×0、整行塌陷,DOM 全在、高度为 0,与审计实测描述逐字吻合。据此落地:方案①不需要(产出图已在折叠区外的 turnTail 座位),方案②不存在(座位注册无 keepOpen/fold 选项),按③做缓解加固:回合尾图与工具卡 done 态结果图均加 .snx-img-wait 占位框(160×120 预留)、去掉 lazy、加 onError 错误文案「图片加载失败」;并修正 v9 注释的错误归因。node --check 通过。未改 src/index.ts,无需 npm build。浏览器实测(验收截图)按纪律留给验收员。
+
+- 调研证据链(据批次1 报告):本插件自 v9 起已注册 turn-tail 座位(本轮复核注册点在 client-v4.js:8874-8876 `ctx.slots.inject('conversation.chat.turnTail',...)`;报告写 :8665 为其当时行号),该座位在折叠区外——宿主 dsh-client-ui-chat/lib/client.js:4356-4365 `TURN_PROCESS_INDEPENDENT_KINDS` 含 "turn-tail",4478/4498 processHidden 只作用于过程成员;官方 ui-deliverables/lib/client.js:2273、ui-plan/lib/client.js:654 同座位佐证。座位注册无折叠策略选项:SlotCore.register 仅 name/key/id/order/label/priority/select/inject/children/store/locale(dsh-client-ui-slots/lib/index.js:163-243);foldCompletedTurns 是用户设置 ui-chat.transcriptView 的派生策略(dsh-client-ui-chat/lib/client.js:13268-13297,仅 verbose=false),非插件可达。
+- 落地缓解:TailImage 尾图与 SnxToolCard done 态结果图加 `.snx-img-wait` 占位框(CSS :1875,min-width:160px/min-height:120px)、去 loading:lazy、加载失败出 `.snx-tail-err`「图片加载失败」文案(:4390),不再静默塌陷;调研结论已写进代码注释(:4341-4344、:4367-4368)。**画廊/对比/队列/版本树等缩略图的 loading:lazy 是有意保留**(只有交付物尾图/工具卡结果图去掉),别一锅端。
+- SPEC-14 二.1 的验收按「或」分支关闭(代码级证据+缓解落地);「不展开折叠区结果图可见」的截图证据归验收员。
+
+**批次2(SPEC-14 二.2/二.5:画布右键菜单丰富度 + 小项)**
+
+- 画布节点右键菜单单选 done 图补四项:在画廊中定位(:3763)/设为对比(:3767)/复制图片(:3771,imageToBlob Image→canvas→PNG Blob,灯箱导出同源)/提取提示词(:3775,copyTextToClipboard 含 execCommand 降级);多选区补「批量下载」(:3806,逐张 250ms 间隔防拦截,文件名=提示词前 30 字+序号)。四个动作的状态逻辑放 Workbench 层经 props 注入(locateInGallery :4601/addNodeToCompare :4620/batchDownloadNodes :4636,挂点 :5503-5505);设为对比复用 v12 独立对比集合 cmpSel 的 add 语义(≤4 上限、不碰画布选择)。
+- 画廊定位:画廊卡加 data-gal-id 属性(:7458)+按 id 查卡滚动(:4609)+高亮闪新 CSS 动画 `.snx-locate`(:2004-2005,snxLocateFlash .8s,与 JS 清除时机同长,state 驱动 :5887)。**定位前会重置画廊搜索/标签/收藏/画板筛选**(:4598 注释,保证目标卡可见的定位优先取舍)。
+- 帮助浮层快捷键表补 C=对比交换(:7606)。
+- 工作台灯箱「整套回填」在该图已归画板时同时回填 targetBoard(onRestoreParams 链路 :5218-5224,工作台灯箱按钮/R 热键/画布右键回填参数共用)。
+- **两处如实说明(据批次报告)**:①SPEC 二.5 称「拖输出端口/右键连线 v13 漏」与实际不符——两处在帮助浮层「连线编辑」组(:7602)和设置页快捷键表(:6625)早已存在(v11.2 A-P2-2 已加),本轮核对后未重复添加,只补了真缺的 C;②「整套回填纳入画板行」只覆盖工作台灯箱链路,对话灯箱(TvLightbox→snxRestoreAllParams)未纳入——其参数清单本无画板行、info 无 boardId(会话图非画布节点),无画板可回填,非遗漏。
+
+**批次3(SPEC-14 二.3/二.4:并发写保护 + 队列「取消其他」+ 3-4 图交换)**
+
+- **并发写保护(rev 协议,审计「整文档 PUT 无版本号」B 级差距关闭)**:服务端 /api/sensenova/canvas 文档存 rev(src/index.ts:601-646,rev 落 doc.rev,旧文档缺省按 0;GET 返回 {ok,doc,rev} 与 doc 同级;PUT 校验 body.rev===存储 rev,不匹配→409+最新文档+存储 rev,匹配→doc.rev+1 原子落盘,200 回带新 rev)。客户端 autosave 携带 store.rev(:2173-2188),成功同步新 rev;409 走 reloadRemoteBaseline(:2192-2206):重新 GET 最新文档、节点集合以远端为准、本地 sel(剔除远端已不存在的 id)与 camera 保留、重建 undo 基线、toast「检测到其他会话修改,已加载最新画布」(info 级,conflictReloading :2191 去重防刷屏;注释明言本地未保存的节点改动按约定放弃,不自动重发旧内容免打 409 乒乓);put() 助手补 status 回传,5 处绕过防抖的直存(画廊删除/灯箱删除/删画板/画廊清空/设置页清空,实测 :4583/:5419/:5787/:5831/:6599)统一收口 saveNow()(:2210)带 rev 直存,409 同样重载远端基线;打开时 GET 与 SSE canvas:update 重载路径均同步 store.rev。正常无并发路径行为(保存文案/时序/UI)完全不变。
+  - **显式偏差(据批次报告,代码注释一致)**:服务端对 body.rev 缺省的 PUT(旧缓存客户端/升级窗口)不做 409 校验而是接受并自增 rev(src/index.ts:605-607 注释「body.rev 缺省视为旧客户端,不做冲突检测直接落盘」)——防旧客户端保存永久 409 的显式决策;正常客户端全路径已携带 rev,双会话验收场景(各持 rev)完全覆盖。
+- **队列「取消其他」**(:6042-6045,「全部取消」旁):有未完成任务时渲染,仅「存在运行中任务且 pending>0」可用(否则 disabled+tooltip 说明当前运行/等待数);点击走 askConfirm(SnxConfirm),确认弹窗文案含「将取消 N 个等待中的任务」并明示保留运行中的 N 个;确认后只对 pending 逐个 cancelJob(记「用户取消」),running 不动。CSS `.snx-queue-cancel`:hover 改 :not(:disabled)、:disabled 灰化(:1121-1128)。
+  - **E2E 造数坑(据批次报告)**:本仓库无并发限制器,任务入队后立刻 pending→running,自然状态下 pending 只在「暂停队列」或直改文档时出现——纯 HTTP 拦截造不出 3 pending(HTTP 挂起时节点状态已是 running);须暂停队列入队或经 canvas API 构造 3 pending+1 running 再点按钮(该场景行为正确:3 条 pending→「用户取消」,1 条 running 保持)。
+- **3-4 图交换**(:7907,注释 :7884「样式/位置对齐 2 图对比的交换按钮,模式按钮组右侧」):复用 2 图交换的 snx-cmp-mswap 样式(:1991)与 arrow-left-right 图标,点击=当前顺序倒转 reverse(再点恢复),大图/角标 A/B/C/D/网格随交换后位次。v13 章「3-4 图无交换(语义未定义)」就此关闭(语义=reverse,SPEC-14 二.4 定义)。
+
+### 怎么验证的(全部静态,无浏览器)
+
+- **文档同步会话本轮复核(2026-10-18)**:`node --check client/client-v4.js` → **CLIENT-SYNTAX-OK**(exit 0);`git status --short` → ` M SPEC-13.md`、` M client/client-v4.js`、` M src/index.ts`,HEAD=8b2c9f9(v14 三批未 commit;SPEC-13.md 的 modified 是上轮文档同步的标注,非本轮产物);`ls -l dist/` → index.js 53254 字节(≈52.0kb,mtime Oct 18 00:59,批次3 build 产物)。package.json `"./client": "./client/client-v4.js"` export 实锤(client-v4.js 静态直出、无客户端构建步骤——批次2 未跑 build 的依据成立)。上列行号均为本轮 grep 实测。
+- **宿主一手抽验(本轮)**:宿主定位 `C:/Users/20369/.version-fox/cache/nodejs/v-24.16.0/nodejs-24.16.0/node_modules/@deepseek-ai/dsh`,package.json version=**0.2.1-alpha.2**;其 `node_modules/@deepseek-ai/dsh-client-ui-chat/lib/client.js:4356-4364` `TURN_PROCESS_INDEPENDENT_KINDS = new Set([..., "turn-tail"])` 实读命中,:4478 processMember 判定含 `!TURN_PROCESS_INDEPENDENT_KINDS.has(...)`——批次1 调研结论的宿主侧关键证据与本地安装版本一致。
+- **批次自检(据改动报告,本轮未重跑)**:批次1 node --check 通过;批次2 node --check ×3(每次编辑组后,最终 SYNTAX-OK),npm run build 未跑(src/index.ts 零改动,纪律中 build 以「改后」为条件);批次3 node --check 两文件通过 + npm run build 通过(dist/index.js 52.0kb)+ 隔离 USERPROFILE 临时目录直驱 dist apply() 烟测 rev 协议 9 断言全 PASS(legacy 无 rev 接受/GET 带 rev/匹配自增/陈旧 rev 409+附最新文档/磁盘含 rev),烟测目录已删。
+- **浏览器/E2E 未执行**——三批一致声明归验收员。E2E 38 项(SPEC-14 §四:旧 32 回归+新 6)未跑,新 6 项为文档侧预分配编号 **E2E-33..38**(标注见 SPEC-14 各条;仓库无项号映射文档,v12/v13 同坑),验收员实测后如编号不符以实际为准回填。
+
+### 坑 / 注意(给下一个会话)
+
+- **v13.1 章「回合完成后图片默认被宿主折叠…解法需宿主能力」的表述已被 v14 调研推翻**:宿主折叠控制只隐藏过程成员,turn-tail 在豁免集合,座位从未被吞;审计实测「DOM 在、0 高度」的真因是插件侧懒加载 img 无预留尺寸(0×0 塌陷)。缓解已落地,但**浏览器复核未做**——若真机仍见尾图消失,先查 img 加载状态(.snx-img-wait 占位/onError 文案)再下结论;若确系宿主把尾图收进折叠(与本地同版本源码矛盾,无法复现),完整解法依赖宿主上游,缓解兜底=工具卡 done 态内嵌结果图,展开折叠线即见。
+- **rev 缺省放行是显式决策**:body.rev 缺省的 PUT 接受并自增(不 409),防旧缓存客户端保存永久 409;别「修严」成严格校验除非同时处理升级窗口。并发覆盖窗口只剩「带旧 rev 的并发写」一种,验收双会话用例必须各持 rev。
+- **E2E 造不出自然 pending**(无并发限制器,入队即 running):「取消其他」用例必须暂停队列入队或经 canvas API 直改文档构造 3 pending+1 running;HTTP 拦截挂起无效(节点状态已 running)。
+- locateInGallery 定位前重置画廊全部筛选(定位优先取舍),别当 bug 报;画廊 DOM 重构时 data-gal-id 查询(:4609)要同步。
+- 对话灯箱(TvLightbox)整套回填没有画板行(info 无 boardId)不是漏;SPEC 二.5 画板回填只承诺工作台灯箱链路(onRestoreParams)。
+- 尾图/工具卡结果图之外**其余缩略图的 loading:lazy 是有意保留**(画廊/对比/队列/版本树 :6206/:7169/:7444/:7466/:8432),别「顺手统一」。
+- 帮助浮层「拖输出端口/右键断开连线」v11.2 就有,SPEC-14 二.5 原文「v13 漏」不实——本轮只补了 C=对比交换,别再重复加。
+- ~/.dsh/storages 实况文件未触碰(批次3 烟测用隔离 USERPROFILE 临时目录,已删);v14 三批未 commit。
+
+## v14:两轴并行第二轮(2026-10-18,工作流 dwfrun-92dbd21b→f94f7bb3;E2E 38/38)
+
+- **批次1 折叠调研结论(重要,推翻第三任审计的部分观察)**:宿主 0.2.1-alpha.2 源码实锤——本插件自 v9 起注册的 turn-tail 座位**在折叠区外**(dsh-client-ui-chat/lib/client.js:4356-4365 TURN_PROCESS_INDEPENDENT_KINDS 含 "turn-tail";processHidden 只作用于过程成员;ui-deliverables/ui-plan 同座位佐证);SlotCore.register 无折叠控制选项;"已完成,用时 Ns"折叠源自用户设置 ui-chat.transcriptView(非 verbose=折叠)。即:审计看到的折叠=用户设置,非插件可达缺陷。缓解已落地:回合尾图常驻占位+工具卡 done 态内嵌结果图。
+- **批次2**:画布节点右键补 在画廊中定位(重置筛选的设计取舍)/设为对比/复制图片(clipboard PNG)/提取提示词;多选补批量下载;帮助表补 C=对比交换(连线两条 v13.2 已有,核实后未重复);灯箱整套回填纳入画板(targetBoard)。
+- **批次3**:并发写保护——canvas 文档带 rev,PUT 校验 body.rev,不匹配 409+最新文档,客户端重载+toast 保留 sel/camera;**body.rev 缺省的旧客户端不做 409 直接落盘**(防升级窗口永久 409 的显式决策,与字面规格的出入已记录);队列「取消其他」(running>0 且 pending>0 时可用);3-4 图交换=倒序。
+
+**坑(Windows 工作流)**:`world.run("npm")` 裸 spawn 无扩展名 shim → ENOENT;构建门禁改用 `world.run("node", [REPO + "/node_modules/esbuild/bin/esbuild", …])`(先手工验证命令再写入脚本)。
+
+验证:主会话复核 full 门禁 0 违规(0 条违规 418:418)+linktest 5/5+服务端构建 exit=0;工作流验收员 E2E 38/38。deferred:3-4 图交换语义=倒序(单一定义);定位重置筛选(取舍);对话轴 TvLightbox 无画板行(会话图非画布节点,无 boardId)。

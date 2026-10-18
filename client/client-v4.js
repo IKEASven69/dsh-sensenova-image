@@ -201,8 +201,9 @@ window.__ModuleLoader__.load({
     }
     function get(url) { return fetch(url).then(async (r) => ({ ok: r.ok, ...(await r.json().catch(() => ({}))) })) }
     function put(url, body) {
+      // SPEC-14 二.3：带回 status——画布 PUT 需要区分 409（其他会话已写入）与普通失败
       return fetch(url, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-        .then(async (r) => ({ ok: r.ok, ...(await r.json().catch(() => ({}))) }))
+        .then(async (r) => ({ ok: r.ok, status: r.status, ...(await r.json().catch(() => ({}))) }))
     }
     function del(url) { return fetch(url, { method: 'DELETE' }).then((r) => ({ ok: r.ok })) }
 
@@ -1122,7 +1123,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
   border:1px solid color-mix(in srgb,var(--snx-error) 30%,transparent);border-radius:6px;padding:6px 12px;
   font-size:11.5px;cursor:pointer;font-family:inherit;font-weight:600;
 }
-.snx-queue-cancel:hover{background:color-mix(in srgb,var(--snx-error) 20%,transparent);color:var(--snx-error)}
+.snx-queue-cancel:hover:not(:disabled){background:color-mix(in srgb,var(--snx-error) 20%,transparent);color:var(--snx-error)}
+/* SPEC-14 二.4：「取消其他」在无运行中任务或无等待任务时禁用（灰化，不给 hover 反馈） */
+.snx-queue-cancel:disabled{opacity:.4;cursor:default;background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--dsw-alias-label-caption,#81858c)}
 /* SPEC-13 ②：队列「显示全部历史」toggle——中性色，开启 accent 亮起（aria-pressed 同步） */
 .snx-queue-hist{
   align-self:flex-end;background:var(--dsw-alias-bg-module-platform,#353638);color:var(--dsw-alias-label-secondary,#cfd3d6);
@@ -1868,6 +1871,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-tail-idx{position:absolute;top:8px;left:8px;padding:3px 8px;pointer-events:none;
   background:var(--dsw-alias-bg-mask-1,#00000080);color:var(--dsw-alias-label-primary-foreground,#fff);
   font-size:10.5px;font-weight:700;letter-spacing:.06em;border-radius:4px}
+/* SPEC-14 ①：图未加载完时保留占位框（否则 img 0×0，整行塌成 0 高度）；加载失败给错误文案 */
+.snx-tv-img img.snx-img-wait{min-width:160px;min-height:120px;
+  background:color-mix(in srgb,var(--snx-accent) 8%,transparent)}
+.snx-tv-img img.snx-img-err{min-width:120px;min-height:40px;object-fit:contain;opacity:.4}
+.snx-tail-err{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  font-size:12px;color:var(--snx-error);white-space:nowrap;pointer-events:none}
 
 /* ── v9：设置页顶部状态卡（对齐 dsh 设置页样式）── */
 .snx-hero{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 6px}
@@ -1991,6 +2000,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 /* ═══════ P1-3/P2-3：画廊点击语义分层 + hover 轻操作 + 批量条 + 右键菜单 + 拖拽归类 + 灯箱标签 ═══════ */
 /* 选中轻态（与 hover 区分：accent 描边环）*/
 .snx-gal-item.sel{border-color:var(--snx-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--snx-accent) 30%,transparent)}
+/* SPEC-14 ②：画布右键「在画廊中定位」——滚动到卡后高亮闪 800ms（locateId state 驱动 GalleryItem
+   className 拼 ' snx-locate'，800ms 后清 null，与动画时长同长）*/
+.snx-gal-item.snx-locate{animation:snxLocateFlash .8s ease-out 1}
+@keyframes snxLocateFlash{
+  0%,55%{border-color:var(--snx-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--snx-accent) 45%,transparent)}
+  100%{border-color:var(--dsw-alias-border-l2,#ffffff1f);box-shadow:none}
+}
 /* hover 轻操作组（InvokeAI GalleryItemHoverIcons：只放轻操作，重操作收右键菜单）*/
 .snx-gal-item-img{position:relative}
 .snx-gal-item-ops{position:absolute;top:5px;right:5px;display:flex;gap:3px;z-index:2;
@@ -2144,7 +2160,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       return konvaPromise
     }
 
-    // ——— 自动保存（防抖 700ms → PUT 整文档）———
+    // ——— 自动保存（防抖 700ms → PUT 整文档；携带 rev 做并发写保护，SPEC-14 二.3）———
     let saveTimer = null
     function setSaveState(t) {
       const el = document.getElementById('snx-cv-save')
@@ -2155,10 +2171,52 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       setSaveState('保存中…')
       clearTimeout(saveTimer)
       saveTimer = setTimeout(() => {
-        put(CANVAS_ROUTE, { doc: store.doc }).then((r) => {
-          setSaveState(r.ok ? '已保存 ' + new Date().toTimeString().slice(0, 8) : '保存失败')
+        put(CANVAS_ROUTE, { doc: store.doc, rev: store.rev }).then((r) => {
+          if (r.ok) {
+            if (typeof r.rev === 'number') store.rev = r.rev   // 同步服务端新版本号，下次保存不误判冲突
+            setSaveState('已保存 ' + new Date().toTimeString().slice(0, 8))
+            return
+          }
+          if (r.status === 409) { setSaveState('已加载最新画布'); reloadRemoteBaseline() }
+          else setSaveState('保存失败')
         }).catch(() => setSaveState('保存失败'))
       }, 700)
+    }
+
+    // ——— SPEC-14 二.3：409 冲突恢复——重新 GET 最新文档，节点集合以远端为准；
+    // 本地 sel/camera 保留（sel 里远端已不存在的剔除），相机是本地属性不抢视口，
+    // 与 SSE canvas:update 外部写入的处理先例一致。本地未保存的节点改动按约定放弃
+    // （只 toast 告知，不自动重发旧内容——重发会再撞 409 打乒乓）。conflictReloading
+    // 去重连续 409，避免 toast 刷屏。
+    let conflictReloading = false
+    function reloadRemoteBaseline() {
+      if (conflictReloading) return
+      conflictReloading = true
+      get(CANVAS_ROUTE).then((r) => {
+        if (r && r.doc && Array.isArray(r.doc.nodes)) {
+          if (typeof r.rev === 'number') store.rev = r.rev
+          const cam = store.doc.camera || { x: 0, y: 0, scale: 1 }
+          store.doc = r.doc
+          store.doc.camera = { x: cam.x || 0, y: cam.y || 0, scale: cam.scale || 1 }
+          store.sel = new Set([...store.sel].filter((id) => store.node(id)))
+          store.undoStack = [store.snapshot()]; store.redoStack = []   // 重建 undo 基线（旧栈全是外部写入前的文档）
+          store.emit()
+          toastBus('检测到其他会话修改,已加载最新画布', 'info')
+        }
+      }).catch(() => { }).then(() => { conflictReloading = false })
+    }
+    // SPEC-14 二.3：绕过防抖的直存（画廊删除/清空等）统一走这里——带 rev 保存，成功同步
+    // 新版本号（否则下一次 autosave 必撞 409），撞 409 以远端为基线重载+toast。返回是否落盘成功。
+    async function saveNow() {
+      try {
+        const r = await put(CANVAS_ROUTE, { doc: store.doc, rev: store.rev })
+        if (r.ok) {
+          if (typeof r.rev === 'number') store.rev = r.rev
+          return true
+        }
+        if (r.status === 409) reloadRemoteBaseline()
+      } catch { }
+      return false
     }
 
     // ——— 画布文档 store（vanilla，单一事实源）———
@@ -2168,6 +2226,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 
     const store = {
       doc: emptyDoc(),
+      rev: 0,                  // SPEC-14 二.3：服务端文档版本号（GET/PUT 响应同步；409 时以远端为准）
       sel: new Set(),          // 选中节点 id（运行态，不持久化）
       undoStack: [], redoStack: [],
       _listeners: new Set(),
@@ -3601,7 +3660,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     // ——— 右键菜单 ———
     // v11.2：照 GalContextMenu 模式 portal 挂 body + 实测尺寸钳到视口（fixed 在 .snx-pro
     // container-type 里会被收编为包含块，portal 后不再被画布容器裁剪）
-    function ContextMenu({ menu, engineRef, setMenu, busy, setBusy, onRestoreParams, onExportCanvas, onOpenLightbox, onClearAll }) {
+    function ContextMenu({ menu, engineRef, setMenu, busy, setBusy, onRestoreParams, onExportCanvas, onOpenLightbox, onClearAll,
+      notify, onLocateInGallery, onAddCompare, onBatchDownload }) {
       const ref = useRef(null)
       const [pos, setPos] = useState(null)   // null=首帧离屏，测完尺寸再就位防闪跳
       useEffect(() => {
@@ -3650,6 +3710,27 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         })
         setBusy(false)
       }
+      // ── SPEC-14 ②：菜单补四项的本地实现 ——
+      // 复制图片：imageToBlob（工厂闭包内既有 Image→canvas→PNG Blob 管线，灯箱导出同源）
+      // → navigator.clipboard.write(ClipboardItem image/png)；不支持位图剪贴板的浏览器如实报错
+      const copyNodeImage = async (n) => {
+        try {
+          if (!navigator.clipboard || typeof navigator.clipboard.write !== 'function' || typeof window.ClipboardItem !== 'function') {
+            throw new Error('浏览器不支持位图剪贴板')
+          }
+          const blob = await imageToBlob(n.src, 'png', 92, null)
+          await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })])
+          notify && notify('已复制图片到剪贴板')
+        } catch (e) {
+          notify && notify('复制图片失败：' + String((e && e.message) || e))
+        }
+      }
+      // 提取提示词：复制该图完整提示词（去 💬 前缀，与行级回填同一定义）；走既有 copyTextToClipboard（含降级）
+      const copyNodePrompt = (n) => {
+        const p = String(n.prompt || '').replace(/^💬\s*/, '')
+        if (!p) { notify && notify('这张图没有记录提示词'); return }
+        copyTextToClipboard(p).then((ok) => notify && notify(ok ? '已复制完整提示词' : '复制失败：浏览器拒绝了剪贴板访问'))
+      }
       return portalToBody(h('div', { className: 'snx-cv-menu', ref,
         style: { left: (pos ? pos.x : -9999) + 'px', top: (pos ? pos.y : -9999) + 'px' } },
         // ── v11.1：连线右键——断开 / 选中子节点 ──
@@ -3675,6 +3756,23 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             a.target = '_blank'; a.click()
           }),
         }, ic('download'), ' 下载') : null,
+        // ── SPEC-14 ②：单选 done 图补四项（对齐 InvokeAI 右键菜单动作面）──
+        target && target.status === 'done' ? h('button', {
+          onClick: act(() => onLocateInGallery && onLocateInGallery(target)),
+          title: '切到画廊 tab，滚动到这张图并高亮一下',
+        }, ic('images'), ' 在画廊中定位') : null,
+        target && target.status === 'done' ? h('button', {
+          onClick: act(() => onAddCompare && onAddCompare(target)),
+          title: '加入对比选择集合（「对比」tab 消费，最多 4 张）',
+        }, ic('columns-2'), ' 设为对比') : null,
+        target && target.status === 'done' ? h('button', {
+          onClick: act(() => copyNodeImage(target)),
+          title: '把位图复制到系统剪贴板（PNG）',
+        }, ic('clipboard-copy'), ' 复制图片') : null,
+        target && target.status === 'done' ? h('button', {
+          onClick: act(() => copyNodePrompt(target)),
+          title: '复制这张图的完整提示词',
+        }, ic('type'), ' 提取提示词') : null,
         target && target.status === 'done' ? h('button', {
           onClick: act(() => onRestoreParams && onRestoreParams(target)),
           title: '把这张图的提示词与全部生成参数回填到生图表单',
@@ -3701,6 +3799,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         ) : null,
         store.sel.size >= 2 ? h('button', { onClick: act(() => groupSel()), title: '成组：成员拖拽/变换时一起移动' }, '成组') : null,
         selNodes().some((n) => n.groupId) ? h('button', { onClick: act(() => ungroupSel()), title: '解组：取消一起移动' }, '解组') : null,
+        // SPEC-14 ②：多选补「批量下载」——只下完成图，逐张触发（250ms 间隔防拦截），文件名=提示词前 30 字+序号
+        store.sel.size >= 2 ? h('button', {
+          onClick: act(() => onBatchDownload && onBatchDownload(selNodes().filter((n) => n.status === 'done' && n.src))),
+          title: '逐张下载选中的完成图（文件名 = 提示词前 30 字 + 序号）',
+        }, ic('download'), ' 批量下载') : null,
         h('div', { className: 'sep' }),
         h('button', { onClick: act(() => engineRef.current && engineRef.current.fit()) }, ic('maximize'), ' 适应画面'),
         h('button', { onClick: act(() => onExportCanvas()), title: '全部可见图按布局合成一张 PNG' }, ic('image'), ' 导出画布 PNG'),
@@ -4137,6 +4240,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const [insState, setInsState] = useState('idle')
       // SPEC-13 ②：同参数重抽四态防连点（idle/busy/ok/err，与 insState 同一套词汇）
       const [reroll, setReroll] = useState('idle')
+      const [fitState, setFitState] = useState('wait') // SPEC-14 ③：卡内 done 态结果图的加载三态（wait/ok/err，须在早退 return 前声明）
       const block = props && props.block
       const settled = block && block.kind === 'tool-result'
       if (!settled) return h(SnxToolPending)
@@ -4171,12 +4275,15 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         className: 'snx-tv-img', title: '点击查看原图',
         onClick: (e) => { e.stopPropagation(); setLb(info) },
       }, h('img', {
-        src: url, alt: '', loading: 'lazy',
+        src: url, alt: '',
+        className: fitState === 'ok' ? undefined : (fitState === 'err' ? 'snx-img-err' : 'snx-img-wait'),
         onLoad: (e) => {
+          setFitState('ok')
           const im = e.target
           const f = snxSingleFit(im.naturalWidth || 1024, im.naturalHeight || 1024)
           im.style.width = f.width + 'px'; im.style.height = f.height + 'px'
         },
+        onError: () => setFitState('err'),
       }))
       return h('div', { className: 'snx-tv' },
         fit,
@@ -4231,9 +4338,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     }
 
     // ——— v9：回合尾投递（conversation.chat.turnTail）———
-    // Turn 完成后过程区折叠，上面的工具卡就被收起来了。turnTail 是折叠线以下
-    // 常开的座位（ui-deliverables/ui-plan 同款），把本回合三类生图工具的产出
-    // 重新投到这里，图就直接落在回复下方——对齐 dsh-agnes-multimodal 的主体验。
+    // SPEC-14 调研结论（宿主 0.2.1-alpha.2 源码核对）：turnTail 座位在折叠线以下、不受回合折叠影响——
+    // dsh-client-ui-chat/lib/client.js:4356 的 TURN_PROCESS_INDEPENDENT_KINDS 明确含 "turn-tail"，
+    // ChatNodeSeat 只对过程成员打 hidden（同文件 4478/4498），官方 ui-deliverables/ui-plan 也注册在这一
+    // 座位（dsh-client-ui-deliverables/lib/client.js:2273）。上方工具卡会被收进「已完成,用时 Ns」，本座位不会。
+    // 此前审计看到的「尾图 0 高度」实为 img 未加载时无预留尺寸（0×0）——已在 TailImage 用占位框修复。
     function SnxMediaTail(props) {
       const turn = props.turn
       if (!turn || typeof props.useTurnMedia !== 'function') return null
@@ -4255,8 +4364,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     }
 
     // 回合尾里的单图：240px 适配框 + 多图 x/N 角标（SPEC-13 ④，样式对齐 v11 对比角标）+ 点击复用会话灯箱
+    // SPEC-14 ①：尾图就是交付物——加载中用 .snx-img-wait 预留占位框（否则 img 未加载完整行 0 高度，
+    // 第三方审计把这一幕误报成「宿主折叠吞了尾图」），加载失败给出 .snx-tail-err 文案，不再静默塌陷
     function TailImage({ info, idx, total }) {
       const [lb, setLb] = useState(false)
+      const [imgState, setImgState] = useState('wait') // wait/ok/err，与 insState 同一套三态词汇
       const url = info && info.url
       const prompt = (info && info.prompt) || ''
       return h(React.Fragment, null,
@@ -4265,13 +4377,17 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           onClick: (e) => { e.stopPropagation(); setLb(true) },
         },
           h('img', {
-            src: url, alt: '', loading: 'lazy',
+            src: url, alt: '',
+            className: imgState === 'ok' ? undefined : (imgState === 'err' ? 'snx-img-err' : 'snx-img-wait'),
             onLoad: (e) => {
+              setImgState('ok')
               const im = e.target
               const f = snxSingleFit(im.naturalWidth || 1024, im.naturalHeight || 1024)
               im.style.width = f.width + 'px'; im.style.height = f.height + 'px'
             },
+            onError: () => setImgState('err'),
           }),
+          imgState === 'err' ? h('span', { className: 'snx-tail-err' }, '图片加载失败') : null,
           total > 1 ? h('span', { className: 'snx-tail-idx' }, (idx || 1) + ' / ' + total) : null,
         ),
         lb ? h(TvLightbox, { info, onClose: () => setLb(false) }) : null,
@@ -4358,6 +4474,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const [galSel, setGalSel] = useState(() => new Set())
       const [galAnchor, setGalAnchor] = useState(null)      // Shift 范围选起点
       const [galMenu, setGalMenu] = useState(null)          // 画廊右键菜单 {x,y,nodeId,boardList}
+      // SPEC-14 ②：「在画廊中定位」高亮闪——state 驱动（className 字面量 ' snx-locate' 供静态
+      // 门禁 classes 对账；classList.add 扫不到）。800ms 后清 null，与 CSS 动画时长同长
+      const [locateId, setLocateId] = useState(null)
       // P1-14：应用内确认弹窗状态（SnxConfirm，promise 化）
       const [cfm, setCfm] = useState(null)   // {title, desc, confirmLabel?, confirmIcon?, resolve}
       const [galDragActive, setGalDragActive] = useState(null)  // 拖拽归类进行中 {count}
@@ -4460,7 +4579,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         setGalSel((prev) => new Set([...prev].filter((id) => !idSet.has(id))))
         if (galAnchor && idSet.has(galAnchor)) setGalAnchor(null)
         store.emit(); force((n) => n + 1)
-        try { await put(CANVAS_ROUTE, { doc: store.doc }) } catch { }
+        // SPEC-14 二.3：直存带 rev；未落盘（409 已重载远端基线+toast，删除可能被远端回滚）不再报「已删除」
+        if (!(await saveNow())) return
         notify('已删除 ' + idSet.size + ' 张')
       }
       const downloadNodes = (ids) => {
@@ -4473,6 +4593,58 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           }, i * 250)
         })
         if (real.length) notify('开始下载 ' + real.length + ' 张')
+      }
+      // ── SPEC-14 ②：画布右键菜单补项的 Workbench 侧动作（ContextMenu 只发起，状态都在这层）───
+      // 在画廊中定位：切画廊 tab + 清掉会遮住目标卡的筛选（搜索/标签/收藏/画板→全部），
+      // 等画廊重渲染完成后滚动 .snx-pro-main 到该卡；高亮闪由 locateId state 驱动
+      // （GalleryItem className 拼 ' snx-locate'，800ms 后清 null，动画同长）
+      const locateInGallery = (n) => {
+        if (!n) return
+        setGalQ(''); setGalTag(''); setGalFav(false); setGalBoard('')
+        setMode('gallery')
+        setFsCanvas(false)   // 全屏画布里右键发起时退出全屏，否则盖住画廊（与 onRestoreParams 同规矩）
+        setLocateId(n.id)
+        notify('正在画廊中定位这张图…')
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          const card = document.querySelector('.snx-gal-item[data-gal-id="' + n.id + '"]')
+          if (!card) { notify('画廊里没有这张图（可能已删除或未完成）'); setLocateId(null); return }
+          if (typeof card.scrollIntoView === 'function') card.scrollIntoView({ block: 'center', behavior: 'smooth' })
+          else {
+            const main = document.querySelector('.snx-pro-main')
+            if (main) main.scrollTop = Math.max(0, card.offsetTop - main.clientHeight / 2)
+          }
+          setTimeout(() => setLocateId(null), 800)
+        }))
+      }
+      // 设为对比：复用 v12 独立对比选择集合 cmpSel 的 add 语义（≤4 张、不自动抓图、不碰画布选择）
+      const addNodeToCompare = (n) => {
+        if (!n) return
+        let outcome = 'added'
+        setCmpSel((prev) => {
+          const nx = new Set(prev)
+          if (nx.has(n.id)) { outcome = 'dup'; return nx }
+          if (nx.size >= 4) { outcome = 'full'; return nx }
+          nx.add(n.id)
+          return nx
+        })
+        force((x) => x + 1)
+        notify(outcome === 'added' ? '已加入对比选择（' + (cmpSel.size + 1) + '/4），切「对比」tab 查看'
+          : outcome === 'full' ? '对比选择已满 4 张，未加入（先在对比页移出一张）'
+            : '这张图已在对比选择中')
+      }
+      // 批量下载（多选）：逐张触发，文件名 = 提示词前 30 字（去非法字符）+ 序号；与画廊下载同 250ms 间隔
+      const batchDownloadNodes = (nodes) => {
+        const real = (nodes || []).filter((n) => n && n.src)
+        if (!real.length) { notify('选中里没有可下载的完成图'); return }
+        real.forEach((n, i) => {
+          setTimeout(() => {
+            const a = document.createElement('a')
+            a.href = n.src
+            a.download = ((String(n.prompt || '').replace(/^💬\s*/, '').slice(0, 30).replace(/[\\/:*?"<>|]/g, '')) || 'sensenova') + '-' + (i + 1) + '.png'
+            a.target = '_blank'; a.rel = 'noreferrer'; a.click()
+          }, i * 250)
+        })
+        notify('开始下载 ' + real.length + ' 张')
       }
       const toggleGalFav = (ids, on) => {
         const real = (ids || []).map((id) => store.node(id)).filter(Boolean)
@@ -4603,7 +4775,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           const s = await get(STATUS_ROUTE).catch(() => ({}))
           setKeyOk(!!s.keyConfigured)
           // v13.1：POST 只对本会话生效;持久化已迁移到宿主设置页（profile 条目）
-          notify(r.persisted === false ? 'Key 已生效（本会话）；跨重启持久化请在宿主 设置 → SenseNova 生图 修改并保存' : 'Key 已保存并立即生效')
+          notify(r.persisted === false ? 'Key 已生效（本会话）；跨重启持久化请在宿主设置页的「SenseNova 生图」条目修改并保存' : 'Key 已保存并立即生效')
         } catch (e) { notify('保存失败：' + String((e && e.message) || e)) }
         finally { setKeySaving(false) }
       }
@@ -4679,7 +4851,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           if (activeEngine) { activeEngine.renderAll(); activeEngine.applyCamera() }
           force((n) => n + 1)
         }
-        get(CANVAS_ROUTE).then((r) => { if (!dead) applyDoc(r.doc) }).catch(() => { })
+        get(CANVAS_ROUTE).then((r) => {
+          if (dead) return
+          if (typeof r.rev === 'number') store.rev = r.rev   // SPEC-14 二.3：打开时同步文档版本号
+          applyDoc(r.doc)
+        }).catch(() => { })
         // Phase 2：SSE 订阅（agent → 画布实时通道）
         const es = new window.EventSource('/api/sensenova/events')
         es.onmessage = (m) => {
@@ -4693,6 +4869,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             // 相机保持本地不动，外部写入不抢用户视口。
             get(CANVAS_ROUTE).then((r) => {
               if (dead || !r.doc || !Array.isArray(r.doc.nodes)) return
+              if (typeof r.rev === 'number') store.rev = r.rev   // SPEC-14 二.3：外部写入后以服务端版本为准，避免下次保存误判 409
               store.doc.nodes = r.doc.nodes
               store.doc.boards = r.doc.boards || store.doc.boards   // v11.2：画板列表一并跟随外部写入
               store.sel = new Set([...store.sel].filter((id) => store.node(id)))
@@ -5037,14 +5214,20 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             .filter((r) => r && r.src)
             .map((r) => ({ src: r.src, role: r.role || 'reference', strength: r.strength ?? 0.7 })),
         }
+        // SPEC-14 二.5：整套回填纳入画板行——该图已归画板时同时回填「目标画板」
+        // （与行级「画板」按钮同一 targetBoard 语义，形成回填→生成回同一画板闭环）；
+        // 未归板图不动当前目标画板（行级按钮才会显式回填「未分组」）
+        if (n.boardId) detail.board = n.boardId
         genPrefs.prompt = detail.prompt; genPrefs.negPrompt = detail.negPrompt
         genPrefs.size = detail.size; genPrefs.model = detail.model
         genPrefs.seed = detail.seed; genPrefs.refs = detail.refs
+        if (detail.board !== undefined) genPrefs.targetBoard = detail.board
         window.dispatchEvent(new CustomEvent('snx:restoreParams', { detail }))
         setLightbox(null)
         setFsCanvas(false)   // 从全屏画布右键发起时退出全屏，否则盖住生图 tab
         setMode('gen')
-        notify('已回填参数：提示词/负面/尺寸/模型/种子' + (detail.refs.length ? '/参考图×' + detail.refs.length : ''))
+        notify('已回填参数：提示词/负面/尺寸/模型/种子' + (detail.refs.length ? '/参考图×' + detail.refs.length : '')
+          + (detail.board !== undefined ? '/目标画板' : ''))
         force((x) => x + 1)
       }
       // ── InvokeAI CurrentImageButtons 灵魂：行级单参数回填（Prompt/Negative/Model/Seed/Size/Refs/Board）──
@@ -5233,7 +5416,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             store.emit()   // 引擎在挂时才同步重绘
             setLightbox(null)
             force((n) => n + 1)
-            try { await put(CANVAS_ROUTE, { doc: store.doc }) } catch {}
+            await saveNow()   // SPEC-14 二.3：直存带 rev，409 时重载远端基线
           },
           // P1-1：「重绘增强」（原 2x/4x 放大）——请求尺寸走已验证的 SIZES 线（≤2752，按锚点比例选档），
           // 与原图同分辨率重绘，不存在倍数放大；toast/tooltip 明示实际请求分辨率
@@ -5315,6 +5498,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           menu, engineRef, setMenu, busy, setBusy, onRestoreParams, onExportCanvas,
           onOpenLightbox: (n) => setLightbox(n),
           onClearAll: askClearCanvas,
+          // SPEC-14 ②：菜单补项——画廊定位 / 设为对比 / 批量下载的动作都在 Workbench 层
+          notify,
+          onLocateInGallery: locateInGallery,
+          onAddCompare: addNodeToCompare,
+          onBatchDownload: batchDownloadNodes,
         }),
         // ─── P1-3：画廊右键菜单（单选/多选两套，portal 挂 body，外点关闭）───
         galMenu ? h(GalContextMenu, {
@@ -5596,7 +5784,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                   if (galAnchor && idSet.has(galAnchor)) setGalAnchor(null)
                   setLightbox((lb) => (lb && idSet.has(lb.id) ? null : lb))
                   notify('已删除画板「' + b.name + '」及其中 ' + idSet.size + ' 张图')
-                  try { await put(CANVAS_ROUTE, { doc: store.doc }) } catch { }
+                  await saveNow()   // SPEC-14 二.3：直存带 rev，409 时重载远端基线
                 } else {
                   // 仅删除画板：图保留，回到未分组
                   store.doc.nodes.forEach((nn) => { if (nn.boardId === b.id) delete nn.boardId })
@@ -5640,7 +5828,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 store.sel = new Set()
                 setGalSel(new Set()); setGalAnchor(null)
                 force((n) => n + 1)
-                try { await put(CANVAS_ROUTE, { doc: store.doc }) } catch {}
+                await saveNow()   // SPEC-14 二.3：直存带 rev，409 时重载远端基线
               },
             }, ic('trash-2'), ' 清空') : null,
           ),
@@ -5696,6 +5884,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             nodes.map((n) => h(GalleryItem, {
               key: n.id, node: n,
               selected: galSel.has(n.id),
+              locateFlash: locateId === n.id,   // SPEC-14 ②：画布右键「在画廊中定位」高亮闪
               onItemClick: onGalItemClick,
               onItemDoubleClick: () => setLightbox(n),
               onItemContext: onGalItemContext,
@@ -5850,6 +6039,30 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 autosave()
               },
             }, ic('circle-x'), ' 全部取消') : null,
+            // SPEC-14 二.4：「取消其他」=只取消全部 pending、保留当前 running（区别于「全部取消」）。
+            // 有未完成任务时出现在操作区，仅在「存在运行中任务且 pending>0」时可用
+            allJobs.length > 0 ? h('button', {
+              className: 'snx-queue-cancel',
+              type: 'button',
+              disabled: !(running > 0 && pending > 0),
+              'aria-disabled': !(running > 0 && pending > 0),
+              title: (running > 0 && pending > 0)
+                ? '取消全部等待中的任务，保留正在运行的任务'
+                : '需要同时有运行中和等待中的任务（当前运行 ' + running + ' 个 / 等待 ' + pending + ' 个）',
+              onClick: async () => {
+                const pends = store.doc.nodes.filter((n) => n.status === 'pending')
+                if (!pends.length) return
+                const ok = await askConfirm({
+                  title: '取消其他 ' + pends.length + ' 个等待中任务？',
+                  confirmLabel: '取消其他', confirmIcon: 'circle-x',
+                  desc: '将取消 ' + pends.length + ' 个等待中的任务（不再开跑）；正在运行的 ' + running + ' 个任务保持不变。被取消任务记为「用户取消」，重跑失败时不会自动复活。',
+                })
+                if (!ok) return
+                for (const n of pends) cancelJob(n.id)
+                force((x) => x + 1)
+                autosave()
+              },
+            }, ic('circle-x'), ' 取消其他') : null,
           ),
           // 进度条（全局）
           allJobs.length > 0 ? h('div', { className: 'snx-queue-progress' },
@@ -6383,7 +6596,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                   store.sel = new Set()
                   setGalSel(new Set()); setGalAnchor(null)
                   force((n) => n + 1)
-                  try { await put(CANVAS_ROUTE, { doc: store.doc }) } catch {}
+                  await saveNow()   // SPEC-14 二.3：直存带 rev，409 时重载远端基线
                   notify && notify('画布已清空')
                 },
               }, ic('trash-2'), ' 清空画布'),
@@ -7236,11 +7449,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 
     // ── 画廊单项（P1-3：点击语义分层 + hover 轻操作组，对齐 InvokeAI GalleryItemHoverIcons）──
     // 网格保持轻：缩略图只放轻操作（参考图/下载/收藏/删除），重操作全收右键菜单与批量条
-    function GalleryItem({ node, selected, onItemClick, onItemDoubleClick, onItemContext, onItemPointerDown, ops }) {
+    function GalleryItem({ node, selected, onItemClick, onItemDoubleClick, onItemContext, onItemPointerDown, ops, locateFlash }) {
       const ts = node.ts ? new Date(node.ts) : null
       const date = ts ? `${ts.getMonth() + 1}/${ts.getDate()} ${String(ts.getHours()).padStart(2, '0')}:${String(ts.getMinutes()).padStart(2, '0')}` : ''
       return h('div', {
-        className: 'snx-gal-item' + (node.favorite ? ' fav' : '') + (selected ? ' sel' : ''),
+        className: 'snx-gal-item' + (node.favorite ? ' fav' : '') + (selected ? ' sel' : '') + (locateFlash ? ' snx-locate' : ''),
+        // SPEC-14 ②：画布右键「在画廊中定位」按 id 找卡（滚动 + 高亮闪）
+        'data-gal-id': node.id,
         onClick: (e) => onItemClick && onItemClick(e, node),
         onDoubleClick: () => onItemDoubleClick && onItemDoubleClick(node),
         onContextMenu: (e) => onItemContext && onItemContext(e, node),
@@ -7387,6 +7602,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           ['拖输出端口', '从图右缘圆点拖到目标节点 = 改接其父图（防环，可撤销）'],
           ['右键连线', '断开衍生关系 / 选中子节点'],
           ['Esc（拖线中）', '取消本次拖线'],
+        ] },
+        // SPEC-14 二.5：补 C 键（对比交换，v12 ComparePair 实装、帮助表此前漏记）
+        { title: '对比', items: [
+          ['C', '对比视图交换 A/B（输入态 / 模态弹层打开时不触发）'],
         ] },
         { title: '画廊', items: [
           ['单击', '选中（轻态，不再直接跳画布/灯箱）'],
@@ -7660,13 +7879,17 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 
     // ── 对比：3-4 张网格 + 单击设大图 ──
     // SPEC-13 ②：顶栏补与 2 图一致的模式按钮组——网格本身即「并排」（默认可用）；
-    // 滑块/叠化是 2 图专属交互，对 3-4 图禁用（disabled + tooltip「仅支持 2 张对比」），不做假开关
+    // 滑块/叠化是 2 图专属交互，对 3-4 图禁用（disabled + tooltip「仅支持 2 张对比」），不做假开关。
+    // SPEC-14 二.4：顶栏补「交换」按钮=当前顺序倒转（reverse，再点一次恢复），
+    // 样式/位置对齐 2 图对比的交换按钮（snx-cmp-mswap，模式按钮组右侧）
     function CompareGrid({ items }) {
       const [focus, setFocus] = useState(items[0] && items[0].id)
       const [mode, setMode] = useState('side')   // 3-4 图恒为并排；滑块/叠化按钮仅作禁用展示
-      const big = items.find((n) => n.id === focus) || items[0]
-      // v11.2（A-P2-5 半）：角标改字母 A/B/C/D，与 ComparePair 的 A/B 对齐（模式循环/交换按钮 deferred）
-      const tagOf = (n) => 'ABCD'[items.indexOf(n)] || '?'
+      const [swapped, setSwapped] = useState(false)
+      const shown = swapped ? items.slice().reverse() : items
+      const big = shown.find((n) => n.id === focus) || shown[0]
+      // v11.2（A-P2-5 半）：角标改字母 A/B/C/D，与 ComparePair 的 A/B 对齐；字母跟随交换后的位次
+      const tagOf = (n) => 'ABCD'[shown.indexOf(n)] || '?'
       return h('div', { className: 'snx-cmp-grid' },
         h('div', { className: 'snx-cmp-modes' },
           h('div', { className: 'snx-cmp-mseg', role: 'group', 'aria-label': '对比模式（多图）' },
@@ -7680,6 +7903,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 onClick: () => setMode(m),
               }, label)),
           ),
+          h('button', {
+            type: 'button', className: 'snx-cmp-mswap',
+            title: '倒序排列当前对比顺序（再点一次恢复）',
+            onClick: () => setSwapped((s) => !s),
+          }, ic('arrow-left-right', 12), ' 交换'),
         ),
         h('div', { className: 'snx-cmp-grid-big' },
           h('img', { src: big.src, alt: '' }),
@@ -7688,9 +7916,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         ),
         h('div', {
           // 列数类名字面量化(静态对账可见);对比网格只收 3-4 图,2 列兜底
-          className: 'snx-cmp-grid-row ' + ({ 2: 'cols-2', 3: 'cols-3', 4: 'cols-4' }[Math.min(items.length, 4)] || 'cols-3'),
+          className: 'snx-cmp-grid-row ' + ({ 2: 'cols-2', 3: 'cols-3', 4: 'cols-4' }[Math.min(shown.length, 4)] || 'cols-3'),
         },
-          items.map((n) => h('button', {
+          shown.map((n) => h('button', {
             key: n.id,
             className: 'snx-cmp-grid-cell' + (n.id === focus ? ' on' : ''),
             onClick: () => setFocus(n.id),
@@ -8061,7 +8289,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                   h('span', { className: 't' }, '参数清单'),
                   h('button', {
                     type: 'button', className: 'snx-lb-plist-go',
-                    title: '整套回填：提示词/负向词/尺寸/模型/种子/参考图一次填回生图表单（热键 R）',
+                    title: '整套回填：提示词/负向词/尺寸/模型/种子/参考图一次填回生图表单（热键 R）；该图已归画板时同时回填目标画板',
                     onClick: () => onRestoreParams && onRestoreParams(node),
                   }, ic('wand-sparkles', 12), '整套回填'),
                 ),

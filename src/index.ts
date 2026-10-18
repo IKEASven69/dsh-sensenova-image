@@ -599,11 +599,18 @@ export function apply(ctx: Context, rawConfig: Config) {
   }
 
   // 画布文档 GET/PUT（整文档 JSON，原子写；8MB 上限）
+  // SPEC-14 二.3 并发写保护：文档存 rev（整数，落在 doc.rev；旧文档缺省按 0，agent 的
+  // appendCanvasNode 原样带过 rev 不自增——服务端追加不算会话写冲突）。GET 返回 { ok, doc, rev }
+  // （rev 与 doc 同级）；PUT 校验 body.rev === 存储 rev：不匹配 → 409 + 服务端最新文档；
+  // 匹配 → rev+1 落盘并在 200 响应里回带新 rev。body.rev 缺省视为旧客户端，不做冲突检测直接落盘
+  // （保证升级窗口/异常路径下正常保存行为不变）。成功/409 响应都带 rev，客户端据此保持版本同步。
   reg('/api/sensenova/canvas', (req, res) => {
     void (async () => {
       if (req.method === 'GET') {
-        try { sendJson(res, 200, { ok: true, doc: JSON.parse(readFileSync(canvasFile(), 'utf8')) }) }
-        catch { sendJson(res, 200, { ok: true, doc: null }) }
+        try {
+          const doc = JSON.parse(readFileSync(canvasFile(), 'utf8'))
+          sendJson(res, 200, { ok: true, doc, rev: doc && typeof doc.rev === 'number' && Number.isFinite(doc.rev) ? Math.floor(doc.rev) : 0 })
+        } catch { sendJson(res, 200, { ok: true, doc: null, rev: 0 }) }
         return
       }
       if (req.method === 'PUT') {
@@ -611,10 +618,19 @@ export function apply(ctx: Context, rawConfig: Config) {
           const body = JSON.parse((await readBody(req)) || '{}')
           const doc = body?.doc
           if (!doc || typeof doc !== 'object' || !Array.isArray(doc.nodes)) { sendJson(res, 400, { ok: false, error: 'doc{nodes[]} required' }); return }
+          const cur = readCanvasDoc()
+          const storedRev = cur && typeof cur.rev === 'number' && Number.isFinite(cur.rev) ? Math.floor(cur.rev) : 0
+          const clientRev = typeof body.rev === 'number' && Number.isFinite(body.rev) ? Math.floor(body.rev) : null
+          if (clientRev !== null && clientRev !== storedRev) {
+            const latest = cur && Array.isArray(cur.nodes) ? cur : null
+            sendJson(res, 409, { ok: false, error: '画布已被其他会话修改', doc: latest, rev: storedRev })
+            return
+          }
+          doc.rev = storedRev + 1
           const json = JSON.stringify(doc)
           if (json.length > 8 * 1024 * 1024) { sendJson(res, 413, { ok: false, error: 'doc too large (>8MB)' }); return }
           atomicWriteFile(canvasFile(), json)
-          sendJson(res, 200, { ok: true })
+          sendJson(res, 200, { ok: true, rev: doc.rev })
         } catch (e) { sendJson(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) }) }
         return
       }
