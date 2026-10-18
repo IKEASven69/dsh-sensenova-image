@@ -319,6 +319,8 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 
 **Konva/宿主 API 两连坑(本轮新知)**:①cordis `ctx.<service>` 属性访问必须在该插件 inject 数组声明,否则抛 "cannot get property without inject";②探测宿主服务形状时,describe() 返回**数组**而非 {namespaces:[…]}——按后者解构会得到假 ABSENT。
 
+> **两章关系(2026-10-18 收敛)**:本节为静态交付时点记录(E2E 未跑,归验收员);下方「v14:两轴并行第二轮(…E2E 38/38)」为验证后记录,第四任独立审计 8/8 真机复核为真。E2E 结论以验证后记录为准;两章的行号/坑互为补充,均有效。
+
 ## v14:两轴并行第二轮——折叠调研+缓解 / 右键菜单丰富度 / 并发写保护 / 队列·对比操作(2026-10-17 ~ 10-18,三批次工作流交付)
 
 > 本章由文档同步会话据三批改动报告写成,关键事实已在本轮做静态复核(命令与结果见「怎么验证的」;宿主豁免集合为本轮一手抽验)。规格 `SPEC-14.md`(行为/基础设施轮,无新视觉表面,原型豁免),验收条目已逐条标注(含 E2E 预分配编号)。**批次1/2 只改 client/client-v4.js;批次3 改 client/client-v4.js + src/index.ts(已 npm run build,dist/index.js 52.0kb)。全部为静态交付:浏览器/E2E 未跑(纪律归验收员);改动在工作树未 commit(`git status --short` = ` M SPEC-13.md`/` M client/client-v4.js`/` M src/index.ts`,HEAD=8b2c9f9)。**
