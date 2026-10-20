@@ -380,3 +380,57 @@ URL 形如 `http://127.0.0.1:5180/?token=...`（token 每次重启会变）。
 **坑(Windows 工作流)**:`world.run("npm")` 裸 spawn 无扩展名 shim → ENOENT;构建门禁改用 `world.run("node", [REPO + "/node_modules/esbuild/bin/esbuild", …])`(先手工验证命令再写入脚本)。
 
 验证:主会话复核 full 门禁 0 违规(0 条违规 418:418)+linktest 5/5+服务端构建 exit=0;工作流验收员 E2E 38/38。deferred:3-4 图交换语义=倒序(单一定义);定位重置筛选(取舍);对话轴 TvLightbox 无画板行(会话图非画布节点,无 boardId)。
+
+## v15:两轴并行第三轮——资产流(2026-10-19 ~ 10-20,三批次工作流交付)
+
+> 本章由文档同步会话据三批改动报告写成,关键事实已在本轮做静态复核(命令与结果见「怎么验证的」)。规格 `SPEC-15.md`(原型豁免:全部为既有表面小增量;验收条目已在 SPEC 内逐条标注 ✅ 与 E2E 预分配编号)。**三批全部只改 client/client-v4.js,服务端零改动;全部为静态交付:浏览器/E2E 未跑(纪律归验收员)。v15 改动在工作树未 commit(`git status --short` = ` M client/client-v4.js`,diff --stat +140/-23;HEAD=63be5c7=SPEC-15 规格提交,v14 代码已在 035a662 入库)。**
+
+### 做了什么
+
+**批次1(SPEC-15 §一:生成自动归板·跟随画廊——审计 Top5「资产流」代码级关闭)**
+
+- genPrefs 增 `galBoard` 镜像字段(注释 :3292-3297);新增模块级 `followBoard` 跟随态(默认开,:3299)、`followTargetOf`(:3301)/`resolveTargetBoard`(:3303-3304)解析函数与 `FOLLOW_BOARD` 哨兵(:3298);Workbench 用 useEffect 把画廊画板筛选 galBoard(''/none/boardId)镜像进 genPrefs(:4485)并作 prop 传入 GenForm(:5669)。
+- genToCanvas 落板从「genPrefs.targetBoard || undefined」改为「resolveTargetBoard() || undefined」(:2665-2667)——表单/悬浮条/重绘增强等所有 genToCanvas 入口统一按解析结果落板(未分组不赋 boardId)。
+- gen form 目标画板下拉首项为动态标签(跟随态「跟随画廊:画板「X」/跟随画廊:未分组」:7113-7118;手动态首项「回到跟随画廊」一键 :7428);用户在下拉手动选择(**含未分组**,:7418-7419)或灯箱行级回填目标画板(snx:restoreParams 带 board,:7019-7020)即脱离跟随,画廊再切不覆盖。
+- 决策面板目标行如实显示解析结果(:7510,「跟随画廊:画板「X」/跟随画廊:未分组」;手动态仍为画板名/未分组);删画板路径补跟随分支说明(被删板=跟随板时 setGalBoard('') 经镜像进 genPrefs.galBoard 防悬空,:5886-5887)。
+- 未加任何新 className/图标/var(--x),零 CSS 改动(SnxSelect 触发钮 label 已有 ellipsis、弹层渲染后夹取视口,「跟随画廊:画板「X」」长标签安全)。
+
+**批次2(SPEC-15 §二:批量变体)**
+
+- 画廊多选 galSelIds(既有 done+src 过滤,:5836)≥2 张时,snx-gal-bulk 批量动作条出现「批量变体」按钮(:6002-6007,与 移入画板/删除/清空 同排,复用 .bt 样式与 shuffle 图标;busy 态显示「变体中…」);未在画廊右键菜单重复加入口(避免两入口双份 busy 同步)。
+- 新增 batchVariantNodes(:4675):逐张串行,每张按 doEnhance 直连模式先落 pending 节点(原图右侧挂 parentId,整批一个撤销步),直连 POST /api/sensenova/generate(reference=该图 src,dataURL 先走 persistRef 落盘兜底;prompt=「基于这张图做变体:」+该图提示词;size/model 沿用该图 params;persist:true),成功 pending→done 落画布;单张失败 pending→error 计入失败不中断批次;按钮 busy 态防连点(useState 渲染+useRef 判重入,:4505),张间 250ms 间隔(照抄 batchDownload 经验)。
+- toast 三态(本轮实读 :4730-4736):部分失败=「N 张变体完成,M 张失败」(err 级);全部成功=「N 张变体完成」;全部失败=「批量变体全部失败(M 张)」(err 级)。
+
+**批次3(SPEC-15 §三:导出元数据默认开启)——核对轮,零改动**
+
+导出弹层「嵌入元数据(提示词/参数到 PNG tEXt)」开关默认已是开启,无需修改:`const [exportMeta, setExportMeta] = useState(true)`(:8176);开关渲染 :8492-8494(checkbox `checked: exportMeta` :8493,文案 :8494);导出消费点 :8267 `imageToBlob(outSrc, exportFmt, exportQuality, exportMeta ? node : null)`(tEXt/iTXt 拼装 :8663 起、CRC32 :8722)。grep localStorage 无 export/meta 持久化——纯 useState 会话态,恰符合 SPEC「倾向会话态」,未加持久化,用户可随时取消勾选。SPEC-15 原文与第四任审计标注的 8376/8545 为旧行号,有漂移但实现确认存在。
+
+### 怎么验证的(全部静态,无浏览器)
+
+- **文档同步会话本轮复核(2026-10-20)**:`node --check client/client-v4.js` → exit 0;`git status --short` → ` M client/client-v4.js`;`git rev-parse --short HEAD` → 63be5c7;`git diff --stat` → 仅 client/client-v4.js +140/-23;`git diff -U0` 的 22 个 hunk 全部落于 SPEC-15 ①/② 区块(② 恰 4 处:CSS `.bt:disabled` :2032、busy ref :4505、batchVariantNodes :4669 起 +71 行、批量条按钮 :6002 起 +6 行,与批次2报告「仅 4 处 ②」一致,其余为 ① 跟随画廊链)。
+- **关键符号 grep 全部在位**(行号为当前工作树):galBoard 镜像注释 :3292-3297、FOLLOW_BOARD :3298、followBoard=true :3299、followTargetOf :3301、resolveTargetBoard :3303-3304、`boardId: resolveTargetBoard() || undefined` :2665-2667、Workbench 镜像 useEffect :4485、GenForm galBoard prop :5669、行级回填脱离跟随 :7019-7020、下拉首项动态标签/回到跟随画廊 :7113-7118/:7414-7428、手动选择(含未分组)脱离 :7418-7419、决策面板目标行 :7510、删板跟随分支注释 :5886-5887、hideDecide/onMouseLeave :6941/:7479、galSelIds done+src 过滤 :5836、批量条按钮 :6002-6007、batchVariantNodes :4675(≥2 守卫 :4678、进度 toast :4685、结尾 toast :4730-4736)、exportMeta :8176/:8267/:8492-8494、CRC32 :8722。
+- **localStorage 复核**:`grep -niE localStorage client-v4.js | grep -iE "export|meta"` → 0 命中(exit 1),exportMeta 纯会话态成立。
+- **批次自检(据改动报告,本轮未重跑)**:批次1 node --check 通过;批次2 node --check ×2(SYNTAX_OK/FINAL_SYNTAX_OK)+ git diff 确认仅 4 处 ② 区块为本轮改动(其余 ① hunks 为批次1 产物,由 ask 开始时原始 Read 证实);批次3 零改动下跑基线 node --check 通过。**full 门禁未在任一批报告中提及,未确认是否跑过**(SPEC §五写了「每批 node --check+full 门禁」)。
+- **浏览器/E2E 未执行**——套件归验收员(项号口径见坑)。
+
+### 坑 / 注意(给下一个会话)
+
+- **「回到跟随画廊」一键在目标画板下拉首项,不在决策面板目标行**(ask 给过两个位置):决策面板是 gowrap hover/focus 浮出的 portal,鼠标移入面板即触发 onMouseLeave 收起(hideDecide,:6941/:7479),面板内按钮不可达——下拉首项是两位置中唯一可用的;别「修」进面板。
+- **跟随时手动下拉选「未分组」也视为手动指定(脱离跟随)**,与手动选具体画板同语义(显式选择、画廊再切不覆盖);跟随态是内存态,刷新恢复默认跟随(genPrefs 本就不落盘,行为一致)。
+- **批量变体节点不赋 boardId**(严格参照 doEnhance 的节点创建,doEnhance 本身不落板),未接 ① 的 resolveTargetBoard——若验收要求批量变体也跟随画廊归板,加一行 `boardId: resolveTargetBoard()||undefined` 即可;验收提出前别当 bug 修。
+- **「与批量下载同排」的口径**:v14 的「批量下载」在画布多选 UI(作用于 store.sel,注释 :3816),画廊多选 galSel 自己的动作区是 snx-gal-bulk 批量条(画廊右键另有「下载 N 张」单条目)——「批量变体」放入批量条与既有动作同排即满足语义;未在画廊右键菜单重复加入口。
+- **批量变体 toast 三态与 SPEC §二样例不一致**:SPEC 写汇总「N 张变体已入画布」,实现为「N 张变体完成」/「N 张变体完成,M 张失败」/「批量变体全部失败(M 张)」(:4730-4736)——验收断言按实现文案匹配;全部失败不是「0 张变体完成,M 张失败」(信息等价、中文更自然,据批次报告)。
+- **行号引用漂移两处**:批次2报告引的「:5761 done+src 过滤」现实际在 :5836;SPEC-15 §三与第四任审计引的 8376/8545 现实际在 :8176(默认值)/:8492-8494(开关)/:8267(消费点)——以本轮复核行号为准。
+- **E2E 项号计数口径**:SPEC-15 §五「E2E 38 项(旧 32+新 6)」与 v14 套件已扩到 38(E2E-33..38,SPEC-14 §四)冲突——按延续新 6 项预分配 **E2E-39..44**(总数 44),已在 SPEC 各条标注;验收员实测后以实际为准回填(v12 起「仓库无项号映射文档」的老坑)。
+- ~/.dsh/storages 实况文件未触碰;v15 改动未 commit。
+
+## v15.1:资产流收尾 + 选中路径根修(2026-10-19,v15 工作流 43/44 + 主会话两项根修)
+
+v15 工作流(归板跟随/批量变体/导出默认核对)三批完成;验收 43/44——唯一失败 E2E-19 画布双击在 84 节点拥挤画布下复现不稳。主会话根修两条:
+1. **emitLight 根修**:单击选中→store.emit→renderAll 全量销毁重建 Konva 节点,是双击检测失稳的架构根源。新增 `store.emitLight()`(只通知监听、不重建节点),全部纯选中路径(bindNode click/contextmenu 预选/edge mousedown/marquee/Esc 清选/菜单选中子节点)改走 emitLight。文档变更路径仍走 emit(带 renderAll)。
+2. **补偿上限拆除**:v11.1 的热区补偿带了 min(60,…)/min(14,…) 世界像素上限——scale 0.05 时热区被压回 3 屏幕像素。改为纯倒数(14*inv 等),任何缩放恒定 14 屏幕像素。
+3. 批量变体节点补 boardId=resolveTargetBoard()(归板跟随语义与生成一致)。
+
+**测试基建两坑**:①linktest 轮式缩放导航到任意世界点**不收敛**(wheel 方向/幅度/相机联动都难控),改为**直接 PUT doc.camera 把目标点放到画布中心+reload**——确定性,一次到位;②linktest 的 mid 屏幕坐标必须用缩放后的**最新相机**重算(陈旧 GEO 在缩放后落点全偏);③Konva.stages 里可能混入缺 getLayers 的死对象,取 stage 要过滤。
+
+验证:full 门禁 0 违规;linktest 5/5(确定性相机下);重载画布双击待第五任审计复测。恢复脚本沉淀:tmp/cleanup/restore-canvas.js(备份快照+rev 处理的画布还原范式)。

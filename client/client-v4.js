@@ -426,13 +426,14 @@ window.__ModuleLoader__.load({
 .snx-cfg-msg.ok{color:var(--snx-accent);border-color:color-mix(in srgb,var(--snx-accent) 35%,transparent);background:color-mix(in srgb,var(--snx-accent) 7%,transparent)}
 .snx-cfg-msg.err{color:var(--snx-error);border-color:color-mix(in srgb,var(--snx-error) 35%,transparent);background:color-mix(in srgb,var(--snx-error) 7%,transparent)}
 /* 侧栏按钮（自包含样式 — dsh 左下角小工具按钮） */
-.snx-sidebtn{display:inline-flex;align-items:center;gap:6px;
-  padding:6px 12px;border-radius:10px;border:1px solid var(--dsw-alias-border-l2,#ffffff1f);
-  background:var(--dsw-alias-bg-layer-3,#353638);color:var(--dsw-alias-label-primary,#f9fafb);font-size:12px;
-  font-weight:600;cursor:pointer;transition:all .15s;line-height:1;font-family:inherit}
-.snx-sidebtn:hover{border-color:var(--snx-accent);background:var(--dsw-alias-bg-layer-3,#353638);color:var(--snx-accent)}
-.snx-sidebtn:active{transform:translateY(1px)}
-.snx-sidebtn svg{width:13px;height:13px;flex-shrink:0;stroke:currentColor}
+/* v15.1:对齐宿主侧栏原触发行样式(VOzbGW_trigger:无边框/透明底/42px 高/hover 浅底)——旧版带框样式与相邻的「设置」原生行割裂(用户点名) */
+.snx-sidebtn{display:flex;align-items:center;gap:8px;width:calc(100% + 4px);
+  margin:4px -2px;padding:0 10px 0 8px;height:42px;border:none;border-radius:var(--dsw-radius-md,8px);
+  background:none;color:var(--dsw-alias-label-primary,#f9fafb);font-family:inherit;font-size:14px;
+  line-height:22px;font-weight:inherit;cursor:pointer;overflow:hidden;text-align:left}
+.snx-sidebtn:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14)}
+.snx-sidebtn:active{background:var(--dsw-alias-interactive-bg-active,#ffffff1f)}
+.snx-sidebtn svg{width:16px;height:16px;flex-shrink:0;stroke:currentColor}
 /* rightbar tab 标题（在 dsh 右栏 tab 标签里显示） */
 .snx-rb-title{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600}
 .snx-rb-ico{color:var(--snx-accent);font-size:14px;line-height:1}
@@ -2029,6 +2030,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
   color:var(--dsw-alias-label-secondary,#cfd3d6);border-radius:6px;padding:4px 9px;font-size:11.5px;cursor:pointer;font-family:inherit;white-space:nowrap}
 .snx-gal-bulk .bt:hover{color:var(--snx-accent);border-color:var(--snx-accent)}
 .snx-gal-bulk .bt.danger:hover{color:var(--snx-error);border-color:var(--snx-error)}
+.snx-gal-bulk .bt:disabled{opacity:.5;cursor:default;pointer-events:none}   /* SPEC-15 ②：批量变体 busy 态 */
 /* 画廊右键菜单（portal 挂 body）*/
 .snx-gal-menu{position:fixed;z-index:10020;background:var(--dsw-alias-bg-layer-3,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);
   border-radius:8px;padding:4px;min-width:172px;max-width:240px;box-shadow:0 12px 32px rgba(0,0,0,.32)}
@@ -2233,6 +2235,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       subscribe(fn) { this._listeners.add(fn); return () => this._listeners.delete(fn) },
       emit() {
         if (activeEngine) activeEngine.renderAll()
+        this._listeners.forEach((fn) => { try { fn() } catch { } })
+      },
+      // v15.1：选中类变更专用——不重建 Konva 节点（选中不改文档,renderAll 的全量销毁重建
+      // 是双击检测在高负载画布下失稳的根源）
+      emitLight() {
         this._listeners.forEach((fn) => { try { fn() } catch { } })
       },
       snapshot() { return JSON.stringify(this.doc) },
@@ -2661,9 +2668,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         const col = i % cols, row = Math.floor(i / cols)
         store.doc.nodes.push({
           id, type: 'image', status: 'pending', src: '', parentId,
-          // SPEC-13 ②：生成入板路由——表单选了目标画板就落板，未分组（''）不赋值。
-          // 表单/悬浮条/重绘增强/蒙版重绘等所有 genToCanvas 入口同路生效
-          boardId: genPrefs.targetBoard || undefined,
+          // SPEC-13 ②/SPEC-15 ①：生成入板路由按「当前解析目标」落板——跟随画廊=画廊筛选画板，
+          // 手动=表单所选；未分组（''）不赋值。表单/悬浮条/重绘增强/蒙版重绘等所有 genToCanvas 入口同路生效
+          boardId: resolveTargetBoard() || undefined,
           x: Math.round(bx + col * cellW), y: Math.round(by + row * cellH), w: 480, h: 480,
           prompt, params: {
             size, model,
@@ -2818,7 +2825,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               lastClick = { id: docNode.id, at: now }
             }
           }
-          syncTransformer(); store.emit()
+          syncTransformer(); store.emitLight()
         })
         // 成组：同 groupId 的成员随拖拽/变换平移（记录基线坐标，结束时套用位移）
         const groupBase = () => (docNode.groupId
@@ -2861,7 +2868,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         // 不再依赖「同一 Konva 实例收到两次点击」（renderAll 重建后该前提永不成立）。
         k.on('contextmenu', (e) => {
           e.evt.preventDefault(); e.cancelBubble = true
-          if (!store.sel.has(docNode.id)) { store.sel = new Set([docNode.id]); syncTransformer(); store.emit() }
+          if (!store.sel.has(docNode.id)) { store.sel = new Set([docNode.id]); syncTransformer(); store.emitLight() }
           if (opts.onContext) opts.onContext(e.evt.clientX, e.evt.clientY, docNode.id)
         })
       }
@@ -3002,30 +3009,30 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             points: [x0, y0, x0 + dx, y0, x1 - dx, y1, x1, y1],
             bezier: true,
             stroke: theme.tint(theme.accent, 0.45), strokeWidth: 1.75,
-            hitStrokeWidth: Math.min(60, 14 * inv),   // 恒定 ≈14 屏幕像素的隐形热区
+            hitStrokeWidth: 14 * inv,   // 恒定 ≈14 屏幕像素的隐形热区(纯倒数,无上限——上限会在极低缩放时把热区压回像素级)
           })
           line.on('mouseenter', () => { line.stroke(theme.accent); line.strokeWidth(2.75); edgeLayer.batchDraw() })
           line.on('mouseleave', () => { line.stroke(theme.tint(theme.accent, 0.45)); line.strokeWidth(1.75); edgeLayer.batchDraw() })
           line.on('mousedown', (e) => {
             if (e.evt.button !== 0) return
             e.cancelBubble = true
-            store.sel = new Set([n.id]); syncTransformer(); store.emit()
+            store.sel = new Set([n.id]); syncTransformer(); store.emitLight()
           })
           line.on('contextmenu', (e) => {
             e.evt.preventDefault(); e.cancelBubble = true
             if (opts.onContext) opts.onContext(e.evt.clientX, e.evt.clientY, null, { edgeChild: n.id })
           })
           edgeLayer.add(line)
-          edgeLayer.add(new Konva.Circle({ x: x0, y: y0, radius: Math.min(7, 2.5 * inv), fill: theme.tint(theme.accent, 0.6) }))
-          edgeLayer.add(new Konva.Circle({ x: x1, y: y1, radius: Math.min(7, 2.5 * inv), fill: theme.tint(theme.accent, 0.6) }))
+          edgeLayer.add(new Konva.Circle({ x: x0, y: y0, radius: 2.5 * inv, fill: theme.tint(theme.accent, 0.6) }))
+          edgeLayer.add(new Konva.Circle({ x: x1, y: y1, radius: 2.5 * inv, fill: theme.tint(theme.accent, 0.6) }))
         }
         // 输出/输入端口：拖输出端口到目标节点=改接其 parentId
         for (const n of store.doc.nodes) {
           if (n.status !== 'done' || n.hidden) continue
           const out = new Konva.Circle({
-            x: n.x + n.w, y: n.y + n.h / 2, radius: Math.min(14, 4.5 * inv),
+            x: n.x + n.w, y: n.y + n.h / 2, radius: 4.5 * inv,
             fill: theme.tint(theme.accent, 0.8), stroke: theme.accent, strokeWidth: 1.5 * inv,
-            hitStrokeWidth: Math.min(30, 12 * inv),
+            hitStrokeWidth: 12 * inv,
           })
           out.on('mousedown', (e) => {
             if (e.evt.button !== 0 || linkDrag) return
@@ -3047,7 +3054,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           })
           portLayer.add(out)
           portLayer.add(new Konva.Circle({
-            x: n.x, y: n.y + n.h / 2, radius: Math.min(11, 3.5 * inv), listening: false,
+            x: n.x, y: n.y + n.h / 2, radius: 3.5 * inv, listening: false,
             stroke: theme.accent, strokeWidth: 1.2 * inv, opacity: 0.55,
           }))
         }
@@ -3154,7 +3161,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           } else {
             store.sel = new Set()   // 点空处清除选择
           }
-          syncTransformer(); store.emit()
+          syncTransformer(); store.emitLight()
         }
       })
       stage.on('wheel', (e) => {
@@ -3190,7 +3197,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             if (wx >= n.x && wx <= n.x + n.w && wy >= n.y && wy <= n.y + n.h) { hitId = n.id; break }
           }
         }
-        if (hitId && !store.sel.has(hitId)) { store.sel = new Set([hitId]); syncTransformer(); store.emit() }
+        if (hitId && !store.sel.has(hitId)) { store.sel = new Set([hitId]); syncTransformer(); store.emitLight() }
         if (opts.onContext) opts.onContext(e.evt.clientX, e.evt.clientY, hitId)
       })
 
@@ -3287,8 +3294,21 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     }
 
     // ——— 右侧面板：生成 ———
-    // targetBoard：生成入板路由（SPEC-13 ②）——'' = 未分组（生成节点不归板）；否则为 boards[].id
-    const genPrefs = { size: '2048x2048', model: '', targetBoard: '' }   // 面板/悬浮 bar 共享的生成偏好
+    // targetBoard：生成入板路由（SPEC-13 ②）——'' = 未分组（生成节点不归板）；否则为 boards[].id。
+    // galBoard：画廊画板筛选镜像（Workbench useEffect 同步进 genPrefs）——「跟随画廊」解析用（SPEC-15 ①）
+    const genPrefs = { size: '2048x2048', model: '', targetBoard: '', galBoard: '' }   // 面板/悬浮 bar 共享的生成偏好
+    // SPEC-15 ①「跟随画廊」（默认开）：画廊画板筛选为具体画板时，生成入板=该画板；
+    // 筛选「全部('')/未分组('none')」→ 未分组（不赋板）。用户在 gen form 手动选了画板 →
+    // 脱离跟随（手动优先，画廊再切不覆盖），下拉首项「回到跟随画廊」一键返回跟随。
+    // followBoard/genPrefs 均为内存态，刷新后恢复默认跟随
+    const FOLLOW_BOARD = '__follow__'   // 目标画板下拉首项哨兵值（画板 id 由 nid() 生成，不会撞）
+    let followBoard = true              // 当前是否跟随画廊（gen form 手动选择时置 false）
+    // 跟随解析：画廊筛选为具体画板 id → 该板；'' 全部 / 'none' 未分组 → ''（未分组，不赋板）
+    function followTargetOf(gb) { return gb && gb !== 'none' ? gb : '' }
+    // 生成入板的最终解析目标——genToCanvas 落板与决策面板目标行统一走这里（手动优先）
+    function resolveTargetBoard() {
+      return followBoard ? followTargetOf(genPrefs.galBoard) : (genPrefs.targetBoard || '')
+    }
 
     // ——— 提示词库（v8）：localStorage 星标 / 最近 / 模板 ———
     // P2-4：模块级内存缓存——GenForm 等组件渲染期不再同步读 localStorage（每次渲染 3 次 → 0 次），
@@ -3743,7 +3763,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           title: '断开后这张图不再衍生自父图（可 Ctrl+Z 撤销）',
         }, ic('unlink'), ' 断开连线') : null,
         edgeChild ? h('button', {
-          onClick: act(() => { store.sel = new Set([edgeChild.id]); if (engineRef.current) engineRef.current.syncTransformer(); store.emit() }),
+          onClick: act(() => { store.sel = new Set([edgeChild.id]); if (engineRef.current) engineRef.current.syncTransformer(); store.emitLight() }),
         }, ic('mouse-pointer-click'), ' 选中子节点') : null,
         target && target.status === 'error' ? h('button', { onClick: retry, disabled: busy }, ic('rotate-ccw'), ' 重试生成') : null,
         // v11.2：灯箱打开为主项，「新标签打开」保留为次项（A-P1-5：画布→灯箱链路）
@@ -4468,6 +4488,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const [galSort, setGalSort] = useState('time')
       const [galFav, setGalFav] = useState(false)
       const [galBoard, setGalBoard] = useState('')   // v10：'' 全部 / 'none' 未分组 / boardId
+      // SPEC-15 ①：画廊画板筛选镜像进 genPrefs——「跟随画廊」的入板解析读这份模块级镜像。
+      // GenForm 只在生图 tab 挂载，画廊 tab 里切筛选时它收不到，必须走这里同步
+      useEffect(() => { genPrefs.galBoard = galBoard }, [galBoard])
       const [galBdCreating, setGalBdCreating] = useState(false)
       const [galBdName, setGalBdName] = useState('')
       // P1-3：画廊多选（InvokeAI 点击语义分层）。galSel 与画布 store.sel 解耦，不污染画布/对比选择
@@ -4485,6 +4508,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const galGhostRef = useRef(null)
       const galClickSuppressRef = useRef(false)   // 拖拽结束后吃掉紧跟的 click，避免误选中
       const galVisIdsRef = useRef([])             // 画廊当前可见完成图的有序 id（Shift 范围选基准）
+      // SPEC-15 ②：批量变体进行中——按钮 busy 态防连点；ref 兜底 setState 异步窗口内的重入
+      const [galVarBusy, setGalVarBusy] = useState(false)
+      const galVarBusyRef = useRef(false)
       // 设置页：Key 内联配置（renderSettingsMode 是内联函数，状态必须挂在顶层）
       const [keyDraft, setKeyDraft] = useState('')
       const [keyVisible, setKeyVisible] = useState(false)
@@ -4645,6 +4671,78 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           }, i * 250)
         })
         notify('开始下载 ' + real.length + ' 张')
+      }
+      // ── SPEC-15 ②：批量变体（画廊多选）——对每张选中完成图串行入队一条变体任务。
+      // 节点创建参照 doEnhance 直连模式：先落 pending（队列可见/可取消），直连 POST /api/sensenova/generate，
+      // reference=该图 src（dataURL 先 persistRef 落盘，失败仍用原 src），prompt=「基于这张图做变体：」+该图提示词，
+      // size/model 沿用该图 params；成功 pending→done 落在原图右侧挂 parentId。单张失败 pending→error 不中断批次，
+      // 计入结尾汇总；进度 toast「批量变体 i/N」。串行 + 张间 250ms 间隔（batchDownload 防拦截同款经验）防限流；
+      // 整批一个撤销步，按钮 busy 态防连点（state 渲染 + ref 判重入）。
+      const batchVariantNodes = async (ids) => {
+        if (galVarBusyRef.current) return
+        const real = (ids || []).map((id) => store.node(id)).filter((n) => n && n.status === 'done' && n.src)
+        if (real.length < 2) { notify('批量变体至少选 2 张完成图'); return }
+        galVarBusyRef.current = true; setGalVarBusy(true)
+        store.pushUndo()
+        const N = real.length
+        let ok = 0, fail = 0
+        for (let i = 0; i < N; i++) {
+          const n = real[i]
+          notify('批量变体 ' + (i + 1) + '/' + N)
+          if (i > 0) await new Promise((res) => setTimeout(res, 250))   // batchDownload 同款间隔防限流
+          const id = nid()
+          const base = String(n.prompt || '').replace(/^💬\s*/, '') || '生成这张图的变化版本，保持风格与构图'
+          const vprompt = '基于这张图做变体：' + base
+          const vsize = (n.params && n.params.size) || sizeForAspect(n.w, n.h)
+          const srcRef = await persistRef(n.src)
+          store.doc.nodes.push({
+            id, type: 'image', status: 'pending', src: '', parentId: n.id,
+            boardId: resolveTargetBoard() || undefined,   // v15.1：变体也跟随归板(与生成同语义)
+            x: n.x + n.w + 60, y: n.y, w: 480, h: 480,
+            prompt: vprompt,
+            params: {
+              model: (n.params && n.params.model) || '',
+              size: vsize,
+              reference: keepShortRef(srcRef || n.src),
+            }, ts: Date.now(), _queuedAt: Date.now(),
+          })
+          store.emit(); autosave()
+          const ac = new AbortController()
+          inflightJobs.set(id, ac)
+          try {
+            const r = await post('/api/sensenova/generate', {
+              prompt: vprompt, size: vsize,
+              model: (n.params && n.params.model) || undefined,
+              reference: srcRef || n.src, persist: true,
+            }, ac.signal)
+            if (isCancelled(id)) { fail++; continue }
+            if (!r.ok || !r.image) throw new Error(r.error || '生成失败')
+            const value = r.image.kind === 'base64' ? 'data:image/png;base64,' + r.image.value : r.image.value
+            if (overInlineLimit(r.image.kind, value)) {
+              throw new Error('返回图 ' + (value.length / 1024 / 1024).toFixed(1) + 'MB 过大且落盘失败，已拒收以免撑爆画布文档')
+            }
+            const im = await loadImg(value)
+            if (isCancelled(id)) { fail++; continue }
+            const fit = nodeFit(im, 480)
+            store.updateNode(id, { status: 'done', src: value, w: fit.w, h: fit.h, error: '', errMsg: '', ts: Date.now() })
+            ok++
+          } catch (e) {
+            const aborted = !!(e && (e.name === 'AbortError' || /abort/i.test(String((e && e.message) || e))))
+            if (aborted || isCancelled(id)) store.updateNode(id, { status: 'error', error: '用户取消', errMsg: '用户取消', _endedAt: Date.now() })
+            else {
+              const msg = String((e && e.message) || e).slice(0, 200)
+              store.updateNode(id, { status: 'error', error: msg, errMsg: msg, _endedAt: Date.now() })
+            }
+            fail++
+          } finally {
+            if (inflightJobs.get(id) === ac) inflightJobs.delete(id)
+          }
+        }
+        notify(ok
+          ? (fail ? ok + ' 张变体完成，' + fail + ' 张失败' : ok + ' 张变体完成')
+          : '批量变体全部失败（' + fail + ' 张）', fail ? 'err' : undefined)
+        galVarBusyRef.current = false; setGalVarBusy(false)
+        force((x) => x + 1)
       }
       const toggleGalFav = (ids, on) => {
         const real = (ids || []).map((id) => store.node(id)).filter(Boolean)
@@ -5004,7 +5102,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             // P2-7：全选（对齐 tldraw/InvokeAI；隐藏节点一并选，可见性不受选中影响）
             e.preventDefault()
             store.sel = new Set(store.doc.nodes.map((n) => n.id))
-            engine.syncTransformer(); store.emit()
+            engine.syncTransformer(); store.emitLight()
           }
           else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
             // P2-7：方向键微调选中节点（1px，Shift=10px）；锁定节点跳过
@@ -5018,7 +5116,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             ns.forEach((n) => store.updateNode(n.id, { x: n.x + dx, y: n.y + dy }))
           }
           else if (e.key === 'Delete' || e.key === 'Backspace') { store.removeSelected() }
-          else if (e.key === 'Escape') { store.sel.clear(); engine.syncTransformer(); store.emit() }
+          else if (e.key === 'Escape') { store.sel.clear(); engine.syncTransformer(); store.emitLight() }
           else if ((e.key === 'f' || e.key === 'F') && !ctrl) { engine.fit() }
         }
         window.addEventListener('keydown', onKey)
@@ -5575,6 +5673,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             engineRef, busy, setBusy, notify,
             anchorInfo,
             keyOk,   // v12：决策面板 blocker 清单（SPEC ①）；队列等待数由 GenForm 面板展开期间从 store 现算
+            galBoard,   // SPEC-15 ①：跟随画廊解析 + 决策面板目标行如实显示（画廊切筛选时 GenForm 重渲染）
             onClearAnchor: () => {
               store.sel = new Set()
               force((n) => n + 1)
@@ -5791,7 +5890,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                   notify('已删除画板「' + b.name + '」，' + inNodes.length + ' 张图回到未分组')
                 }
                 if (galBoard === b.id) setGalBoard('')
-                // SPEC-13 ②：被删画板若是当前「目标画板」，同步回未分组——防 genToCanvas 继续落悬空 id
+                // SPEC-13 ②/SPEC-15 ①：被删画板若是当前「目标画板」/跟随画板，同步回未分组——
+                // 手动路径清 targetBoard；跟随路径 setGalBoard('') 经镜像进 genPrefs.galBoard，防落悬空 id
                 if (genPrefs.targetBoard === b.id) genPrefs.targetBoard = ''
                 autosave(); force((x) => x + 1)
               },
@@ -5906,6 +6006,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               options: [{ value: '', label: '移入画板…' }, { value: 'none', label: '未分组（移出）' }]
                 .concat(boards.map((b) => ({ value: b.id, label: b.name }))),
             }),
+            // SPEC-15 ②：多选 ≥2 张完成图 →「批量变体」（与批量下载动作同排复用 .bt 样式；busy 态防连点）
+            galSelIds.length >= 2 ? h('button', {
+              type: 'button', className: 'bt', disabled: galVarBusy,
+              title: '对选中的完成图逐张入队变体任务（串行防限流，变体图落在各自原图旁）',
+              onClick: () => batchVariantNodes(galSelIds),
+            }, ic('shuffle', 13), galVarBusy ? '变体中…' : '批量变体') : null,
             h('button', { type: 'button', className: 'bt danger', onClick: () => askGalDelete(galSelIds) }, ic('trash-2', 13), '删除'),
             h('button', {
               type: 'button', className: 'bt', title: '清空选择',
@@ -6811,7 +6917,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       { id: 'sensenova-u1.5-fast', label: 'sensenova-u1.5-fast · 真机已验证（文生图/图生图）' },
       { id: 'sensenova-u1.5', label: 'sensenova-u1.5 · 控制台已开通时可用' },
     ]
-    function GenForm({ engineRef, busy, setBusy, notify, anchorInfo, keyOk, onClearAnchor }) {
+    function GenForm({ engineRef, busy, setBusy, notify, anchorInfo, keyOk, galBoard, onClearAnchor }) {
       const [prompt, setPrompt] = useState(genPrefs.prompt || '')
       const [negPrompt, setNegPrompt] = useState(genPrefs.negPrompt || '')
       const [size, setSize] = useState(genPrefs.size || '2048x2048')
@@ -6825,8 +6931,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       // 多参考图：refs = [{src, role, strength}] — 风格 / 角色 / 构图 / 参考
       const [refs, setRefs] = useState(genPrefs.refs || [])
       const [pickerOpen, setPickerOpen] = useState(false)
-      // SPEC-13 ②：目标画板（生成入板路由）——'' = 未分组；genToCanvas 创建节点按它赋 boardId
+      // SPEC-13 ②：目标画板（生成入板路由）——'' = 未分组；genToCanvas 创建节点按它赋 boardId。
+      // SPEC-15 ①：targetBoard 现在是「手动选择」的存底值——默认跟随画廊（follow=true）时，
+      // 实际入板走 resolveTargetBoard()（画廊筛选画板/未分组），targetBoard 不参与解析
       const [targetBoard, setTargetBoard] = useState(genPrefs.targetBoard || '')
+      const [follow, setFollow] = useState(followBoard)   // 跟随画廊态；翻转时同步写回模块级 followBoard（重挂载不丢）
       // ── v12：生成按钮决策面板（SPEC ①：按下之前就知道一切）───
       // hover/focus 按钮包裹层即浮出（无延时+150ms 淡入，<300ms）；disabled 改列 blocker 清单；
       // 队列暂停顶部红条。portal 挂 body 防 .snx-pro container-type 收编与滚动容器裁剪；面板只读。
@@ -6913,7 +7022,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           if (d.model !== undefined) setModel(d.model)
           if (d.seed !== undefined) setSeed(d.seed)
           if (Array.isArray(d.refs)) setRefs(d.refs)
-          if (d.board !== undefined) setTargetBoard(d.board)   // SPEC-13 ②：灯箱「画板」行级回填写目标画板
+          if (d.board !== undefined) {   // SPEC-13 ②：灯箱「画板」行级回填写目标画板；
+            setTargetBoard(d.board)      // SPEC-15 ①：显式回填=手动指定目标，脱离跟随画廊
+            followBoard = false; setFollow(false)
+          }
         }
         window.addEventListener('snx:restoreParams', onRestore)
         return () => window.removeEventListener('snx:restoreParams', onRestore)
@@ -6937,7 +7049,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       useEffect(() => { genPrefs.refs = refs }, [refs])
       useEffect(() => { genPrefs.count = count }, [count])
       useEffect(() => { genPrefs.seed = seed }, [seed])
-      useEffect(() => { genPrefs.targetBoard = targetBoard }, [targetBoard])   // SPEC-13 ②：入板路由偏好实时随行（悬浮条/重绘增强同路生效）
+      useEffect(() => { genPrefs.targetBoard = targetBoard }, [targetBoard])   // SPEC-15 ①：手动目标存底随行（跟随态下入板解析不走它，见 resolveTargetBoard）
       const pickRef = (node) => {
         if (refs.length >= 4) return
         setRefs([...refs, { src: node.src, role: 'reference', strength: 0.7, fromId: node.id }])
@@ -7004,11 +7116,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         if (!p) return model || '默认'
         return (p.label.split('·')[0] || p.label).trim() || p.label
       })()
-      // SPEC-13 ②：决策面板「目标」行如实显示所选——选板显示画板名，未分组显示未分组；
-      // 画板已被删（悬空 id）按未分组显示（删板路径会同步清偏好，这里只是兜底）
+      // SPEC-13 ②/SPEC-15 ①：决策面板「目标」行如实显示当前解析结果——
+      // 跟随态：「跟随画廊:画板「X」」/「跟随画廊:未分组」（随 galBoard 实时变）；
+      // 手动态：画板名 / 未分组（画廊再切不覆盖）。悬空 id 按未分组显示（删板路径会同步清，这里兜底）
       const decideTarget = (() => {
-        if (!targetBoard) return '未分组'
-        const b = (store.doc.boards || []).find((x) => x.id === targetBoard)
+        const eff = follow ? followTargetOf(galBoard) : targetBoard
+        const b = eff ? (store.doc.boards || []).find((x) => x.id === eff) : null
+        if (follow) return b ? '跟随画廊:画板「' + b.name + '」' : '跟随画廊:未分组'
         return b ? '画板「' + b.name + '」' : '未分组'
       })()
 
@@ -7023,7 +7137,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           genPrefs.size = size; genPrefs.model = model; genPrefs.count = count
           genPrefs.seed = seed; genPrefs.quality = quality; genPrefs.styleId = styleId
           genPrefs.refs = refs
-          genPrefs.targetBoard = targetBoard   // SPEC-13 ②：入板路由随批落地
+          genPrefs.targetBoard = targetBoard   // SPEC-15 ①：手动选择存底；实际落板由 genToCanvas 按跟随/手动解析（resolveTargetBoard）走
           addRecent(p)
           await genToCanvas(engine, {
             prompt: p + styleSuffix(), negative: negPrompt || undefined, size: applyQuality(size, quality), model,
@@ -7296,7 +7410,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             }, size) : null,
           ),
         ),
-        // ── 目标画板（SPEC-13 ②：生成入板路由——生成节点落所选画板，未分组=不归板）──
+        // ── 目标画板（SPEC-13 ②/SPEC-15 ①：生成入板路由——默认跟随画廊当前筛选，手动选择优先，未分组=不归板）──
         h('div', { className: 'snx-gen-styles' },
           h('div', { className: 'lb' },
             h('span', { className: 'ti' }, ic('folder')),
@@ -7304,14 +7418,24 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             h('div', { style: { flex: 1 } }),
           ),
           h(SnxSelect, {
-            value: targetBoard,
-            onChange: (v) => { setTargetBoard(v); genPrefs.targetBoard = v },
+            // SPEC-15 ①：跟随态值=哨兵 FOLLOW_BOARD（按钮回显首项「跟随画廊:…」标签）；
+            // 手动态值=targetBoard（按钮回显所选画板/未分组），首项变「回到跟随画廊」一键
+            value: follow ? FOLLOW_BOARD : targetBoard,
+            onChange: (v) => {
+              if (v === FOLLOW_BOARD) { followBoard = true; setFollow(true); return }   // 「回到跟随画廊」
+              followBoard = false; setFollow(false)   // 手动选择（含未分组）→ 脱离跟随，画廊再切不覆盖
+              setTargetBoard(v); genPrefs.targetBoard = v
+            },
             width: '100%',
             popWidth: 240,
-            title: '生成结果落入的画板；未分组 = 不归板（悬浮条生成/重绘增强等同样按此落板）',
-            options: [{ value: '', label: '未分组' }].concat(
-              (store.doc.boards || []).map((b) => ({ value: b.id, label: b.name })),
-            ),
+            title: '生成结果落入的画板：默认跟随画廊当前画板筛选（全部/未分组=不归板）；手动选择后以手动为准，下拉首项可回到跟随画廊（悬浮条生成/重绘增强等同样按解析落板）',
+            options: (() => {
+              const fB = follow ? (store.doc.boards || []).find((x) => x.id === followTargetOf(galBoard)) : null
+              return [
+                { value: FOLLOW_BOARD, label: follow ? (fB ? '跟随画廊:画板「' + fB.name + '」' : '跟随画廊:未分组') : '回到跟随画廊' },
+                { value: '', label: '未分组' },
+              ].concat((store.doc.boards || []).map((b) => ({ value: b.id, label: b.name })))
+            })(),
           }),
         ),
         // ── 模型 + 质量 + 张数 ──
@@ -7390,7 +7514,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 h('div', { key: 'm', className: 'snx-gen-decide-r' }, ic('image', 13),
                   h('span', null, '模型 ', h('b', null, decideModel), ' · ', h('b', null, applyQuality(size, quality)))),
                 h('div', { key: 't', className: 'snx-gen-decide-r' }, ic('folder', 13),
-                  h('span', null, '目标：', h('b', null, decideTarget))),   // SPEC-13 ②：如实显示所选画板/未分组
+                  h('span', null, '目标：', h('b', null, decideTarget))),   // SPEC-15 ①：如实显示解析结果（跟随画廊:画板「X」/跟随画廊:未分组/手动画板/未分组）
                 h('div', { key: 'q', className: 'snx-gen-decide-r' }, ic('list-ordered', 13),
                   decideQueueLen > 0
                     ? h('span', null, '队列等待 ', h('b', null, String(decideQueueLen)), ' 个任务')
