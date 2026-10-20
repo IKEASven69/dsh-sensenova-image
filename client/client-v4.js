@@ -4009,7 +4009,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     // 两处 UI 各自持有按钮三/四态 state）───
     // 行级回填字段的中文名（toast 用，与工作台 onRestoreField 文案一致）
     function snxFieldLabel(field) {
-      return { prompt: '提示词', model: '模型', size: '尺寸', seed: '种子' }[field] || '参数'
+      return { prompt: '提示词', model: '模型', size: '尺寸', seed: '种子', board: '目标画板' }[field] || '参数'
     }
     // 对话灯箱参数清单行级回填——与工作台灯箱行级回填（Workbench onRestoreField）同语义：
     // 只带对应字段的 detail 广播 snx:restoreParams，GenForm 侧只覆盖到场字段、不动其余表单项；
@@ -4021,10 +4021,14 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       else if (field === 'model') detail.model = String(val || '')
       else if (field === 'size') detail.size = String(val || '')
       else if (field === 'seed') detail.seed = val
+      else if (field === 'board') detail.board = String(val || '')
       if (detail.prompt !== undefined) genPrefs.prompt = detail.prompt
       if (detail.model !== undefined) genPrefs.model = detail.model
       if (detail.size !== undefined) genPrefs.size = detail.size
       if (detail.seed !== undefined) genPrefs.seed = detail.seed
+      // v15.1：画板行级回填——写 genPrefs.targetBoard 且脱离跟随画廊（followBoard 是模块级内存态,
+      // 不置 false 则 GenForm 挂载时跟随语义会覆盖刚回填的画板——第五任审计「跨面回填丢画板」根因）
+      if (detail.board !== undefined) { genPrefs.targetBoard = detail.board; followBoard = false }
       try { window.dispatchEvent(new CustomEvent('snx:restoreParams', { detail })) } catch { }
       return snxFieldLabel(field)
     }
@@ -5319,7 +5323,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         genPrefs.prompt = detail.prompt; genPrefs.negPrompt = detail.negPrompt
         genPrefs.size = detail.size; genPrefs.model = detail.model
         genPrefs.seed = detail.seed; genPrefs.refs = detail.refs
-        if (detail.board !== undefined) genPrefs.targetBoard = detail.board
+        if (detail.board !== undefined) { genPrefs.targetBoard = detail.board; followBoard = false }
         window.dispatchEvent(new CustomEvent('snx:restoreParams', { detail }))
         setLightbox(null)
         setFsCanvas(false)   // 从全屏画布右键发起时退出全屏，否则盖住生图 tab

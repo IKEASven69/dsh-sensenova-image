@@ -434,3 +434,12 @@ v15 工作流(归板跟随/批量变体/导出默认核对)三批完成;验收 4
 **测试基建两坑**:①linktest 轮式缩放导航到任意世界点**不收敛**(wheel 方向/幅度/相机联动都难控),改为**直接 PUT doc.camera 把目标点放到画布中心+reload**——确定性,一次到位;②linktest 的 mid 屏幕坐标必须用缩放后的**最新相机**重算(陈旧 GEO 在缩放后落点全偏);③Konva.stages 里可能混入缺 getLayers 的死对象,取 stage 要过滤。
 
 验证:full 门禁 0 违规;linktest 5/5(确定性相机下);重载画布双击待第五任审计复测。恢复脚本沉淀:tmp/cleanup/restore-canvas.js(备份快照+rev 处理的画布还原范式)。
+
+## v15.2:跨面画板回填修复(2026-10-20,第五任审计新发现 1)
+
+第五任审计 9/10 真、1 部分——唯一实质缺口:**画廊路径开灯箱的行级「画板」回填在 GenForm 未挂载时丢事件**,且跟随语义覆盖 genPrefs 存底。根修三处:
+1. `snxRestoreField` 补 board 分支(此前只有 prompt/model/size/seed)——写 genPrefs.targetBoard + **followBoard=false**(脱离跟随,防挂载时跟随覆盖刚回填的画板);
+2. 工作台整套回填(onRestoreParams)同样补 followBoard=false;
+3. 字段中文表补「目标画板」。
+
+验证:full 门禁 0 违规 + linktest 5/5。第五任其余发现(全部低危已记录):双击 400ms 窗弱环境敏感性(根修成立,窗宽自适应候选)、极小缩放短边被端口命中圆吞没(设计张力)、批量条跨筛选计数提示、E2E 脚本未入库(tmp/audit-v15 可复用)。
