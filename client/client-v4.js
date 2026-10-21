@@ -2582,6 +2582,42 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       try { window.dispatchEvent(new CustomEvent('snx:queuePaused', { detail: v })) } catch { }
     }
 
+    // ——— SPEC-16 一：生成耗时样本与「预计 ~Xs」———
+    // snxGenPost = 客户端直连 POST /api/sensenova/generate 的唯一收口（工作台生成 runOne、
+    // 卡片同参数重抽 snxRerollDirect、画廊批量变体 batchVariantNodes 三处共用）：计一次墙钟
+    // 时长，HTTP ok（=服务端已落盘、节点将落 done）才计样本。错误/取消不计——SPEC-16 §一
+    // 定义「样本=最近 5 次 done 的 POST 墙钟时长」，秒回的 4xx 与用户中途取消会把均值拉到失真。
+    // 注意：对话工具路径（sensenova_generate_image）在服务端 execute 直调上游、不经任何客户端
+    // POST，该路径的耗时客户端采不到样本（本插件客户端侧无共通收口，见本轮报告）。
+    const SNX_DUR_KEY = 'snxAvgDur'
+    function snxRecordGenDur(ms) {
+      try {
+        if (!Number.isFinite(ms) || ms <= 0) return
+        let arr = []
+        try { arr = JSON.parse(localStorage.getItem(SNX_DUR_KEY) || '[]') } catch { }
+        if (!Array.isArray(arr)) arr = []
+        arr.push(Math.round(ms))
+        while (arr.length > 5) arr.shift()   // 环形：只留最近 5 次
+        localStorage.setItem(SNX_DUR_KEY, JSON.stringify(arr))
+      } catch { }   // localStorage 不可用（隐私模式等）静默跳过，不碰生成主流程
+    }
+    // 历史均值（秒，取整）；无有效样本返回 0，展示层据此不显示「预计」行
+    function snxAvgGenDurSec() {
+      try {
+        const arr = JSON.parse(localStorage.getItem(SNX_DUR_KEY) || '[]')
+        const nums = Array.isArray(arr) ? arr.filter((n) => Number.isFinite(n) && n > 0) : []
+        if (!nums.length) return 0
+        return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length / 1000)
+      } catch { return 0 }
+    }
+    function snxGenPost(body, signal) {
+      const t0 = Date.now()
+      return post('/api/sensenova/generate', body, signal).then((r) => {
+        if (r && r.ok) snxRecordGenDur(Date.now() - t0)
+        return r
+      })
+    }
+
     async function runOne(nodeId, o) {
       await waitIfPaused()
       // v11.2：暂停苏醒后先查取消——等待期间被用户取消（error/用户取消）的任务不再复活成 running，不发请求
@@ -2593,7 +2629,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       try {
         // 构造要发送的 refs：dataURL/内联直接传，远程 URL 简化只传 refs 数组（服务端会解析）
         const refsPayload = (refs || []).map((r) => ({ src: r.src, role: r.role || 'reference', strength: r.strength ?? 0.7 }))
-        const r = await post('/api/sensenova/generate', {
+        const r = await snxGenPost({
           prompt, size, model: model || undefined,
           negative: negative || undefined,
           seed: typeof seed === 'number' && seed >= 0 ? seed : undefined,
@@ -2662,15 +2698,17 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       // 并发布局：n>4 时改用 4 列网格，避免画布太宽
       const cols = Math.min(n, 4)
       const cellW = 540, cellH = 540
+      // SPEC-13 ②/SPEC-15 ①：生成入板路由按「当前解析目标」落板——跟随画廊=画廊筛选画板，
+      // 手动=表单所选；未分组（''）不赋值。表单/悬浮条/重绘增强/蒙版重绘等所有 genToCanvas 入口同路生效。
+      // SPEC-16 三：入板即刷新该板 lastUsed（画板列表按最近使用倒序渲染）
+      const targetB = resolveTargetBoard() || undefined
       for (let i = 0; i < n; i++) {
         const id = nid()
         ids.push(id)
         const col = i % cols, row = Math.floor(i / cols)
         store.doc.nodes.push({
           id, type: 'image', status: 'pending', src: '', parentId,
-          // SPEC-13 ②/SPEC-15 ①：生成入板路由按「当前解析目标」落板——跟随画廊=画廊筛选画板，
-          // 手动=表单所选；未分组（''）不赋值。表单/悬浮条/重绘增强/蒙版重绘等所有 genToCanvas 入口同路生效
-          boardId: resolveTargetBoard() || undefined,
+          boardId: targetB,
           x: Math.round(bx + col * cellW), y: Math.round(by + row * cellH), w: 480, h: 480,
           prompt, params: {
             size, model,
@@ -2682,6 +2720,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           }, ts: Date.now(), _queuedAt: Date.now(),   // v12：入队时刻（队列详情耗时两段，ts 在 done 时会被完成时间覆盖）
         })
       }
+      if (targetB) touchBoard(targetB)   // SPEC-16 三：入板即刷新该板最近使用（随下方 autosave 持久化）
       store.emit(); autosave()
       // 并发跑（已 Promise.allSettled），但单图失败不再拖垮其他
       await Promise.allSettled(ids.map((id) => runOne(id, { prompt, size, model, reference, refs: effRefs, upscale, negative, seed })))
@@ -3309,6 +3348,19 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     function resolveTargetBoard() {
       return followBoard ? followTargetOf(genPrefs.galBoard) : (genPrefs.targetBoard || '')
     }
+    // SPEC-16 三：画板最近使用——节点创建入板/移入时刷新该板 lastUsed（存 boards[].lastUsed，
+    // 随 doc.boards 走 autosave 整文档持久化，snapshot JSON.stringify 同样覆盖撤销）；
+    // 画板列表渲染统一按它倒序，无 lastUsed 的板沉底保持原相对序
+    function touchBoard(boardId) {
+      if (!boardId) return
+      const b = (store.doc.boards || []).find((x) => x.id === boardId)
+      if (b) b.lastUsed = Date.now()
+    }
+    // 渲染专用：返回 lastUsed 倒序的副本（Array.sort 稳定排序，缺 lastUsed 视为 0 沉底），
+    // 不改 store.doc.boards 原数组顺序
+    function boardsByRecent() {
+      return (store.doc.boards || []).slice().sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0))
+    }
 
     // ——— 提示词库（v8）：localStorage 星标 / 最近 / 模板 ———
     // P2-4：模块级内存缓存——GenForm 等组件渲染期不再同步读 localStorage（每次渲染 3 次 → 0 次），
@@ -3646,6 +3698,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       }, [pend.length])
       if (!wrapEl || !pend.length) return null
       const c = store.doc.camera
+      // SPEC-16 一（顺手项）：工作台 pending 悬浮层同加「预计 ~Xs」，数据源与对话卡同一份样本
+      const est = snxAvgGenDurSec()
       return h('div', null, pend.map((n) => {
         const sx = n.x * c.scale + c.x
         const sy = n.y * c.scale + c.y
@@ -3656,7 +3710,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             : n.status === 'running' ? '生成中' : '排队中'
         return h('div', { className: 'snx-pending-ov', key: n.id, style: { left: sx, top: sy, width: Math.max(40, n.w * c.scale), height: Math.max(40, n.h * c.scale) } },
           h('div', { className: 'ring' }),
-          h('span', { className: 'txt' }, label + ' · ' + elapsed + 's'),
+          h('span', { className: 'txt' }, label + ' · ' + elapsed + 's' + (est > 0 ? ' · 预计 ~' + est + 's' : '')),
         )
       }))
     }
@@ -4071,7 +4125,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       if (info.size) body.size = String(info.size)
       if (info.model) body.model = String(info.model)
       if (typeof info.seed === 'number' && info.seed >= 0) body.seed = info.seed
-      return post('/api/sensenova/generate', body)
+      return snxGenPost(body)
         .then((r) => {
           if (!r.ok || !r.image || !r.image.value) throw new Error(r.error || '服务端未返回图片')
           const value = r.image.kind === 'base64' ? 'data:image/png;base64,' + r.image.value : r.image.value
@@ -4249,10 +4303,14 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         const timer = setInterval(() => setSec(Math.floor((Date.now() - t0) / 1000)), 500)
         return () => clearInterval(timer)
       }, [])
+      // SPEC-16 一：「预计 ~Xs」=历史生成均值（挂载时读一次即可，样本在生成期间不会变）；
+      // 无样本（首次使用）时不显示预计，只显示已耗时
+      const est = snxAvgGenDurSec()
       return h('div', { className: 'snx-tv' },
         h('div', { className: 'snx-tv-run snx-tv-wait' },
           h('span', { className: 'ring', 'aria-hidden': true }),
-          h('span', null, 'SenseNova 生成中 · 已 ', h('b', null, sec + 's')),
+          h('span', null, 'SenseNova 生成中 · 已 ', h('b', null, sec + 's'),
+            est > 0 ? ' · 预计 ~' + est + 's' : null),
         ),
         h('div', { className: 'snx-tv-ws' }, '完成后图片直接显示在这里，可回填参数 / 设为参考图 / 同参数重抽'),
       )
@@ -4515,6 +4573,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       // SPEC-15 ②：批量变体进行中——按钮 busy 态防连点；ref 兜底 setState 异步窗口内的重入
       const [galVarBusy, setGalVarBusy] = useState(false)
       const galVarBusyRef = useRef(false)
+      // SPEC-16 四：批量导出进行中——同批量变体的 busy 态防连点经验
+      const [galExpBusy, setGalExpBusy] = useState(false)
+      const galExpBusyRef = useRef(false)
       // 设置页：Key 内联配置（renderSettingsMode 是内联函数，状态必须挂在顶层）
       const [keyDraft, setKeyDraft] = useState('')
       const [keyVisible, setKeyVisible] = useState(false)
@@ -4582,6 +4643,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         if (!real.length) return
         store.pushUndo()
         real.forEach((n) => { if (boardId === 'none') delete n.boardId; else n.boardId = boardId })
+        if (boardId && boardId !== 'none') touchBoard(boardId)   // SPEC-16 三：移入即刷新该板最近使用（拖拽/批量/右键菜单同路）
         store.emit(); autosave(); force((x) => x + 1)
         const b = (store.doc.boards || []).find((x) => x.id === boardId)
         notify(boardId === 'none'
@@ -4676,6 +4738,38 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         })
         notify('开始下载 ' + real.length + ' 张')
       }
+      // ── SPEC-16 四：批量导出（画廊多选 ≥2 done）——逐张下载，每张走与灯箱单张导出相同的
+      // 嵌入元数据管线（imageToBlob PNG + sensenova tEXt：提示词/模型/尺寸/种子，读回验证过的既有实现）。
+      // 恒定嵌入：meta 固定传节点本体，不读灯箱导出面板的「嵌入元数据」开关（exportMeta 只是单张的偏好）。
+      // 串行 + 张间 250ms 间隔（batchDownload 防拦截同款经验）；文件名同批量下载=提示词前 30 字+序号；
+      // 单张失败不中断批次计入结尾汇总；toast 进度（i/N）+ 结尾汇总；busy 态防连点。
+      const batchExportNodes = async (ids) => {
+        if (galExpBusyRef.current) return
+        const real = (ids || []).map((id) => store.node(id)).filter((n) => n && n.status === 'done' && n.src)
+        if (real.length < 2) { notify('批量导出至少选 2 张完成图'); return }
+        galExpBusyRef.current = true; setGalExpBusy(true)
+        const N = real.length
+        let ok = 0, fail = 0
+        for (let i = 0; i < N; i++) {
+          const n = real[i]
+          notify('批量导出 ' + (i + 1) + '/' + N)
+          if (i > 0) await new Promise((res) => setTimeout(res, 250))   // batchDownload 同款间隔防拦截
+          try {
+            // 与灯箱单张导出 doExport 同管线：imageToBlob(src,'png',…,meta=节点)——meta 传节点即恒定嵌入 tEXt
+            const blob = await imageToBlob(n.src, 'png', 92, n)
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = ((String(n.prompt || '').replace(/^💬\s*/, '').slice(0, 30).replace(/[\\/:*?"<>|]/g, '')) || 'sensenova') + '-' + (i + 1) + '.png'
+            a.click(); setTimeout(() => URL.revokeObjectURL(url), 400)   // v16.1:立即 revoke 偶发触发 Chromium 重启下载(第六任审计发现 1)
+            ok++
+          } catch { fail++ }
+        }
+        notify(ok
+          ? (fail ? '批量导出完成：' + ok + ' 张成功（含元数据），' + fail + ' 张失败' : '批量导出完成：' + ok + ' 张（均含元数据）')
+          : '批量导出全部失败（' + fail + ' 张）', fail ? 'err' : undefined)
+        galExpBusyRef.current = false; setGalExpBusy(false)
+      }
       // ── SPEC-15 ②：批量变体（画廊多选）——对每张选中完成图串行入队一条变体任务。
       // 节点创建参照 doEnhance 直连模式：先落 pending（队列可见/可取消），直连 POST /api/sensenova/generate，
       // reference=该图 src（dataURL 先 persistRef 落盘，失败仍用原 src），prompt=「基于这张图做变体：」+该图提示词，
@@ -4699,9 +4793,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           const vprompt = '基于这张图做变体：' + base
           const vsize = (n.params && n.params.size) || sizeForAspect(n.w, n.h)
           const srcRef = await persistRef(n.src)
+          const targetB = resolveTargetBoard() || undefined
           store.doc.nodes.push({
             id, type: 'image', status: 'pending', src: '', parentId: n.id,
-            boardId: resolveTargetBoard() || undefined,   // v15.1：变体也跟随归板(与生成同语义)
+            boardId: targetB,   // v15.1：变体也跟随归板(与生成同语义)；SPEC-16 三：入板同刷新最近使用
             x: n.x + n.w + 60, y: n.y, w: 480, h: 480,
             prompt: vprompt,
             params: {
@@ -4710,11 +4805,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               reference: keepShortRef(srcRef || n.src),
             }, ts: Date.now(), _queuedAt: Date.now(),
           })
+          if (targetB) touchBoard(targetB)   // SPEC-16 三：入板即刷新该板最近使用
           store.emit(); autosave()
           const ac = new AbortController()
           inflightJobs.set(id, ac)
           try {
-            const r = await post('/api/sensenova/generate', {
+            const r = await snxGenPost({
               prompt: vprompt, size: vsize,
               model: (n.params && n.params.model) || undefined,
               reference: srcRef || n.src, persist: true,
@@ -5457,11 +5553,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             setLightbox(list[(i + dir + list.length) % list.length])
           },
           nav: { idx: store.doc.nodes.filter((nn) => nn.status === 'done' && nn.src).findIndex((nn) => nn.id === lightbox.id), total: store.doc.nodes.filter((nn) => nn.status === 'done' && nn.src).length },
-          boards: store.doc.boards || [],
+          boards: boardsByRecent(),   // SPEC-16 三：灯箱画板下拉按最近使用倒序
           onChangeBoard: (n, boardId) => {
             store.pushUndo()   // P1-10：画板归属可撤销（此前绕过 undo）
             if (boardId) n.boardId = boardId
             else delete n.boardId
+            if (boardId) touchBoard(boardId)   // SPEC-16 三：灯箱移入即刷新该板最近使用
             store.emit()   // v11.2：补 emit——画廊/画布同步重渲染
             autosave(); force((x) => x + 1)
             const b = (store.doc.boards || []).find((x) => x.id === boardId)
@@ -5609,7 +5706,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         // ─── P1-3：画廊右键菜单（单选/多选两套，portal 挂 body，外点关闭）───
         galMenu ? h(GalContextMenu, {
           menu: galMenu,
-          boards: store.doc.boards || [],
+          boards: boardsByRecent(),   // SPEC-16 三：右键「移入画板」子列表按最近使用倒序
           selIds: [...galSel],
           onClose: () => setGalMenu(null),
           onOpenBoardList: () => setGalMenu((m) => (m ? Object.assign({}, m, { boardList: true }) : m)),
@@ -5811,6 +5908,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         const [favOnly, setFavOnly] = [galFav, setGalFav]
         const [boardFilter, setBoardFilter] = [galBoard, setGalBoard]
         const boards = store.doc.boards || (store.doc.boards = [])
+        const boardsRecent = boardsByRecent()   // SPEC-16 三：chips/移入下拉按最近使用倒序渲染（无 lastUsed 沉底保持原序）
         const [bdCreating, setBdCreating] = [galBdCreating, setGalBdCreating]
         const [bdName, setBdName] = [galBdName, setGalBdName]
         const createBoard = () => {
@@ -5856,7 +5954,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               onClick: () => setGalBoard('none'),
               title: '拖图到这里移出画板',
             }, '未分组'),
-            boards.map((b) => h('button', {
+            boardsRecent.map((b) => h('button', {
               key: b.id, className: 'chip' + (boardFilter === b.id ? ' on' : '') + (galDragOver === b.id ? ' droptgt' : ''), type: 'button',
               'data-galboard': b.id,
               onClick: () => setGalBoard(b.id),
@@ -6008,7 +6106,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               value: '', width: 132,
               onChange: (v) => moveNodesToBoard(galSelIds, v),
               options: [{ value: '', label: '移入画板…' }, { value: 'none', label: '未分组（移出）' }]
-                .concat(boards.map((b) => ({ value: b.id, label: b.name }))),
+                .concat(boardsRecent.map((b) => ({ value: b.id, label: b.name }))),
             }),
             // SPEC-15 ②：多选 ≥2 张完成图 →「批量变体」（与批量下载动作同排复用 .bt 样式；busy 态防连点）
             galSelIds.length >= 2 ? h('button', {
@@ -6016,6 +6114,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               title: '对选中的完成图逐张入队变体任务（串行防限流，变体图落在各自原图旁）',
               onClick: () => batchVariantNodes(galSelIds),
             }, ic('shuffle', 13), galVarBusy ? '变体中…' : '批量变体') : null,
+            // SPEC-16 四：多选 ≥2 张完成图 →「批量导出」（与批量变体/删除同排复用 .bt 样式；busy 态防连点）——
+            // 逐张走灯箱单张导出的嵌入元数据管线（PNG tEXt 恒定嵌入），250ms 间隔防拦截
+            galSelIds.length >= 2 ? h('button', {
+              type: 'button', className: 'bt', disabled: galExpBusy,
+              title: '逐张导出选中的完成图为 PNG，每张嵌入提示词/参数元数据（tEXt），间隔 250ms 防拦截',
+              onClick: () => batchExportNodes(galSelIds),
+            }, ic('package', 13), galExpBusy ? '导出中…' : '批量导出') : null,
             h('button', { type: 'button', className: 'bt danger', onClick: () => askGalDelete(galSelIds) }, ic('trash-2', 13), '删除'),
             h('button', {
               type: 'button', className: 'bt', title: '清空选择',
@@ -6244,7 +6349,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           force((x) => x + 1)
         }
         // 画廊池：画板筛选（'' 全部 / 'none' 未分组 / boardId）+ 池子扩大到 60 张
-        const boards = store.doc.boards || []
+        const boards = boardsByRecent()   // SPEC-16 三：画板筛选下拉按最近使用倒序（本函数仅渲染消费）
         let pool = allDone
         if (cmpBoard === 'none') pool = pool.filter((n) => !n.boardId)
         else if (cmpBoard) pool = pool.filter((n) => n.boardId === cmpBoard)
@@ -7438,7 +7543,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               return [
                 { value: FOLLOW_BOARD, label: follow ? (fB ? '跟随画廊:画板「' + fB.name + '」' : '跟随画廊:未分组') : '回到跟随画廊' },
                 { value: '', label: '未分组' },
-              ].concat((store.doc.boards || []).map((b) => ({ value: b.id, label: b.name })))
+              ].concat(boardsByRecent().map((b) => ({ value: b.id, label: b.name })))   // SPEC-16 三：按最近使用倒序
             })(),
           }),
         ),
@@ -8279,7 +8384,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           const url = URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url; a.download = (node && node.id || 'snx') + '.' + exportFmt
-          a.click(); URL.revokeObjectURL(url)
+          a.click(); setTimeout(() => URL.revokeObjectURL(url), 400)   // v16.1:立即 revoke 偶发触发 Chromium 重启下载(第六任审计发现 1)
           setExportOpen(false)
           notify && notify('已导出 ' + a.download)
         } catch (e) {
