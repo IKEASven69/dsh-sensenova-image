@@ -443,3 +443,46 @@ v15 工作流(归板跟随/批量变体/导出默认核对)三批完成;验收 4
 3. 字段中文表补「目标画板」。
 
 验证:full 门禁 0 违规 + linktest 5/5。第五任其余发现(全部低危已记录):双击 400ms 窗弱环境敏感性(根修成立,窗宽自适应候选)、极小缩放短边被端口命中圆吞没(设计张力)、批量条跨筛选计数提示、E2E 脚本未入库(tmp/audit-v15 可复用)。
+
+## v16:资产生产力轮——等待预估 / 乱码节点清理 / 画板最近使用排序 / 批量导出(2026-10-20 ~ 10-21,两批次工作流交付)
+
+> 本章由文档同步会话据两批改动报告写成,关键事实已在本轮做静态复核(命令与结果见「怎么验证的」)。规格 `SPEC-16.md`(原型豁免:全部为既有表面小增量;验收条目已在 SPEC 内逐条标注 ✅ 与 E2E 预分配编号)。**两批全部只改 client/client-v4.js,服务端零改动、无 git 操作;全部为静态交付:浏览器/E2E 未跑(纪律归验收员)。改动在工作树未 commit(`git status --short` = ` M client/client-v4.js`,HEAD=20f267d=SPEC-16 规格提交)。**
+
+### 做了什么
+
+**批次1(SPEC-16 §一 等待预估 + §二 乱码节点)**
+
+- **snxGenPost 收口**(client-v4.js:2613-2618,设计注释 :2585-2591):客户端三处直连 POST /api/sensenova/generate 的唯一收口——工作台 runOne(调用 :2632)、卡片同参数重抽 snxRerollDirect(:4123,调用 :4128)、画廊批量变体 batchVariantNodes(:4779,调用 :4813);grep 确认客户端仅剩 :2615 一处裸 post('/api/sensenova/generate'),其余命中全是注释,无重复计数。
+- **样本协议**:每次请求计一次墙钟,HTTP ok(=服务端已落盘、节点将落 done)才写样本(snxRecordGenDur :2593-2602);localStorage 键 `snxAvgDur`(:2592)存环形数组(超 5 shift,只留最近 5 次,ms);`snxAvgGenDurSec()`(:2605-2611)取整秒均值,无样本返回 0。**有意偏差(代码注释 :2588-2589 与本章均注明)**:ask 原文写样本记「done 或 error」,但 SPEC-16 §一明文「样本=最近 5 次 done 的 POST 墙钟时长」,且秒回的 4xx 与用户中途取消会把均值拉到失真——按 SPEC 执行,只记 done 不记 error。
+- **展示两处**:对话卡 SnxToolPending(:4299)pending 行追加「· 预计 ~Xs」(:4313,est 挂载时读一次,:4306-4307),无样本(est=0)不显示;工作台 PendingOverlay(:3690)顺手同加(:3702/:3713),与对话卡同一份样本。
+- **对话工具路径不覆盖(如实)**:sensenova_generate_image 工具在服务端 execute 直调上游(src/index.ts:848 起 execute,callImagesGenerations :869),不经过任何客户端 POST——客户端采不到该路径的 POST 墙钟;覆盖须改服务端(本轮禁区)或在客户端观测 tool-call→tool-result 墙钟(含宿主排队开销、非 POST 墙钟),均超本轮范围,已写入代码注释(:2589-2591)。
+- **§二 乱码节点:未写自动清理代码(ask 允许 deferred),判定与移除步骤移交验收员/主会话**。判定(画布文档只读检查):唯一确定乱码节点 id=**mv6mublabhbmv**(status=done,parentId 空;去💬后可读中英文占比 0.52<0.6(报告数字,本轮未复算该占比)、37 个 U+FFFD、[�/◆] 最长连续 7——U+FFFD 数与连跑数本轮已复核吻合;残余仅 CP1252 型 mojibake+零散 ASCII 碎片(v4/ChatGPT $200//Claude $200//SemiAnalysis),无可读提示词内容);无任何节点 parentId=mv6mublabhbmv(无断链风险,无需置空)。保留项:**mv5fl7a3mo0zw**(done)英文主体完全可读但嵌 21 个 U+FFFD(最长连跑 8,本轮从备份复核吻合),属部分损坏非「无可读信息」,按「只删确定项」留待主会话裁量。移除步骤(API+rev,改前备份):a) GET /api/sensenova/canvas 存全量 JSON 备份快照(含 doc+rev);b) 紧接 PUT 前 re-GET 取最新 rev;c) PUT body={doc:<去掉该节点的完整 doc>, rev:<该 rev>}(服务端 src/index.ts:623-628 校验 rev,不符回 409 带最新 doc+rev,重新套用后重试);d) 验证:GET 后节点数 7→6、无该 id、其余节点逐字节不变。
+- **【文档同步会话复核 2026-10-21 深夜:该删除已被执行——验收员勿重复执行】**:实况存储 `%USERPROFILE%\.dsh\storages\` 下已有备份快照 `dsh-sensenova-image-canvas.backup-spec16-20261021.json`(mtime 2026-10-21 22:39,**7 节点,rev=567**,与批次报告判定数字逐项吻合:mv6mublabhbmv done/parentId 空/37 U+FFFD/最长连跑 7/无子节点;mv5fl7a3mo0zw 21 U+FFFD/连跑 8);实况 `dsh-sensenova-image-canvas.json`(22:49,rev=612)已无 mv6mublabhbmv,**且 mv5fl7a3mo0zw 也已移除**(报告原留裁量,裁量结果=删);其余 5 节点与备份逐节点 JSON 深比较全部 identical,boards/camera 未动、无新增节点。执行者身份与中间 rev 递增(567→612)归属本文档会话无法确认,验收以实况为准。
+
+**批次2(SPEC-16 §三 画板最近使用排序 + §四 批量导出)**
+
+- **touchBoard()/boardsByRecent()** 两个工厂级助手(:3354-3358/:3361-3363,紧邻 resolveTargetBoard :3348):入板/移入四处刷新该板 `boards[].lastUsed=Date.now()`——genToCanvas 落板(:2723)、批量变体建节点(:4808)、moveNodesToBoard(:4646,chips 拖拽/画廊批量下拉/右键菜单三路共用)、灯箱 onChangeBoard(:5561);随 doc.boards 经 autosave 整文档 PUT 自动持久化(v14 rev 协议照走),undo/redo 快照(JSON.stringify(doc))天然覆盖。boardsByRecent 为渲染专用(:3362,`slice().sort` 副本,lastUsed 倒序稳定排序、缺 lastUsed 视为 0 沉底保持原相对序,不改存储数组),6 处列表全部接入(5 个代码点,画廊 chips 与批量移入下拉共用 :5911 的 boardsRecent):画廊 chips+批量移入下拉(:5911)、画廊右键「移入画板」子列表(:5709)、表单目标下拉(:7546)、灯箱画板下拉(:5556)、对比页画板筛选下拉(:6352)——ask 点名三处全改,另 3 处同词表表面对齐同序,避免同一列表两种排序。
+- **batchExportNodes**(:4746-4778)+ 批量条「批量导出」按钮(:6122-6126,galSelIds≥2 出现,与批量变体/删除同排复用 .bt 样式+package 图标,busy 态 disabled):串行逐张走与灯箱单张导出同一 `imageToBlob(src,'png',92,node)` 嵌入元数据管线(sensenova tEXt 含 prompt/model/size/seed,v12 读回验证过的既有实现);**meta 恒定传节点本体、不读灯箱 exportMeta 开关**(规格明示恒定嵌入,注释 :4743);张间 250ms 间隔(batchDownload 同款经验);toast 进度 i/N+结尾汇总(部分失败 err 级,单张失败不中断批次);文件名=提示词前 30 字(去非法字符)+序号(与批量下载一致);busy state+ref 双防连点。
+
+### 怎么验证的(全部静态,无浏览器/未起服务)
+
+- **文档同步会话本轮复核(2026-10-21)**:`node --check client/client-v4.js` → exit 0(MY-SYNTAX-OK);`git status --short` → 仅 ` M client/client-v4.js`;`git rev-parse --short HEAD` → 20f267d;`grep -n "sensenova/generate" client/client-v4.js` → 5 命中(:2615 唯一实际调用,:2586/:2587/:4119/:4774 均注释);`grep -nE "snxGenPost|snxAvgDur|snxAvgGenDurSec|touchBoard|boardsByRecent|batchExportNodes|lastUsed"` 全部在位。**上列行号均为本轮 grep/sed 实测**;批次报告原引 snxRerollDirect:4112/batchVariantNodes:4759/SnxToolPending:4283/PendingOverlay:3686-3697 已漂移,以本轮为准(runOne:2632 恰好未漂)。
+- **实况存储只读核查(本轮 node 单行脚本直读 JSON,非 HTTP GET,未起服务)**:备份快照 7 节点 rev=567、实况 5 节点 rev=612、两文件共同 5 节点深比较 identical、mv6/mv5 损伤数字复核——见批次1 末条。§二 验收「GET canvas 无该节点」的存储层等价核验已做;HTTP GET 复核归验收员。
+- **服务端锚点复核**:src/index.ts:623-628 rev 校验+409 带最新 doc/rev、:630 自增落盘(sed 实读);:848 起 execute 直调 callImagesGenerations(:869)证实对话工具路径无客户端 POST。
+- **批次自检(据改动报告,本轮未重跑)**:批次1 node --check 修改后两次运行均 SYNTAX-OK;批次2 第一组改完 SYNTAX-OK、全部改完 FINAL-SYNTAX-OK(命令均为 `node --check D:/coding/dsh-sensenova-image/client/client-v4.js`)。
+- **浏览器/E2E 未执行**——归验收员;第三方审计收口未做。
+
+### 坑 / 注意(给下一个会话)
+
+- **乱码节点清理已完成,勿重复执行**:mv6mublabhbmv 与 mv5fl7a3mo0zw 均已不在实况文档(2026-10-21 复核),备份快照在 storages 目录(7 节点 rev=567,可恢复基线);验收 §二 时起服务后 GET /api/sensenova/canvas 断言节点清单即可,别再跑移除步骤。
+- **预计样本只记 done**:别「补」error 样本——秒回 4xx 与用户取消会拉失真,SPEC §一 定义如此;与 ask 原文「done 或 error」的出入已在代码注释(:2588-2589)与本章注明。
+- **「已耗时」与「预计」是两路数据**:已耗时计时起点=卡片挂载(v13 既知,折叠重挂重数,未修);「预计 ~Xs」=localStorage snxAvgDur 均值,est=0 时整段不显示,别当 bug。
+- **lastUsed 是 boards[] 字段,随整文档 PUT 走 rev 协议**;存量板无 lastUsed 视为 0 沉底——别给存量板补写 lastUsed(首次入板自然刷新);boardsByRecent 返回渲染副本,别拿它改存储。
+- **批量导出恒定嵌元数据**:不读 exportMeta 开关是规格明示(单张开关只是单张偏好),别当 bug「统一」成读开关。
+- **E2E 项号预分配(文档侧)**:新 4 项 = **E2E-45** 等待预估(拦截 3s 首次生成→localStorage 出现均值样本;第二次 pending 断言「预计 ~」文本)/ **E2E-46** 乱码节点(GET canvas 无该节点;存储已删,可直接验)/ **E2E-47** 画板排序(向板 A 入新图→A 排首位)/ **E2E-48** 批量导出(多选 2 张→2 次 download 事件且 PNG 含 sensenova tEXt chunk)——§六「旧 44+新 4=48」与 v15 延续(E2E-39..44)无计数冲突;仓库仍无项号映射文档,验收员实测后以实际为准回填。
+- ~/.dsh/storages 实况文件本轮只读未写;v16 改动未 commit(工作区仅 client-v4.js modified)。
+
+## v16 补遗:主会话独立复验与相机漂移(2026-10-20)
+
+主会话独立重跑 48 项 E2E:37/48,11 失败全部定性为**测试环境问题,非产品回归**——①8 项=t23 连锁(该轮 LLM 未调生图工具,mock 命中 0,下游 7 项无法复用;LLM 非确定性,重跑即过);②2 项=共享画布相机被历次测试缩放循环漂移到极值(scale 0.05/x-5482),右键菜单/点击全部落偏——相机重置到 fit 后立即恢复(14 项菜单全弹出);③1 项=队列历史断言精确行数时窗抖动(已改健壮断言)。相机已重置为 fit 7 节点。
+**教训**:共享画布的测试必须以「重置相机到 fit」收尾(缩放循环会把相机漂到极值并 autosave);判读 E2E 失败先分「产品回归/环境连锁」两类再动手。
