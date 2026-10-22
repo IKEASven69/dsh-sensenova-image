@@ -8875,7 +8875,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         const payload = { apiKey: apiKey.trim(), baseUrl: baseUrl.trim() }
         if (finalModel) payload.model = finalModel
         const r = await post(CONFIG_ROUTE, payload)
-        setMsg(r.ok ? '已保存（立即生效）' : '保存失败：' + (r.error || '未知错误'))
+        setMsg(r.ok ? (r.persisted ? '已保存并持久化（立即生效）' : '已生效（本会话）——持久化暂不可用') : '保存失败：' + (r.error || '未知错误'))
       }
       const test = async () => {
         setTesting(true); setTestMsg('测试中…')

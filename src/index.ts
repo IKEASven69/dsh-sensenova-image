@@ -215,20 +215,23 @@ function describeRefs(metas: Array<{ role?: string; strength?: number } | null>)
 export function apply(ctx: Context, rawConfig: Config) {
   const config = (Config as unknown as (v: unknown) => Config)(rawConfig ?? {})
 
-  // ——— 设置持久化（v13.1 重写）———
-  // 0.2.1-alpha.2 起 settings 服务不再暴露 register（旧内联注册抛 "register is not a function"
-  // 且被 inject 运行器吞掉 → 设置页持久化静默失效,独立审计发现）。新模型:插件声明
-  // schemastery Config（见文件头）,宿主设置页自动生成表单并持久化到 profile 条目;
-  // 改动经 cordis 热重载回到 apply()。此处不再注册任何东西。
-  console.log('[sensenova-image] settings: Config schema declared; persistence via host settings page')
-  setTimeout(() => {
-    try {
-      const svc = (ctx as unknown as { settings: { describe: (o?: unknown) => Array<{ ns: string }> } }).settings
-      const d = svc.describe()
-      const ok = d.some((x) => x.ns === 'sensenova-image')
-      console.log('[sensenova-image] settings namespace', ok ? 'registered OK (host settings page live-edit enabled)' : 'ABSENT — persistence disabled')
-    } catch (e) { console.error('[sensenova-image] v13.1 verify ERR:', String(e).slice(0, 200)) }
-  }, 4000)
+  // ——— 设置持久化（v16.1 重写）———
+  // 0.2.1-alpha.2 的 settings 服务:configure(presentation, owner) 控制自动表单策略;
+  // update(ns, patch) 写 profile 条目(真持久化,cordis 热重载回 apply())。
+  // 本插件自带中文设置卡(snx-cfg)→ configure({auto:false}) 关闭宿主自动表单避免重复;
+  // update 暴露给 POST /config 实现保存按钮真持久化。
+  const SETTINGS_NS = 'sensenova-image'
+  let settingsUpdate: ((patch: Record<string, unknown>) => Promise<unknown>) | null = null
+  ctx.inject(['settings'], (scopedCtx: any) => {
+    const svc = scopedCtx.settings
+    if (!svc || typeof svc.update !== 'function') {
+      console.log('[sensenova-image] settings service: no update method (legacy host)')
+      return
+    }
+    settingsUpdate = (patch) => svc.update(SETTINGS_NS, patch)
+    try { svc.configure({ auto: false }, scopedCtx.fiber) } catch (e) { console.warn('[sensenova-image] configure:', String(e).slice(0, 120)) }
+    console.log('[sensenova-image] settings: persistence wired (update + auto-form suppressed)')
+  })
 
   // ——— HTTP 路由：用户可见的生图面板（web 客户端模块调用）———
   const sendJson = (res: { writeHead: (c: number, h?: Record<string, string>) => void; end: (b?: string) => void }, code: number, payload: unknown): void => {
@@ -259,9 +262,13 @@ export function apply(ctx: Context, rawConfig: Config) {
         if (typeof body.apiKey === 'string' && body.apiKey.trim()) { config.apiKey = body.apiKey.trim(); patch.apiKey = body.apiKey.trim() }
         if (typeof body.baseUrl === 'string' && body.baseUrl.trim()) { config.baseUrl = body.baseUrl.trim(); patch.baseUrl = body.baseUrl.trim() }
         if (typeof body.model === 'string' && body.model.trim()) { config.model = body.model.trim(); patch.model = body.model.trim() }
-        // v13.1：settingsScope 已废弃——POST 只对本会话内存生效;持久化走宿主设置页(profile 条目)
+        // v16.1：settingsUpdate 可用时写 profile 真持久化(cordis 热重载回 apply());不可用时降级为内存
         for (const [k, v] of Object.entries(patch)) (config as Record<string, unknown>)[k] = v
-        sendJson(res, 200, { ok: true, persisted: false, note: '已对本会话生效;持久化请在宿主 设置 → SenseNova 生图 修改并保存' })
+        let persisted = false
+        if (settingsUpdate) {
+          try { await settingsUpdate(patch); persisted = true } catch (e) { console.warn('[sensenova-image] settings update:', String(e).slice(0, 120)) }
+        }
+        sendJson(res, 200, { ok: true, persisted, note: persisted ? undefined : '已对本会话生效;持久化暂不可用' })
       } catch (e) {
         sendJson(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) })
       }
