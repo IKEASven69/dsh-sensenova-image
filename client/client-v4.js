@@ -3072,6 +3072,18 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           const nx = Math.round(k.x()), ny = Math.round(k.y())
           const dx = nx - docNode.x, dy = ny - docNode.y
           applyFollowerDelta(dx, dy)
+          // v17.1：多选拖拽落库——Transformer._proxyDrag 对同挂节点 startDrag 但 mouseup
+          // 只给指针节点发 dragend，其余选中节点的 Konva x/y 已被移动但文档坐标未更新。
+          // 遍历选中集，从 kmap 读 Konva 坐标写回 doc。
+          for (const selId of store.sel) {
+            if (selId === docNode.id) continue
+            const peerK = kmap.get(selId)
+            const peerN = store.node(selId)
+            if (peerK && peerN && peerN.status === 'done' && !peerN.locked) {
+              const px = Math.round(peerK.x()), py = Math.round(peerK.y())
+              if (px !== peerN.x || py !== peerN.y) { peerN.x = px; peerN.y = py }
+            }
+          }
           store.updateNode(docNode.id, { x: nx, y: ny })
         })
         k.on('transformstart', () => {

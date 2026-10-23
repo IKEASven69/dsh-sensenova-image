@@ -535,3 +535,7 @@ v15 工作流(归板跟随/批量变体/导出默认核对)三批完成;验收 4
 - **拖动中随动成员的连线/PendingOverlay 按文档坐标绘制,dragend 才跳终位**(沿用既有节流重画模式);co-挂载 done 节点由 Konva proxy 以各自 dragstart 时刻为基部落库,与首帧指针位移有既有微漂(≤首帧移动量,改动前即如此)——都别当本批回归报。
 - **极小缩放短边端口吞边仍 deferred**:空间分配设计张力,已记 client-v4.js:2837-2842 注释;热区半径已按 1/max(0.05,scale) 反比,再压会伤正常缩放可点性。
 - 批量条跨筛选计数只做文案提示不自动缩选(批量操作全吃 galSelIds 不吃可见性);~/.dsh/storages 实况文件未触碰;v17 改动未 commit。
+
+## v17.1:多选拖拽落库修复(2026-10-24,第七任审计发现 1 高优先缺陷)
+
+第七任审计实测:框选 3+ 张拖其一,松手后除被拖节点外全部回弹。根因:Konva 9.3.22 Transformer._proxyDrag 对同挂节点 startDrag 但 mouseup 只给指针节点发 dragend——bindNode 依赖各节点自身 dragend 落库,其余选中节点永不落库。修复:dragend 遍历 store.sel,从 kmap 读每个选中节点的 Konva x/y 写回 doc(updateNode→emit→renderAll 一并重绘)。
