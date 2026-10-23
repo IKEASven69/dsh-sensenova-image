@@ -937,9 +937,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
   padding:7px 12px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:500;
   display:inline-flex;align-items:center;gap:5px;
 }
-.snx-lb-act:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--dsw-alias-label-primary,#f9fafb);border-color:var(--dsw-alias-border-l3,#ffffff29)}
+.snx-lb-act:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--dsw-alias-label-primary,#f9fafb);border-color:var(--dsw-alias-border-l3,#ffffff29)}
 .snx-lb-act.go{background:color-mix(in srgb,var(--snx-accent) 15%,transparent);border-color:var(--snx-accent);color:var(--snx-accent)}
-.snx-lb-act.go:hover{background:color-mix(in srgb,var(--snx-accent) 25%,transparent)}
+.snx-lb-act.go:hover:not(:disabled){background:color-mix(in srgb,var(--snx-accent) 25%,transparent)}
+/* SPEC-17 二：同种子重生成 busy 态（四态防连点）——禁用期降透明度并锁 hover */
+.snx-lb-act:disabled{opacity:.55;cursor:default}
 .snx-lb-act.danger{color:var(--snx-error);border-color:color-mix(in srgb,var(--snx-error) 30%,transparent)}
 .snx-lb-act.danger:hover{background:color-mix(in srgb,var(--snx-error) 10%,transparent);color:var(--snx-error)}
 
@@ -2287,6 +2289,47 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         this.sel = new Set(clones.map((c) => c.id))
         this.emit(); autosave()
       },
+      // ── SPEC-17 批次2：内部节点剪贴板（Ctrl+C / Ctrl+X / Ctrl+V，与已有 Ctrl+D 互补：
+      // 可跨位置/跨时刻粘贴）──克隆逻辑与 duplicateSelected 同款深拷贝。约束：
+      //  - pending/running 是在途任务不参与复制——贴出去没有生成过程，只会永远停在幽灵占位；
+      //  - 选中集内 parentId 粘贴时重映射到新 id（派生链保持）；选集外的父引用原样保留
+      //   （drawEdges 查不到父节点时自动不画，不会报错）；
+      //  - groupId 不随粘贴带走（副本与原组脱钩，避免拖原图把副本拽走）；
+      //  - _queuedAt/_startedAt 等运行态字段一律不复制。剪贴板是运行态，不持久化。
+      clipboard: null,   // { nodes: [{...node 深拷贝, cpId: 原id}] }
+      copySelected() {
+        const ns = selNodes().filter((n) => n.status !== 'pending' && n.status !== 'running')
+        if (!ns.length) return 0
+        this.clipboard = { nodes: ns.map((n) => { const c = JSON.parse(JSON.stringify(n)); c.cpId = n.id; return c }) }
+        return ns.length
+      },
+      pasteClipboard(at) {
+        const src = this.clipboard
+        if (!src || !src.nodes.length) return 0
+        this.pushUndo()
+        // 落点：复制时包围盒质心对齐目标点，成员相对位置保持
+        const cx = src.nodes.reduce((a, n) => a + n.x + n.w / 2, 0) / src.nodes.length
+        const cy = src.nodes.reduce((a, n) => a + n.y + n.h / 2, 0) / src.nodes.length
+        const idMap = new Map()
+        const clones = src.nodes.map((n) => {
+          const id = nid()
+          idMap.set(n.cpId, id)
+          const c = { id, x: Math.round(n.x + at.x - cx), y: Math.round(n.y + at.y - cy) }
+          for (const key of Object.keys(n)) {
+            if (key === 'cpId' || key === 'id' || key === 'x' || key === 'y' || key === 'groupId') continue
+            if (key.charAt(0) === '_') continue
+            c[key] = n[key]
+          }
+          return c
+        })
+        for (const c of clones) {
+          if (c.parentId && idMap.has(c.parentId)) c.parentId = idMap.get(c.parentId)
+        }
+        clones.forEach((c) => this.doc.nodes.push(c))
+        this.sel = new Set(clones.map((c) => c.id))
+        this.emit(); autosave()
+        return clones.length
+      },
     }
 
     // ——— P1-10：滑块/连发类操作的 undo 合并（InvokeAI canvasSlice：同类操作 1 秒内并成一步）———
@@ -2791,6 +2834,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const edgeLayer = new Konva.Layer({ listening: true })
       const mainLayer = new Konva.Layer()
       // v11.2：portLayer 端口层——节点之上、框选矩形之下（此前端口混在 edgeLayer 里被节点图盖住半截）
+      // SPEC-17 一.4 确认：下方 stage.add 顺序即 z 序，portLayer(第3) 在 edgeLayer(第1) 之上，
+      // Konva 命中检测自顶层向下 → 端口命中恒优先于边线：点端口=拖线，点边线中部=选中/右键菜单。
+      // 残余张力 deferred（SPEC-17 一.4）：极小缩放时短边的两端端口热区(12*inv)合拢覆盖整条边，
+      // 「点边线中部」无处落脚——空间分配设计张力本轮不改（热区半径已按缩放反比 1/max(0.05,scale)，
+      // 再压会伤正常缩放下的可点性）。
       const portLayer = new Konva.Layer({ listening: true })
       const fxLayer = new Konva.Layer({ listening: false })   // 框选矩形
       const trLayer = new Konva.Layer()
@@ -2839,6 +2887,36 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         trLayer.batchDraw()
       }
 
+      // ── SPEC-17 批次2：拖拽对齐参考线吸附（tldraw/InvokeAI 同款）──
+      // 移动集与其他节点的边/中心在 ~6 屏幕像素内吸附；参考线画在 fxLayer（与框选矩形同层，
+      // 盖在节点之上）。纯本地几何计算，不碰 store 文档与后端；dragend 落库后清线。
+      const SNAP_PX = 6   // 屏幕像素吸附半径
+      function snapTargets(movingIds) {
+        const arr = []
+        for (const n of store.doc.nodes) {
+          if (n.hidden || movingIds.has(n.id)) continue   // 隐藏节点不作吸附目标
+          arr.push(n)
+        }
+        return arr
+      }
+      function drawSnapGuides(guides) {
+        const c = cam()
+        fxLayer.destroyChildren()
+        fxLayer.position({ x: c.x, y: c.y }); fxLayer.scale({ x: c.scale, y: c.scale })
+        const sw = 1 / Math.max(0.05, c.scale)
+        for (const g of guides) {
+          fxLayer.add(new Konva.Line({
+            points: g.axis === 'v' ? [g.at, g.from, g.at, g.to] : [g.from, g.at, g.to, g.at],
+            stroke: theme.accent, strokeWidth: sw, dash: [6 * sw, 4 * sw], opacity: 0.85, listening: false,
+          }))
+        }
+        fxLayer.batchDraw()
+      }
+      function clearSnapGuides() {
+        if (!fxLayer.getChildren().length) return
+        fxLayer.destroyChildren(); fxLayer.batchDraw()
+      }
+
       function bindNode(k, docNode) {
         k.setAttr('snxId', docNode.id)
         k.on('click tap', (e) => {
@@ -2866,20 +2944,124 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           }
           syncTransformer(); store.emitLight()
         })
-        // 成组：同 groupId 的成员随拖拽/变换平移（记录基线坐标，结束时套用位移）
-        const groupBase = () => (docNode.groupId
-          ? store.doc.nodes.filter((m) => m.groupId === docNode.groupId && m.id !== docNode.id)
-            .map((m) => ({ id: m.id, x: m.x, y: m.y }))
-          : [])
-        const applyGroupDelta = (dx, dy) => {
-          const base = k.getAttr('snxGroupBase') || []
-          if (dx || dy) for (const m of base) store.updateNode(m.id, { x: Math.round(m.x + dx), y: Math.round(m.y + dy) })
-          k.setAttr('snxGroupBase', null)
+        // ── SPEC-17 批次2：批量拖拽（框选/Shift 多选后拖任一成员整组跟随）+ 成组语义合一 ──
+        // 随动成员 = 其余选中成员 ∪ 相关 groupId 队友，dragstart 记基线、拖动中实时同位移
+        //（直接改 Konva 坐标，不触发 emit/renderAll——会销毁正在拖拽的实例）、dragend 一次性
+        // 套位移落库。去重规则：
+        //  - 与被拖节点同挂 Transformer 的选中 done 成员：Konva Transformer._proxyDrag 已同步
+        //    移动它们且各自 dragend 落库——不进 followers，防二次位移（被拖节点自身非 done 挂载
+        //    时，这些成员不随动，须进 followers）；
+        //  - locked 成员一律不动（与删除/方向键微调同规矩）；
+        //  - 幂等：同手势多个挂载节点各自捕获同一基线、各自套同一位移，写同一终值，无需手势属主。
+        const collectFollowers = () => {
+          const selfMounted = docNode.status === 'done' && store.sel.has(docNode.id)
+          const out = new Map()
+          const add = (n) => {
+            if (!n || n.id === docNode.id || out.has(n.id) || n.locked) return
+            if (selfMounted && n.status === 'done' && store.sel.has(n.id)) return   // Konva proxy 代管
+            out.set(n.id, { id: n.id, x: n.x, y: n.y, w: n.w, h: n.h })
+          }
+          const gids = new Set()
+          if (docNode.groupId) gids.add(docNode.groupId)
+          if (store.sel.has(docNode.id)) {
+            for (const id of store.sel) {
+              const m = store.node(id)
+              if (!m) continue
+              add(m)   // pending/error 等其余选中成员整组跟随（此前批量移动只覆盖 done 图）
+              if (m.groupId) gids.add(m.groupId)
+            }
+          }
+          if (gids.size) for (const m of store.doc.nodes) if (m.groupId && gids.has(m.groupId)) add(m)
+          return [...out.values()]
         }
-        k.on('dragstart', () => { store.pushUndo(); k.setAttr('snxGroupBase', groupBase()) })
+        // 与被拖节点同挂 Transformer 的其余选中 done 成员（Konva proxy 代管落库，但它们跟随
+        // 指针原位移、不带吸附修正）——拖动中随吸附一并视觉平移，落库仍由各自 dragend 负责
+        const collectPeers = () => {
+          if (docNode.status !== 'done' || !store.sel.has(docNode.id)) return []
+          const arr = []
+          for (const id of store.sel) {
+            if (id === docNode.id) continue
+            const n = store.node(id)
+            if (!n || n.locked || n.status !== 'done') continue
+            arr.push({ id: n.id, x: n.x, y: n.y, w: n.w, h: n.h })
+          }
+          return arr
+        }
+        // 拖动中：参考线吸附 + 随动成员实时跟随（每帧重算，未被吸附时 adj=0）
+        const moveFollowersVisual = () => {
+          const base = k.getAttr('snxMoveFollowers')
+          if (!base) return
+          const peers = k.getAttr('snxMovePeers') || []
+          const origin = k.getAttr('snxMoveOrigin') || { x: docNode.x, y: docNode.y }
+          const rawDx = k.x() - origin.x, rawDy = k.y() - origin.y
+          let x0 = origin.x + rawDx, y0 = origin.y + rawDy, x1 = x0 + docNode.w, y1 = y0 + docNode.h
+          for (const m of base) {
+            x0 = Math.min(x0, m.x + rawDx); y0 = Math.min(y0, m.y + rawDy)
+            x1 = Math.max(x1, m.x + rawDx + m.w); y1 = Math.max(y1, m.y + rawDy + m.h)
+          }
+          for (const p of peers) {
+            x0 = Math.min(x0, p.x + rawDx); y0 = Math.min(y0, p.y + rawDy)
+            x1 = Math.max(x1, p.x + rawDx + p.w); y1 = Math.max(y1, p.y + rawDy + p.h)
+          }
+          const movingIds = new Set(base.map((m) => m.id)); movingIds.add(docNode.id)
+          for (const p of peers) movingIds.add(p.id)
+          const thr = SNAP_PX / Math.max(0.05, cam().scale)
+          let bx = null, by = null
+          for (const o of snapTargets(movingIds)) {
+            for (const L of [o.x, o.x + o.w / 2, o.x + o.w]) {
+              for (const e of [x0, (x0 + x1) / 2, x1]) {
+                const d = L - e
+                if (Math.abs(d) <= thr && (!bx || Math.abs(d) < Math.abs(bx.d))) {
+                  bx = { d, L, from: Math.min(y0, o.y), to: Math.max(y1, o.y + o.h) }
+                }
+              }
+            }
+            for (const L of [o.y, o.y + o.h / 2, o.y + o.h]) {
+              for (const e of [y0, (y0 + y1) / 2, y1]) {
+                const d = L - e
+                if (Math.abs(d) <= thr && (!by || Math.abs(d) < Math.abs(by.d))) {
+                  by = { d, L, from: Math.min(x0, o.x), to: Math.max(x1, o.x + o.w) }
+                }
+              }
+            }
+          }
+          const dx = rawDx + (bx ? bx.d : 0), dy = rawDy + (by ? by.d : 0)
+          k.position({ x: origin.x + dx, y: origin.y + dy })
+          for (const m of base) {
+            const fk = kmap.get(m.id)
+            if (fk) fk.position({ x: m.x + dx, y: m.y + dy })
+          }
+          for (const p of peers) {
+            const pk = kmap.get(p.id)
+            if (pk) pk.position({ x: p.x + dx, y: p.y + dy })
+          }
+          const guides = []
+          if (bx) guides.push({ axis: 'v', at: bx.L, from: bx.from, to: bx.to })
+          if (by) guides.push({ axis: 'h', at: by.L, from: by.from, to: by.to })
+          drawSnapGuides(guides)
+          mainLayer.batchDraw()
+        }
+        // dragend/transformend 落库：随动成员直接写文档坐标，最后一次 updateNode 的 emit 一并重绘
+        const applyFollowerDelta = (dx, dy) => {
+          const base = k.getAttr('snxMoveFollowers') || []
+          k.setAttr('snxMoveFollowers', null)
+          clearSnapGuides()
+          if (!dx && !dy) return
+          for (const m of base) {
+            const n = store.node(m.id)
+            if (n) { n.x = Math.round(m.x + dx); n.y = Math.round(m.y + dy) }
+          }
+        }
+        k.on('dragstart', () => {
+          store.pushUndo()
+          k.setAttr('snxMoveFollowers', collectFollowers())
+          k.setAttr('snxMovePeers', collectPeers())
+          k.setAttr('snxMoveOrigin', { x: docNode.x, y: docNode.y })
+        })
         // v11.1：拖动/变换时连线实时跟随（此前边只在 renderAll 时重画，拖动中甩在原地）
         // v11.2：dragmove 重画 50ms 节流（时间戳比较）；dragend 后 updateNode→emit→renderAll 兜底全量重画
         k.on('dragmove', () => {
+          moveFollowersVisual()
           const now = Date.now()
           if (now - lastEdgeDrawAt < 50) return
           lastEdgeDrawAt = now
@@ -2889,10 +3071,15 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         k.on('dragend', () => {
           const nx = Math.round(k.x()), ny = Math.round(k.y())
           const dx = nx - docNode.x, dy = ny - docNode.y
+          applyFollowerDelta(dx, dy)
           store.updateNode(docNode.id, { x: nx, y: ny })
-          applyGroupDelta(dx, dy)
         })
-        k.on('transformstart', () => { store.pushUndo(); k.setAttr('snxGroupBase', groupBase()) })
+        k.on('transformstart', () => {
+          store.pushUndo()
+          k.setAttr('snxMoveFollowers', collectFollowers())
+          k.setAttr('snxMovePeers', collectPeers())
+          k.setAttr('snxMoveOrigin', { x: docNode.x, y: docNode.y })
+        })
         k.on('transformend', () => {
           const sx = k.scaleX(), sy = k.scaleY()
           k.scaleX(1); k.scaleY(1)
@@ -2900,8 +3087,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           k.width(w); k.height(hh)
           const nx = Math.round(k.x()), ny = Math.round(k.y())
           const dx = nx - docNode.x, dy = ny - docNode.y
+          applyFollowerDelta(dx, dy)
           store.updateNode(docNode.id, { x: nx, y: ny, w, h: hh })
-          applyGroupDelta(dx, dy)
         })
         // v11.2.1：Konva dblclick 处理已删除——双击开灯箱改由 click/tap 内自实现检测（见上），
         // 不再依赖「同一 Konva 实例收到两次点击」（renderAll 重建后该前提永不成立）。
@@ -3107,6 +3294,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         for (const n of store.doc.nodes) renderNode(n)
         drawEdges()
         syncTransformer()
+        // SPEC-17 批次2：文档重建时清掉吸附参考线（fxLayer 是纯瞬态层——框选矩形/拖线预览
+        // 各自在的交互里重画，这里清掉手势中断后的残线即可，不影响它们）
+        fxLayer.destroyChildren()
         mainLayer.batchDraw()
         mainLayer.drawHit()   // v12：同步重画命中图——batchDraw 是 rAF 延帧的,紧接着的第二次点击
       }                        // 会命中已销毁的旧节点(事件已解绑),双击检测因此对快速双击失效
@@ -3287,6 +3477,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           const c = cam()
           return { x: (stage.width() / 2 - c.x) / c.scale, y: (stage.height() / 2 - c.y) / c.scale }
         },
+        // SPEC-17 批次2：Ctrl+V 粘贴落点 = 指针当前所在的画布坐标（指针不在画布上时为 null）
+        pointerWorld() {
+          const p = stage.getPointerPosition()
+          if (!p) return null
+          const c = cam()
+          return { x: (p.x - c.x) / c.scale, y: (p.y - c.y) / c.scale }
+        },
         // P1-15：图层面板点击=定位——平移相机把节点中心带到视口中心，保持当前缩放（不全局 fit 重置）
         focusNode(id) {
           const n = store.node(id)
@@ -3341,6 +3538,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     // 脱离跟随（手动优先，画廊再切不覆盖），下拉首项「回到跟随画廊」一键返回跟随。
     // followBoard/genPrefs 均为内存态，刷新后恢复默认跟随
     const FOLLOW_BOARD = '__follow__'   // 目标画板下拉首项哨兵值（画板 id 由 nid() 生成，不会撞）
+    const BOARD_SORT_OPT = '__boardsort__'   // SPEC-17 三：目标画板下拉「排序」切换项哨兵值（同为 id 不会撞）
     let followBoard = true              // 当前是否跟随画廊（gen form 手动选择时置 false）
     // 跟随解析：画廊筛选为具体画板 id → 该板；'' 全部 / 'none' 未分组 → ''（未分组，不赋板）
     function followTargetOf(gb) { return gb && gb !== 'none' ? gb : '' }
@@ -3356,10 +3554,24 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       const b = (store.doc.boards || []).find((x) => x.id === boardId)
       if (b) b.lastUsed = Date.now()
     }
-    // 渲染专用：返回 lastUsed 倒序的副本（Array.sort 稳定排序，缺 lastUsed 视为 0 沉底），
-    // 不改 store.doc.boards 原数组顺序
+    // SPEC-17 三：画板多维排序——偏好存 localStorage 键 snxBoardSort（'recent' 最近使用 | 'name' 按名称，
+    // 缺省/读写失败回退 'recent' 保持原行为）；画廊画板 chips / gen form 目标画板下拉 / 灯箱画板下拉
+    // 三处共用 boardsByRecent() 这同一排序函数（批量条移入下拉/右键菜单/画板筛选下拉等其余消费方随之同序）
+    const BOARD_SORT_KEY = 'snxBoardSort'
+    function boardSortPref() {
+      try { return localStorage.getItem(BOARD_SORT_KEY) === 'name' ? 'name' : 'recent' } catch { return 'recent' }
+    }
+    function setBoardSortPref(v) {
+      try { localStorage.setItem(BOARD_SORT_KEY, v === 'name' ? 'name' : 'recent') } catch { }
+    }
+    // 渲染专用：按偏好排序的副本（Array.sort 稳定排序，不改 store.doc.boards 原数组顺序）——
+    // 'recent'=lastUsed 倒序（SPEC-16 三，缺失视为 0 沉底保持原相对序）；
+    // 'name'=localeCompare zh-Hans-CN 拼音序（同名板排序稳定保持原序）
     function boardsByRecent() {
-      return (store.doc.boards || []).slice().sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0))
+      const list = (store.doc.boards || []).slice()
+      if (boardSortPref() === 'name') list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-Hans-CN'))
+      else list.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0))
+      return list
     }
 
     // ——— 提示词库（v8）：localStorage 星标 / 最近 / 模板 ———
@@ -4119,8 +4331,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     // POST /api/sensenova/generate 用该卡原参数；工具卡未记录种子 → 不带 seed，服务端按随机种子
     // 重抽（同参数 = 提示词/尺寸/模型）。done 节点落工作台画布文档：走服务端追加路由（SSE
     // canvas:update 实时刷新），与 agent 生图管线同源；工作台没开过服务端也会先初始化文档再追加。
-    // 成功/失败的 toast 在此统一发，再 rethrow 让调用方归位各自按钮 state
-    function snxRerollDirect(info, prompt) {
+    // 成功/失败的 toast 在此统一发，再 rethrow 让调用方归位各自按钮 state。
+    // SPEC-17 二：opts 可选 { okMsg, errPrefix }——灯箱「同种子重生成」共用本直连 POST，
+    // 但 toast 文案要如实区分（种子锁定 vs 随机）；不传 opts 时维持原「同参数重抽」文案。
+    function snxRerollDirect(info, prompt, opts) {
+      const okMsg = (opts && opts.okMsg) || '已按同参数重抽，结果见工作台'
+      const errPrefix = (opts && opts.errPrefix) || '同参数重抽失败'
       const body = { prompt: String(prompt || '') }
       if (info.size) body.size = String(info.size)
       if (info.model) body.model = String(info.model)
@@ -4139,8 +4355,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             if (!r2.ok || b2.ok === false) throw new Error(b2.error || ('HTTP ' + r2.status))
           })
         })
-        .then(() => { toastBus('已按同参数重抽，结果见工作台') })
-        .catch((e) => { toastBus('同参数重抽失败：' + String((e && e.message) || e)); throw e })
+        .then(() => { toastBus(okMsg) })
+        .catch((e) => { toastBus(errPrefix + '：' + String((e && e.message) || e)); throw e })
     }
 
     // ── SPEC-13 ②：对话卡 → 工作台 跨树通道（卡片在工作台 React 树之外，全部走 window 事件总线）───
@@ -4614,6 +4830,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         window.addEventListener('snx:genFocus', onGenFocus)
         return () => window.removeEventListener('snx:genFocus', onGenFocus)
       }, [])
+      // SPEC-17 三：画板排序偏好变更（gen form 目标画板下拉末项切换）——画廊画板 chips/批量条移入
+      // 下拉/右键菜单板列表/画板筛选下拉等 Workbench 渲染期消费 boardsByRecent() 的地方强制重渲染同序
+      useEffect(() => {
+        const onBoardSort = () => force((x) => x + 1)
+        window.addEventListener('snx:boardSortChanged', onBoardSort)
+        return () => window.removeEventListener('snx:boardSortChanged', onBoardSort)
+      }, [])
       // ── P1-14：promise 化应用内确认（SnxConfirm 渲染在 return 末尾）──
       // v11.2（B-8）：覆盖守卫——已有确认弹窗在场时，后来的请求直接按取消返回，不静默顶掉前一个
       const askConfirm = (opts) => new Promise((resolve) => {
@@ -4769,6 +4992,45 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           ? (fail ? '批量导出完成：' + ok + ' 张成功（含元数据），' + fail + ' 张失败' : '批量导出完成：' + ok + ' 张（均含元数据）')
           : '批量导出全部失败（' + fail + ' 张）', fail ? 'err' : undefined)
         galExpBusyRef.current = false; setGalExpBusy(false)
+      }
+      // ── SPEC-17 一：批量导出 zip（画廊多选 ≥2 done）——客户端 store-only zip 打包（storeOnlyZip，
+      // 无外部依赖），每张 PNG 仍走与灯箱单张导出相同的嵌入元数据管线（imageToBlob PNG + meta=节点
+      // 恒定嵌入 tEXt）。条目名=序号-提示词前 20 字.png（去 Windows 非法字符；序号前导零使解压后
+      // 资源管理器按名排序与打包顺序一致）。下载名=snx-canvas-日期.zip——文档没有「画布名」字段，
+      // 沿用整画布导出 onExportCanvas 的 snx-canvas- 前缀同词汇。串行取 PNG（imageToBlob 解码+编码
+      // 是重活，防内存尖峰）；busy 与「批量导出」共用 galExpBusy（ref 判重入 + state 渲染）防并跑。
+      const batchExportZipNodes = async (ids) => {
+        if (galExpBusyRef.current) return
+        const real = (ids || []).map((id) => store.node(id)).filter((n) => n && n.status === 'done' && n.src)
+        if (real.length < 2) { notify('批量导出 zip 至少选 2 张完成图'); return }
+        galExpBusyRef.current = true; setGalExpBusy(true)
+        try {
+          const N = real.length
+          const entries = []
+          for (let i = 0; i < N; i++) {
+            const n = real[i]
+            notify('打包 zip ' + (i + 1) + '/' + N)
+            // 与灯箱单张导出 doExport 同管线：imageToBlob(src,'png',…,meta=节点)——meta 传节点即恒定嵌入 tEXt
+            const blob = await imageToBlob(n.src, 'png', 92, n)
+            const slug = String(n.prompt || '').replace(/^💬\s*/, '').replace(/\s+/g, ' ').slice(0, 20)
+              .replace(/[\\/:*?"<>|\x00-\x1f]/g, '').trim()
+            entries.push({
+              name: String(i + 1).padStart(2, '0') + '-' + (slug || 'sensenova') + '.png',
+              data: new Uint8Array(await blob.arrayBuffer()),
+            })
+          }
+          const d = new Date()
+          const ds = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0')
+          const url = URL.createObjectURL(storeOnlyZip(entries))
+          const a = document.createElement('a')
+          a.href = url; a.download = 'snx-canvas-' + ds + '.zip'
+          a.click(); setTimeout(() => URL.revokeObjectURL(url), 400)   // v16.1:立即 revoke 偶发触发 Chromium 重启下载(第六任审计发现 1)
+          notify('批量导出 zip 完成：' + N + ' 张已打包（均含元数据）——' + a.download)
+        } catch (e) {
+          notify('批量导出 zip 失败：' + String((e && e.message) || e), 'err')
+        } finally {
+          galExpBusyRef.current = false; setGalExpBusy(false)
+        }
       }
       // ── SPEC-15 ②：批量变体（画廊多选）——对每张选中完成图串行入队一条变体任务。
       // 节点创建参照 doEnhance 直连模式：先落 pending（队列可见/可取消），直连 POST /api/sensenova/generate，
@@ -5198,6 +5460,28 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           if (ctrl && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); e.shiftKey ? store.redo() : store.undo() }
           else if (ctrl && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); store.redo() }
           else if (ctrl && (e.key === 'd' || e.key === 'D')) { e.preventDefault(); store.duplicateSelected() }
+          else if (ctrl && (e.key === 'c' || e.key === 'C')) {
+            // SPEC-17 批次2：内部节点剪贴板。只在实际复制到内容时拦截默认行为
+            // （无选中时不 preventDefault，浏览器原生复制照常）；选中里的排队/生成中节点跳过
+            const n = store.copySelected()
+            if (n) { e.preventDefault(); notify && notify('已复制 ' + n + ' 个节点，Ctrl+V 粘贴到指针处') }
+          }
+          else if (ctrl && (e.key === 'x' || e.key === 'X')) {
+            // 剪切 = 复制 + 删除（removeSelected 自带锁定节点保护与提示）
+            const n = store.copySelected()
+            if (n) { e.preventDefault(); store.removeSelected() }
+          }
+          else if (ctrl && (e.key === 'v' || e.key === 'V')) {
+            // 内部剪贴板有货时优先贴节点（不落下方的系统图片粘贴）；落点=指针所在画布坐标，
+            // 指针不在画布上时退回视口中心
+            if (store.clipboard && store.clipboard.nodes.length) {
+              e.preventDefault()
+              const eng = engineRef.current
+              const at = (eng && eng.pointerWorld()) || (eng ? eng.centerWorld() : { x: 0, y: 0 })
+              const n = store.pasteClipboard(at)
+              if (n) notify && notify('已粘贴 ' + n + ' 个节点')
+            }
+          }
           else if (ctrl && (e.key === 'a' || e.key === 'A')) {
             // P2-7：全选（对齐 tldraw/InvokeAI；隐藏节点一并选，可见性不受选中影响）
             e.preventDefault()
@@ -5458,6 +5742,34 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         notify('已回填' + ({ prompt: '提示词', negPrompt: '负向词', model: '模型', size: '尺寸', seed: '种子', refs: '参考图', board: '目标画板' }[field] || '参数'))
         force((x) => x + 1)
       }
+      // ── SPEC-17 二：同种子重生成（灯箱动作行）——点击=回填该图 种子+提示词/尺寸/模型 到生图表单
+      // （只覆盖这四项，GenForm 按 snx:restoreParams 到场字段覆盖，其余表单项不动；参数清单「种子」
+      // 行的单键回填按钮不受影响、仍只回填字段），随即与「同参数重抽」共用直连 POST（snxRerollDirect），
+      // 但 body.seed=该图种子（种子不变=可控变体），结果落工作台画布。该图没有数字种子（当初按随机
+      // 种子生成/未记录）时无种子可锁——不给入口，调用方（Lightbox）按 params.seed 有无渲染按钮。
+      // 返回 promise 供按钮四态防连点（idle/busy/ok/err，与同参数重抽同一套词汇）
+      const onRegenSameSeed = (n) => {
+        if (!n) return Promise.reject(new Error('没有节点'))
+        const p = n.params || {}
+        if (typeof p.seed !== 'number' || p.seed < 0) return Promise.reject(new Error('该图没有可复用的种子'))
+        const prompt = String(n.prompt || '').replace(/^💬\s*/, '')
+        const detail = {
+          prompt,
+          size: p.size || sizeForAspect(n.w || 1, n.h || 1),
+          model: p.model || '',
+          seed: p.seed,
+        }
+        genPrefs.prompt = detail.prompt
+        genPrefs.size = detail.size
+        genPrefs.model = detail.model
+        genPrefs.seed = detail.seed
+        try { window.dispatchEvent(new CustomEvent('snx:restoreParams', { detail })) } catch { }
+        return snxRerollDirect(
+          { size: detail.size, model: detail.model, seed: p.seed },
+          prompt,
+          { okMsg: '已按同种子重生成（种子 ' + p.seed + '），结果见画布', errPrefix: '同种子重生成失败' },
+        )
+      }
 
       // ——— 整画布导出 PNG（全部可见 done 图按布局合成）———
       const onExportCanvas = async () => {
@@ -5596,6 +5908,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           },
           onRestoreParams,
           onRestoreField,
+          onRegenSameSeed,   // SPEC-17 二：灯箱动作行「同种子重生成」（回填+直连重生成，seed=该图种子）
           onDelete: async () => {
             // P1-14：原生 confirm → SnxConfirm；被其他节点作父图引用时给警告文案
             // v12：在对比选择中时也加引用警告行（删除后自动移出对比槽位）
@@ -5943,6 +6256,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         // P1-3：Shift 范围选基准 = 当前可见完成图的顺序；多选集合过滤出仍存在的
         galVisIdsRef.current = nodes.map((m) => m.id)
         const galSelIds = [...galSel].filter((id) => { const n = store.node(id); return n && n.status === 'done' && n.src })
+        // SPEC-17 一.5：跨筛选计数——多选后切筛选（画板/搜索/标签/收藏），所选图可能不可见。
+        // 批量操作仍对全部选中生效，故只做文案提示、不自动缩选
+        const galSelVisSet = new Set(galVisIdsRef.current)
+        const galSelInFilter = galSelIds.filter((id) => galSelVisSet.has(id)).length
         return h('div', { className: 'snx-gal' },
           // v10：画板筛选条
           h('div', { className: 'snx-gal-bar' },
@@ -6100,8 +6417,16 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             })),
           ),
           // P1-3：浮动已选计数 + 批量条（重操作集中在此；删除走应用内确认，不用原生 confirm）
+          // SPEC-17 一.5：跨筛选计数提示——部分选中图不在当前筛选时，计数后追加「(M 张在当前筛选)」，
+          // 悬浮 title 说明批量操作仍对全部选中生效（操作本身不吃可见性过滤）
           galSelIds.length ? h('div', { className: 'snx-gal-bulk' },
-            h('span', { className: 'ct' }, galSelIds.length + ' 张已选'),
+            h('span', {
+              className: 'ct',
+              title: galSelInFilter < galSelIds.length
+                ? '部分选中图不在当前筛选（画板/搜索/标签/收藏）内不可见；批量操作仍对全部 ' + galSelIds.length + ' 张生效'
+                : '批量操作对选中的全部完成图生效',
+            }, galSelIds.length + ' 张已选'
+              + (galSelInFilter < galSelIds.length ? '（' + galSelInFilter + ' 张在当前筛选）' : '')),
             h(SnxSelect, {
               value: '', width: 132,
               onChange: (v) => moveNodesToBoard(galSelIds, v),
@@ -6121,6 +6446,14 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               title: '逐张导出选中的完成图为 PNG，每张嵌入提示词/参数元数据（tEXt），间隔 250ms 防拦截',
               onClick: () => batchExportNodes(galSelIds),
             }, ic('package', 13), galExpBusy ? '导出中…' : '批量导出') : null,
+            // SPEC-17 一：多选 ≥2 张完成图 →「批量导出 zip」——客户端 store-only zip 打包成单个文件下载
+            // （无外部依赖），每张同上嵌入 tEXt；条目名=序号-提示词前 20 字.png；下载名=snx-canvas-日期.zip。
+            // busy 与「批量导出」共用 galExpBusy（两者都是重导出动作，不并跑）
+            galSelIds.length >= 2 ? h('button', {
+              type: 'button', className: 'bt', disabled: galExpBusy,
+              title: '把选中的完成图打包成一个 zip 下载：每张嵌入提示词/参数元数据（tEXt，与单张导出同管线），条目名=序号-提示词前 20 字.png',
+              onClick: () => batchExportZipNodes(galSelIds),
+            }, ic('download', 13), galExpBusy ? '打包中…' : '批量导出 zip') : null,
             h('button', { type: 'button', className: 'bt danger', onClick: () => askGalDelete(galSelIds) }, ic('trash-2', 13), '删除'),
             h('button', {
               type: 'button', className: 'bt', title: '清空选择',
@@ -7045,6 +7378,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       // 实际入板走 resolveTargetBoard()（画廊筛选画板/未分组），targetBoard 不参与解析
       const [targetBoard, setTargetBoard] = useState(genPrefs.targetBoard || '')
       const [follow, setFollow] = useState(followBoard)   // 跟随画廊态；翻转时同步写回模块级 followBoard（重挂载不丢）
+      // SPEC-17 三：画板排序偏好（localStorage 键 snxBoardSort）——本地 state 只为让「排序」选项的
+      // 文案随切换重渲染；真实偏好走模块级 setBoardSortPref 写穿透，其他面板经 snx:boardSortChanged 刷新
+      const [boardSort, setBoardSort] = useState(boardSortPref())
       // ── v12：生成按钮决策面板（SPEC ①：按下之前就知道一切）───
       // hover/focus 按钮包裹层即浮出（无延时+150ms 淡入，<300ms）；disabled 改列 blocker 清单；
       // 队列暂停顶部红条。portal 挂 body 防 .snx-pro container-type 收编与滚动容器裁剪；面板只读。
@@ -7532,18 +7868,30 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             value: follow ? FOLLOW_BOARD : targetBoard,
             onChange: (v) => {
               if (v === FOLLOW_BOARD) { followBoard = true; setFollow(true); return }   // 「回到跟随画廊」
+              // SPEC-17 三：排序切换项——只改排序偏好（localStorage snxBoardSort），不动目标画板；
+              // 广播 snx:boardSortChanged 让画廊 chips/灯箱下拉等 Workbench 侧消费方同帧重排
+              if (v === BOARD_SORT_OPT) {
+                const next = boardSort === 'name' ? 'recent' : 'name'
+                setBoardSortPref(next)
+                setBoardSort(next)
+                try { window.dispatchEvent(new CustomEvent('snx:boardSortChanged', { detail: { sort: next } })) } catch { }
+                return
+              }
               followBoard = false; setFollow(false)   // 手动选择（含未分组）→ 脱离跟随，画廊再切不覆盖
               setTargetBoard(v); genPrefs.targetBoard = v
             },
             width: '100%',
             popWidth: 240,
-            title: '生成结果落入的画板：默认跟随画廊当前画板筛选（全部/未分组=不归板）；手动选择后以手动为准，下拉首项可回到跟随画廊（悬浮条生成/重绘增强等同样按解析落板）',
+            title: '生成结果落入的画板：默认跟随画廊当前画板筛选（全部/未分组=不归板）；手动选择后以手动为准，下拉首项可回到跟随画廊（悬浮条生成/重绘增强等同样按解析落板）。末项可切换画板列表排序（最近使用/按名称，偏好持久化，画廊画板条/本下拉/灯箱画板下拉三处同时生效）',
             options: (() => {
               const fB = follow ? (store.doc.boards || []).find((x) => x.id === followTargetOf(galBoard)) : null
               return [
                 { value: FOLLOW_BOARD, label: follow ? (fB ? '跟随画廊:画板「' + fB.name + '」' : '跟随画廊:未分组') : '回到跟随画廊' },
                 { value: '', label: '未分组' },
-              ].concat(boardsByRecent().map((b) => ({ value: b.id, label: b.name })))   // SPEC-16 三：按最近使用倒序
+              ]
+                .concat(boardsByRecent().map((b) => ({ value: b.id, label: b.name })))   // SPEC-16 三/17 三：按偏好排序（最近使用/按名称）
+                // SPEC-17 三：排序切换项置于末尾（选中只切偏好不落板）
+                .concat([{ value: BOARD_SORT_OPT, label: boardSort === 'name' ? '排序：按名称（点击改回最近使用）' : '排序：最近使用（点击改为按名称）' }])
             })(),
           }),
         ),
@@ -7825,8 +8173,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           ['Del / Backspace', '删除选中节点'],
           ['Esc', '清除选择；蒙版模式下取消蒙版'],
           ['Ctrl + Z / Shift+Z / Y', '撤销 / 重做'],
-          ['Ctrl + D', '复制选中节点'],
-          ['Ctrl + V / 拖入 PNG', '成节点，带 sensenova 参数自动读回'],
+          ['Ctrl + D', '原位克隆选中节点'],
+          ['Ctrl + C / X / V', '画布内复制 / 剪切 / 粘贴节点（粘贴落指针处，选中集内派生关系保持；排队/生成中的节点不参与复制）'],
+          ['多选后拖动', '框选 / Shift 加选后拖任一成员，整组跟随（含排队/失败占位）'],
+          ['拖动对齐', '靠近其他图的边/中心时显示参考线并吸附（约 6px）'],
+          ['Ctrl + V 粘贴图片 / 拖入 PNG', '成节点，带 sensenova 参数自动读回（画布内已复制节点时 Ctrl+V 优先贴节点）'],
           ['左下角网格按钮', '按生成链整理布局'],
           ['双击节点', '打开灯箱（「新标签打开」在右键菜单）'],
           ['右键节点 / 空白', '菜单：灯箱 / 重试 / 下载 / 回填参数 / 对齐 / 成组 / 置顶等 z 序…'],
@@ -8175,7 +8526,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       ['原片', {}], ['黑白', { saturation: -100 }], ['复古', { saturation: -15, temp: 30, vignette: 35, contrast: -8 }],
       ['冷调', { temp: -45, saturation: 8 }], ['暖调', { temp: 45, saturation: 6 }], ['鲜艳', { saturation: 42, contrast: 12 }],
     ]
-    function Lightbox({ node, onClose, notify, onUseAsAnchor, onEdit, onDownload, onCopyParams, onRestoreParams, onRestoreField, onDelete, onUpscale, onAdjust, onExport, onToggleFavorite, onOpenVersion, onNav, nav, boards, onChangeBoard }) {
+    function Lightbox({ node, onClose, notify, onUseAsAnchor, onEdit, onDownload, onCopyParams, onRestoreParams, onRestoreField, onRegenSameSeed, onDelete, onUpscale, onAdjust, onExport, onToggleFavorite, onOpenVersion, onNav, nav, boards, onChangeBoard }) {
       // P0-2：无 src 节点（生成中/失败）降级——不渲染破图，禁用导出/调整
       const hasImg = !!(node && node.src)
       const [scale, setScale] = useState(1)
@@ -8351,6 +8702,18 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       }
       // 换图（翻页/版本树跳转）清掉上一张的行高亮
       useEffect(() => { setFlash(null) }, [node && node.id])
+      // SPEC-17 二：同种子重生成四态防连点（idle/busy/ok/err，与同参数重抽同一套词汇）；
+      // 换图复位。该图没有数字种子（当初随机生成/未记录）时无种子可锁，不出按钮
+      const [regenSeed, setRegenSeed] = useState('idle')
+      useEffect(() => { setRegenSeed('idle') }, [node && node.id])
+      const canRegenSeed = typeof (node && node.params && node.params.seed) === 'number' && node.params.seed >= 0 && typeof onRegenSameSeed === 'function'
+      const doRegenSameSeed = () => {
+        if (regenSeed === 'busy' || !onRegenSameSeed) return
+        setRegenSeed('busy')
+        Promise.resolve(onRegenSameSeed(node))
+          .then(() => setRegenSeed('ok'))
+          .catch(() => setRegenSeed('err'))   // 失败态保留在按钮上，再点即重试
+      }
       // P2-3：标签编辑（输入+回车写 node.tags，删 tag 同步；画廊标签筛选读同一条链路）
       const [tagDraft, setTagDraft] = useState('')
       const nodeTags = node && Array.isArray(node.tags) ? node.tags : []
@@ -8582,6 +8945,21 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 }),
               ),
               h('div', { className: 'snx-lb-acts' },
+                // SPEC-17 二：同种子重生成——点击=回填该图 种子+提示词/尺寸/模型 到生图表单并直接
+                // 触发重生成（与「同参数重抽」共用直连 POST，但 seed=该图种子而非随机）；四态防连点。
+                // 图标 ic('lock')（ICONS 已有，不引入 emoji）；无种子可锁的图不出按钮
+                canRegenSeed ? h('button', {
+                  type: 'button', className: 'snx-lb-act go',
+                  disabled: regenSeed === 'busy',
+                  title: regenSeed === 'busy' ? '正在按同种子重生成…'
+                    : regenSeed === 'err' ? '重生成失败，点击重试'
+                    : '锁定该图种子 ' + node.params.seed + '，按同提示词/尺寸/模型直接重生成一张（种子不变=可控变体），参数同时回填生图表单',
+                  onClick: doRegenSameSeed,
+                },
+                  regenSeed === 'busy' ? [h('span', { className: 'snx-spinring', key: 'r' }), ' 重生成中']
+                    : regenSeed === 'ok' ? [ic('check', 12), ' 已重生成']
+                      : regenSeed === 'err' ? [ic('triangle-alert', 12), ' 重试']
+                        : [ic('lock'), ' 同种子重生成']) : null,
                 hasImg ? h('button', { className: 'snx-lb-act go', type: 'button', onClick: onUseAsAnchor }, ic('image-plus'), ' 作为参考图') : null,
                 h('button', { className: 'snx-lb-act', type: 'button', onClick: onEdit }, ic('pen-tool'), ' 画布编辑'),
                 h('button', { className: 'snx-lb-act', type: 'button', onClick: onCopyParams }, ic('clipboard-copy'), ' 复制参数'),
@@ -8838,6 +9216,62 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     // CRC32（PNG tEXt 用）
     const _crcTable = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c } return t })()
     function crc32(buf) { let c = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) c = _crcTable[(c ^ buf[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0 }
+
+    // ── SPEC-17 一：store-only zip 打包（客户端手写，无外部依赖，~80 行）——PNG 本身已压缩无需
+    // deflate，method=0(store)：local file header + central directory + EOCD 三段式；CRC32 复用上面的 crc32。
+    // 文件名按 UTF-8 编码并置 general purpose bit 0x0800，中文提示词文件名解压不乱码。
+    // 已知边界（如实）：条目数 >65535 或单文件 >4GB 需 zip64 扩展，本实现未做——画廊批量导出达不到该量级。
+    // entries: [{ name: string, data: Uint8Array }] → Blob('application/zip')
+    function storeOnlyZip(entries) {
+      const enc = new TextEncoder()
+      const u16 = (v) => new Uint8Array([v & 0xff, (v >>> 8) & 0xff])
+      const u32 = (v) => new Uint8Array([v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff])
+      const cat = (parts) => {
+        let n = 0; for (const p of parts) n += p.length
+        const out = new Uint8Array(n)
+        let o = 0; for (const p of parts) { out.set(p, o); o += p.length }
+        return out
+      }
+      const now = new Date()   // DOS 时间：秒 2 秒精度、月份 1-12、年份自 1980
+      const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2)
+      const dosDate = (((now.getFullYear() - 1980) & 0x3f) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()
+      const chunks = []    // 顺序拼接的二进制段（各成员 → central directory → EOCD）
+      const centrals = []
+      let offset = 0       // 下一 local file header 起始偏移
+      for (const e of entries) {
+        const name = enc.encode(String(e.name || 'f'))
+        const data = e.data
+        const crc = crc32(data)
+        // local file header（30B 固定段 + 文件名）：store 下压缩=原始长度
+        const head = cat([
+          u32(0x04034b50), u16(20), u16(0x0800), u16(0),
+          u16(dosTime), u16(dosDate), u32(crc),
+          u32(data.length), u32(data.length),
+          u16(name.length), u16(0),
+          name,
+        ])
+        chunks.push(head, data)
+        // central directory 记录（46B 固定段 + 文件名）：记录 local header 偏移供随机解压
+        centrals.push(cat([
+          u32(0x02014b50), u16(20), u16(20), u16(0x0800), u16(0),
+          u16(dosTime), u16(dosDate), u32(crc),
+          u32(data.length), u32(data.length),
+          u16(name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset),
+          name,
+        ]))
+        offset += head.length + data.length
+      }
+      const cdOffset = offset
+      let cdSize = 0
+      for (const c of centrals) { chunks.push(c); cdSize += c.length }
+      // EOCD（22B）：条目数 + central directory 尺寸/偏移
+      chunks.push(cat([
+        u32(0x06054b50), u16(0), u16(0),
+        u16(entries.length), u16(entries.length),
+        u32(cdSize), u32(cdOffset), u16(0),
+      ]))
+      return new Blob(chunks, { type: 'application/zip' })
+    }
 
     // ——— 设置卡片（插件配置页，v4.1：模型下拉 + 描述 + 测试连接）———
     const MODEL_PRESETS = [
