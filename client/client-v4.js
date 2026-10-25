@@ -25,7 +25,7 @@ window.__ModuleLoader__.load({
     const inject = ['slots', 'sessions', 'uiConversation', 'conversation', 'sidebarRightTabs', 'sidebarRight', 'layout']
 
     // ─── v10：内联 lucide 图标（ISC）——ic(name, size) 返回 currentColor 描边 SVG ───
-    const ICONS = {"align-center-horizontal":"<path d=\"M2 12h20\" /><path d=\"M10 16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4\" /><path d=\"M10 8V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v4\" /><path d=\"M20 16v1a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-1\" /><path d=\"M14 8V7c0-1.1.9-2 2-2h2a2 2 0 0 1 2 2v1\" />","align-center-vertical":"<path d=\"M12 2v20\" /><path d=\"M8 10H4a2 2 0 0 1-2-2V6c0-1.1.9-2 2-2h4\" /><path d=\"M16 10h4a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-4\" /><path d=\"M8 20H7a2 2 0 0 1-2-2v-2c0-1.1.9-2 2-2h1\" /><path d=\"M16 14h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1\" />","align-end-horizontal":"<rect width=\"6\" height=\"16\" x=\"4\" y=\"2\" rx=\"2\" /><rect width=\"6\" height=\"9\" x=\"14\" y=\"9\" rx=\"2\" /><path d=\"M22 22H2\" />","align-end-vertical":"<rect width=\"16\" height=\"6\" x=\"2\" y=\"4\" rx=\"2\" /><rect width=\"9\" height=\"6\" x=\"9\" y=\"14\" rx=\"2\" /><path d=\"M22 22V2\" />","align-horizontal-distribute-center":"<rect width=\"6\" height=\"14\" x=\"4\" y=\"5\" rx=\"2\" /><rect width=\"6\" height=\"10\" x=\"14\" y=\"7\" rx=\"2\" /><path d=\"M17 22v-5\" /><path d=\"M17 7V2\" /><path d=\"M7 22v-3\" /><path d=\"M7 5V2\" />","align-start-horizontal":"<rect width=\"6\" height=\"16\" x=\"4\" y=\"6\" rx=\"2\" /><rect width=\"6\" height=\"9\" x=\"14\" y=\"6\" rx=\"2\" /><path d=\"M22 2H2\" />","align-start-vertical":"<rect width=\"9\" height=\"6\" x=\"6\" y=\"14\" rx=\"2\" /><rect width=\"16\" height=\"6\" x=\"6\" y=\"4\" rx=\"2\" /><path d=\"M2 2v20\" />","align-vertical-distribute-center":"<path d=\"M22 17h-3\" /><path d=\"M22 7h-5\" /><path d=\"M5 17H2\" /><path d=\"M7 7H2\" /><rect x=\"5\" y=\"14\" width=\"14\" height=\"6\" rx=\"2\" /><rect x=\"7\" y=\"4\" width=\"10\" height=\"6\" rx=\"2\" />","arrow-down":"<path d=\"M12 5v14\" /><path d=\"m19 12-7 7-7-7\" />","arrow-up":"<path d=\"m5 12 7-7 7 7\" /><path d=\"M12 19V5\" />","arrow-up-right":"<path d=\"M7 7h10v10\" /><path d=\"M7 17 17 7\" />","arrow-left-right":"<path d=\"M8 3 4 7l4 4\" /><path d=\"M4 7h16\" /><path d=\"m16 21 4-4-4-4\" /><path d=\"M20 17H4\" />","brush":"<path d=\"m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08\" /><path d=\"M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z\" />","camera":"<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\" /><circle cx=\"12\" cy=\"13\" r=\"3\" />","check":"<path d=\"M20 6 9 17l-5-5\" />","chevron-down":"<path d=\"m6 9 6 6 6-6\" />","chevron-left":"<path d=\"m15 18-6-6 6-6\" />","chevron-right":"<path d=\"m9 18 6-6-6-6\" />","chevrons-down":"<path d=\"m7 6 5 5 5-5\" /><path d=\"m7 13 5 5 5-5\" />","chevrons-left-right":"<path d=\"m9 7-5 5 5 5\" /><path d=\"m15 7 5 5-5 5\" />","chevrons-up":"<path d=\"m17 11-5-5-5 5\" /><path d=\"m17 18-5-5-5 5\" />","circle-x":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m15 9-6 6\" /><path d=\"m9 9 6 6\" />","clipboard-copy":"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /><path d=\"M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2\" /><path d=\"M16 4h2a2 2 0 0 1 2 2v4\" /><path d=\"M21 14H11\" /><path d=\"m15 10-4 4 4 4\" />","clock":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><polyline points=\"12 6 12 12 16 14\" />","columns-2":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M12 3v18\" />","copy":"<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\" /><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\" />","corner-right-down":"<path d=\"m10 15 5 5 5-5\" /><path d=\"M4 4h7a4 4 0 0 1 4 4v12\" />","database":"<ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\" /><path d=\"M3 5V19A9 3 0 0 0 21 19V5\" /><path d=\"M3 12A9 3 0 0 0 21 12\" />","dices":"<rect width=\"12\" height=\"12\" x=\"2\" y=\"10\" rx=\"2\" ry=\"2\" /><path d=\"m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6\" /><path d=\"M6 18h.01\" /><path d=\"M10 14h.01\" /><path d=\"M15 6h.01\" /><path d=\"M18 9h.01\" />","download":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"7 10 12 15 17 10\" /><line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\" />","eraser":"<path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\" /><path d=\"M22 21H7\" /><path d=\"m5 11 9 9\" />","expand":"<path d=\"m21 21-6-6m6 6v-4.8m0 4.8h-4.8\" /><path d=\"M3 16.2V21m0 0h4.8M3 21l6-6\" /><path d=\"M21 7.8V3m0 0h-4.8M21 3l-6 6\" /><path d=\"M3 7.8V3m0 0h4.8M3 3l6 6\" />","eye-off":"<path d=\"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49\" /><path d=\"M14.084 14.158a3 3 0 0 1-4.242-4.242\" /><path d=\"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143\" /><path d=\"m2 2 20 20\" />","eye":"<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","film":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M7 3v18\" /><path d=\"M3 7.5h4\" /><path d=\"M3 12h18\" /><path d=\"M3 16.5h4\" /><path d=\"M17 3v18\" /><path d=\"M17 7.5h4\" /><path d=\"M17 16.5h4\" />","folder":"<path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />","folder-plus":"<path d=\"M12 10v6\" /><path d=\"M9 13h6\" /><path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />","frame":"<line x1=\"22\" x2=\"2\" y1=\"6\" y2=\"6\" /><line x1=\"22\" x2=\"2\" y1=\"18\" y2=\"18\" /><line x1=\"6\" x2=\"6\" y1=\"2\" y2=\"22\" /><line x1=\"18\" x2=\"18\" y1=\"2\" y2=\"22\" />","git-fork":"<circle cx=\"12\" cy=\"18\" r=\"3\" /><circle cx=\"6\" cy=\"6\" r=\"3\" /><circle cx=\"18\" cy=\"6\" r=\"3\" /><path d=\"M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9\" /><path d=\"M12 12v3\" />","grid-2x2":"<path d=\"M12 3v18\" /><path d=\"M3 12h18\" /><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" />","group":"<path d=\"M3 7V5c0-1.1.9-2 2-2h2\" /><path d=\"M17 3h2c1.1 0 2 .9 2 2v2\" /><path d=\"M21 17v2c0 1.1-.9 2-2 2h-2\" /><path d=\"M7 21H5c-1.1 0-2-.9-2-2v-2\" /><rect width=\"7\" height=\"5\" x=\"7\" y=\"7\" rx=\"1\" /><rect width=\"7\" height=\"5\" x=\"10\" y=\"12\" rx=\"1\" />","image-plus":"<path d=\"M16 5h6\" /><path d=\"M19 2v6\" /><path d=\"M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" /><circle cx=\"9\" cy=\"9\" r=\"2\" />","image":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\" /><circle cx=\"9\" cy=\"9\" r=\"2\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" />","images":"<path d=\"M18 22H4a2 2 0 0 1-2-2V6\" /><path d=\"m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18\" /><circle cx=\"12\" cy=\"8\" r=\"2\" /><rect width=\"16\" height=\"16\" x=\"6\" y=\"2\" rx=\"2\" />","key-round":"<path d=\"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z\" /><circle cx=\"16.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","keyboard":"<path d=\"M10 8h.01\" /><path d=\"M12 12h.01\" /><path d=\"M14 8h.01\" /><path d=\"M16 12h.01\" /><path d=\"M18 8h.01\" /><path d=\"M6 8h.01\" /><path d=\"M7 16h10\" /><path d=\"M8 12h.01\" /><rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />","layers":"<path d=\"M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z\" /><path d=\"M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12\" /><path d=\"M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17\" />","library":"<path d=\"m16 6 4 14\" /><path d=\"M12 6v14\" /><path d=\"M8 8v12\" /><path d=\"M4 4v16\" />","list-ordered":"<path d=\"M10 12h11\" /><path d=\"M10 18h11\" /><path d=\"M10 6h11\" /><path d=\"M4 10h2\" /><path d=\"M4 6h1v4\" /><path d=\"M6 18H4c0-1 2-2 2-3s-1-1.5-2-1\" />","loader-circle":"<path d=\"M21 12a9 9 0 1 1-6.219-8.56\" />","lock-open":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 9.9-1\" />","lock":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 10 0v4\" />","maximize":"<path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /><path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /><path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /><path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" />","message-circle":"<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\" />","minus":"<path d=\"M5 12h14\" />","package":"<path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\" /><path d=\"M12 22V12\" /><path d=\"m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7\" /><path d=\"m7.5 4.27 9 5.15\" />","palette":"<circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\" /><path d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z\" />","pause":"<rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" /><rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" />","pen-line":"<path d=\"M12 20h9\" /><path d=\"M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z\" />","pen-tool":"<path d=\"M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z\" /><path d=\"m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18\" /><path d=\"m2.3 2.3 7.286 7.286\" /><circle cx=\"11\" cy=\"11\" r=\"2\" />","pin":"<path d=\"M12 17v5\" /><path d=\"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z\" />","play":"<polygon points=\"6 3 20 12 6 21 6 3\" />","plug":"<path d=\"M12 22v-5\" /><path d=\"M9 8V2\" /><path d=\"M15 8V2\" /><path d=\"M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z\" />","plus":"<path d=\"M5 12h14\" /><path d=\"M12 5v14\" />","rotate-ccw":"<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /><path d=\"M3 3v5h5\" />","save":"<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" /><path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" /><path d=\"M7 3v4a1 1 0 0 0 1 1h7\" />","scissors":"<circle cx=\"6\" cy=\"6\" r=\"3\" /><path d=\"M8.12 8.12 12 12\" /><path d=\"M20 4 8.12 15.88\" /><circle cx=\"6\" cy=\"18\" r=\"3\" /><path d=\"M14.8 14.8 20 20\" />","settings":"<path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","shuffle":"<path d=\"m18 14 4 4-4 4\" /><path d=\"m18 2 4 4-4 4\" /><path d=\"M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22\" /><path d=\"M2 6h1.972a4 4 0 0 1 3.6 2.2\" /><path d=\"M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45\" />","sliders-horizontal":"<line x1=\"21\" x2=\"14\" y1=\"4\" y2=\"4\" /><line x1=\"10\" x2=\"3\" y1=\"4\" y2=\"4\" /><line x1=\"21\" x2=\"12\" y1=\"12\" y2=\"12\" /><line x1=\"8\" x2=\"3\" y1=\"12\" y2=\"12\" /><line x1=\"21\" x2=\"16\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"3\" y1=\"20\" y2=\"20\" /><line x1=\"14\" x2=\"14\" y1=\"2\" y2=\"6\" /><line x1=\"8\" x2=\"8\" y1=\"10\" y2=\"14\" /><line x1=\"16\" x2=\"16\" y1=\"18\" y2=\"22\" />","sparkles":"<path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\" /><path d=\"M20 3v4\" /><path d=\"M22 5h-4\" /><path d=\"M4 17v2\" /><path d=\"M5 18H3\" />","star":"<path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" />","tag":"<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\" /><circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","trash-2":"<path d=\"M3 6h18\" /><path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /><path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /><line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /><line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />","triangle-alert":"<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /><path d=\"M12 9v4\" /><path d=\"M12 17h.01\" />","type":"<polyline points=\"4 7 4 4 20 4 20 7\" /><line x1=\"9\" x2=\"15\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"12\" y1=\"4\" y2=\"20\" />","ungroup":"<rect width=\"8\" height=\"6\" x=\"5\" y=\"4\" rx=\"1\" /><rect width=\"8\" height=\"6\" x=\"11\" y=\"14\" rx=\"1\" />","upload":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"17 8 12 3 7 8\" /><line x1=\"12\" x2=\"12\" y1=\"3\" y2=\"15\" />","wand-sparkles":"<path d=\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72\" /><path d=\"m14 7 3 3\" /><path d=\"M5 6v4\" /><path d=\"M19 14v4\" /><path d=\"M10 2v2\" /><path d=\"M7 8H3\" /><path d=\"M21 16h-4\" /><path d=\"M11 3H9\" />","x":"<path d=\"M18 6 6 18\" /><path d=\"m6 6 12 12\" />","unlink":"<path d=\"m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71\" /><path d=\"m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71\" /><line x1=\"8\" x2=\"8\" y1=\"2\" y2=\"5\" /><line x1=\"2\" x2=\"5\" y1=\"8\" y2=\"8\" /><line x1=\"16\" x2=\"16\" y1=\"19\" y2=\"22\" /><line x1=\"19\" x2=\"22\" y1=\"16\" y2=\"16\" />","mouse-pointer-click":"<path d=\"M14 4.1 12 6\" /><path d=\"m5.1 8-2.9-.8\" /><path d=\"m6 12-1.9 2\" /><path d=\"M7.2 2.2 8 5.1\" /><path d=\"M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z\" />","zap":"<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\" />","history":"<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /><path d=\"M3 3v5h5\" /><path d=\"M12 7v5l4 2\" />"};
+    const ICONS = {"align-center-horizontal":"<path d=\"M2 12h20\" /><path d=\"M10 16v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4\" /><path d=\"M10 8V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v4\" /><path d=\"M20 16v1a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-1\" /><path d=\"M14 8V7c0-1.1.9-2 2-2h2a2 2 0 0 1 2 2v1\" />","align-center-vertical":"<path d=\"M12 2v20\" /><path d=\"M8 10H4a2 2 0 0 1-2-2V6c0-1.1.9-2 2-2h4\" /><path d=\"M16 10h4a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-4\" /><path d=\"M8 20H7a2 2 0 0 1-2-2v-2c0-1.1.9-2 2-2h1\" /><path d=\"M16 14h1a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1\" />","align-end-horizontal":"<rect width=\"6\" height=\"16\" x=\"4\" y=\"2\" rx=\"2\" /><rect width=\"6\" height=\"9\" x=\"14\" y=\"9\" rx=\"2\" /><path d=\"M22 22H2\" />","align-end-vertical":"<rect width=\"16\" height=\"6\" x=\"2\" y=\"4\" rx=\"2\" /><rect width=\"9\" height=\"6\" x=\"9\" y=\"14\" rx=\"2\" /><path d=\"M22 22V2\" />","align-horizontal-distribute-center":"<rect width=\"6\" height=\"14\" x=\"4\" y=\"5\" rx=\"2\" /><rect width=\"6\" height=\"10\" x=\"14\" y=\"7\" rx=\"2\" /><path d=\"M17 22v-5\" /><path d=\"M17 7V2\" /><path d=\"M7 22v-3\" /><path d=\"M7 5V2\" />","align-start-horizontal":"<rect width=\"6\" height=\"16\" x=\"4\" y=\"6\" rx=\"2\" /><rect width=\"6\" height=\"9\" x=\"14\" y=\"6\" rx=\"2\" /><path d=\"M22 2H2\" />","align-start-vertical":"<rect width=\"9\" height=\"6\" x=\"6\" y=\"14\" rx=\"2\" /><rect width=\"16\" height=\"6\" x=\"6\" y=\"4\" rx=\"2\" /><path d=\"M2 2v20\" />","align-vertical-distribute-center":"<path d=\"M22 17h-3\" /><path d=\"M22 7h-5\" /><path d=\"M5 17H2\" /><path d=\"M7 7H2\" /><rect x=\"5\" y=\"14\" width=\"14\" height=\"6\" rx=\"2\" /><rect x=\"7\" y=\"4\" width=\"10\" height=\"6\" rx=\"2\" />","arrow-down":"<path d=\"M12 5v14\" /><path d=\"m19 12-7 7-7-7\" />","arrow-up":"<path d=\"m5 12 7-7 7 7\" /><path d=\"M12 19V5\" />","arrow-up-right":"<path d=\"M7 7h10v10\" /><path d=\"M7 17 17 7\" />","arrow-left-right":"<path d=\"M8 3 4 7l4 4\" /><path d=\"M4 7h16\" /><path d=\"m16 21 4-4-4-4\" /><path d=\"M20 17H4\" />","brush":"<path d=\"m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08\" /><path d=\"M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z\" />","camera":"<path d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\" /><circle cx=\"12\" cy=\"13\" r=\"3\" />","check":"<path d=\"M20 6 9 17l-5-5\" />","chevron-down":"<path d=\"m6 9 6 6 6-6\" />","chevron-left":"<path d=\"m15 18-6-6 6-6\" />","chevron-right":"<path d=\"m9 18 6-6-6-6\" />","chevrons-down":"<path d=\"m7 6 5 5 5-5\" /><path d=\"m7 13 5 5 5-5\" />","chevrons-left-right":"<path d=\"m9 7-5 5 5 5\" /><path d=\"m15 7 5 5-5 5\" />","chevrons-up":"<path d=\"m17 11-5-5-5 5\" /><path d=\"m17 18-5-5-5 5\" />","circle-x":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><path d=\"m15 9-6 6\" /><path d=\"m9 9 6 6\" />","clipboard-copy":"<rect width=\"8\" height=\"4\" x=\"8\" y=\"2\" rx=\"1\" ry=\"1\" /><path d=\"M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2\" /><path d=\"M16 4h2a2 2 0 0 1 2 2v4\" /><path d=\"M21 14H11\" /><path d=\"m15 10-4 4 4 4\" />","clock":"<circle cx=\"12\" cy=\"12\" r=\"10\" /><polyline points=\"12 6 12 12 16 14\" />","columns-2":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M12 3v18\" />","copy":"<rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\" ry=\"2\" /><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\" />","corner-right-down":"<path d=\"m10 15 5 5 5-5\" /><path d=\"M4 4h7a4 4 0 0 1 4 4v12\" />","database":"<ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\" /><path d=\"M3 5V19A9 3 0 0 0 21 19V5\" /><path d=\"M3 12A9 3 0 0 0 21 12\" />","dices":"<rect width=\"12\" height=\"12\" x=\"2\" y=\"10\" rx=\"2\" ry=\"2\" /><path d=\"m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6\" /><path d=\"M6 18h.01\" /><path d=\"M10 14h.01\" /><path d=\"M15 6h.01\" /><path d=\"M18 9h.01\" />","download":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"7 10 12 15 17 10\" /><line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\" />","eraser":"<path d=\"m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21\" /><path d=\"M22 21H7\" /><path d=\"m5 11 9 9\" />","expand":"<path d=\"m21 21-6-6m6 6v-4.8m0 4.8h-4.8\" /><path d=\"M3 16.2V21m0 0h4.8M3 21l6-6\" /><path d=\"M21 7.8V3m0 0h-4.8M21 3l-6 6\" /><path d=\"M3 7.8V3m0 0h4.8M3 3l6 6\" />","eye-off":"<path d=\"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49\" /><path d=\"M14.084 14.158a3 3 0 0 1-4.242-4.242\" /><path d=\"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143\" /><path d=\"m2 2 20 20\" />","eye":"<path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","film":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" /><path d=\"M7 3v18\" /><path d=\"M3 7.5h4\" /><path d=\"M3 12h18\" /><path d=\"M3 16.5h4\" /><path d=\"M17 3v18\" /><path d=\"M17 7.5h4\" /><path d=\"M17 16.5h4\" />","folder":"<path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />","folder-plus":"<path d=\"M12 10v6\" /><path d=\"M9 13h6\" /><path d=\"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z\" />","frame":"<line x1=\"22\" x2=\"2\" y1=\"6\" y2=\"6\" /><line x1=\"22\" x2=\"2\" y1=\"18\" y2=\"18\" /><line x1=\"6\" x2=\"6\" y1=\"2\" y2=\"22\" /><line x1=\"18\" x2=\"18\" y1=\"2\" y2=\"22\" />","git-fork":"<circle cx=\"12\" cy=\"18\" r=\"3\" /><circle cx=\"6\" cy=\"6\" r=\"3\" /><circle cx=\"18\" cy=\"6\" r=\"3\" /><path d=\"M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9\" /><path d=\"M12 12v3\" />","grid-2x2":"<path d=\"M12 3v18\" /><path d=\"M3 12h18\" /><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" />","group":"<path d=\"M3 7V5c0-1.1.9-2 2-2h2\" /><path d=\"M17 3h2c1.1 0 2 .9 2 2v2\" /><path d=\"M21 17v2c0 1.1-.9 2-2 2h-2\" /><path d=\"M7 21H5c-1.1 0-2-.9-2-2v-2\" /><rect width=\"7\" height=\"5\" x=\"7\" y=\"7\" rx=\"1\" /><rect width=\"7\" height=\"5\" x=\"10\" y=\"12\" rx=\"1\" />","image-plus":"<path d=\"M16 5h6\" /><path d=\"M19 2v6\" /><path d=\"M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" /><circle cx=\"9\" cy=\"9\" r=\"2\" />","image":"<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\" /><circle cx=\"9\" cy=\"9\" r=\"2\" /><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\" />","images":"<path d=\"M18 22H4a2 2 0 0 1-2-2V6\" /><path d=\"m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18\" /><circle cx=\"12\" cy=\"8\" r=\"2\" /><rect width=\"16\" height=\"16\" x=\"6\" y=\"2\" rx=\"2\" />","key-round":"<path d=\"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z\" /><circle cx=\"16.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","keyboard":"<path d=\"M10 8h.01\" /><path d=\"M12 12h.01\" /><path d=\"M14 8h.01\" /><path d=\"M16 12h.01\" /><path d=\"M18 8h.01\" /><path d=\"M6 8h.01\" /><path d=\"M7 16h10\" /><path d=\"M8 12h.01\" /><rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\" />","layers":"<path d=\"M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z\" /><path d=\"M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12\" /><path d=\"M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17\" />","library":"<path d=\"m16 6 4 14\" /><path d=\"M12 6v14\" /><path d=\"M8 8v12\" /><path d=\"M4 4v16\" />","list-ordered":"<path d=\"M10 12h11\" /><path d=\"M10 18h11\" /><path d=\"M10 6h11\" /><path d=\"M4 10h2\" /><path d=\"M4 6h1v4\" /><path d=\"M6 18H4c0-1 2-2 2-3s-1-1.5-2-1\" />","loader-circle":"<path d=\"M21 12a9 9 0 1 1-6.219-8.56\" />","lock-open":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 9.9-1\" />","lock":"<rect width=\"18\" height=\"11\" x=\"3\" y=\"11\" rx=\"2\" ry=\"2\" /><path d=\"M7 11V7a5 5 0 0 1 10 0v4\" />","map":"<path d=\"M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z\" /><path d=\"M15 5.764v15\" /><path d=\"M9 3.236v15\" />","maximize":"<path d=\"M8 3H5a2 2 0 0 0-2 2v3\" /><path d=\"M21 8V5a2 2 0 0 0-2-2h-3\" /><path d=\"M3 16v3a2 2 0 0 0 2 2h3\" /><path d=\"M16 21h3a2 2 0 0 0 2-2v-3\" />","message-circle":"<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\" />","minus":"<path d=\"M5 12h14\" />","package":"<path d=\"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z\" /><path d=\"M12 22V12\" /><path d=\"m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7\" /><path d=\"m7.5 4.27 9 5.15\" />","palette":"<circle cx=\"13.5\" cy=\"6.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"17.5\" cy=\"10.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"8.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" /><circle cx=\"6.5\" cy=\"12.5\" r=\".5\" fill=\"currentColor\" /><path d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z\" />","pause":"<rect x=\"14\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" /><rect x=\"6\" y=\"4\" width=\"4\" height=\"16\" rx=\"1\" />","pen-line":"<path d=\"M12 20h9\" /><path d=\"M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z\" />","pen-tool":"<path d=\"M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z\" /><path d=\"m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18\" /><path d=\"m2.3 2.3 7.286 7.286\" /><circle cx=\"11\" cy=\"11\" r=\"2\" />","pin":"<path d=\"M12 17v5\" /><path d=\"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z\" />","play":"<polygon points=\"6 3 20 12 6 21 6 3\" />","plug":"<path d=\"M12 22v-5\" /><path d=\"M9 8V2\" /><path d=\"M15 8V2\" /><path d=\"M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z\" />","plus":"<path d=\"M5 12h14\" /><path d=\"M12 5v14\" />","rotate-ccw":"<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /><path d=\"M3 3v5h5\" />","save":"<path d=\"M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\" /><path d=\"M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7\" /><path d=\"M7 3v4a1 1 0 0 0 1 1h7\" />","scissors":"<circle cx=\"6\" cy=\"6\" r=\"3\" /><path d=\"M8.12 8.12 12 12\" /><path d=\"M20 4 8.12 15.88\" /><circle cx=\"6\" cy=\"18\" r=\"3\" /><path d=\"M14.8 14.8 20 20\" />","settings":"<path d=\"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z\" /><circle cx=\"12\" cy=\"12\" r=\"3\" />","shuffle":"<path d=\"m18 14 4 4-4 4\" /><path d=\"m18 2 4 4-4 4\" /><path d=\"M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22\" /><path d=\"M2 6h1.972a4 4 0 0 1 3.6 2.2\" /><path d=\"M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45\" />","sliders-horizontal":"<line x1=\"21\" x2=\"14\" y1=\"4\" y2=\"4\" /><line x1=\"10\" x2=\"3\" y1=\"4\" y2=\"4\" /><line x1=\"21\" x2=\"12\" y1=\"12\" y2=\"12\" /><line x1=\"8\" x2=\"3\" y1=\"12\" y2=\"12\" /><line x1=\"21\" x2=\"16\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"3\" y1=\"20\" y2=\"20\" /><line x1=\"14\" x2=\"14\" y1=\"2\" y2=\"6\" /><line x1=\"8\" x2=\"8\" y1=\"10\" y2=\"14\" /><line x1=\"16\" x2=\"16\" y1=\"18\" y2=\"22\" />","sparkles":"<path d=\"M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z\" /><path d=\"M20 3v4\" /><path d=\"M22 5h-4\" /><path d=\"M4 17v2\" /><path d=\"M5 18H3\" />","star":"<path d=\"M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z\" />","tag":"<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\" /><circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\" />","trash-2":"<path d=\"M3 6h18\" /><path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\" /><path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\" /><line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\" /><line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\" />","triangle-alert":"<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /><path d=\"M12 9v4\" /><path d=\"M12 17h.01\" />","type":"<polyline points=\"4 7 4 4 20 4 20 7\" /><line x1=\"9\" x2=\"15\" y1=\"20\" y2=\"20\" /><line x1=\"12\" x2=\"12\" y1=\"4\" y2=\"20\" />","ungroup":"<rect width=\"8\" height=\"6\" x=\"5\" y=\"4\" rx=\"1\" /><rect width=\"8\" height=\"6\" x=\"11\" y=\"14\" rx=\"1\" />","upload":"<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><polyline points=\"17 8 12 3 7 8\" /><line x1=\"12\" x2=\"12\" y1=\"3\" y2=\"15\" />","wand-sparkles":"<path d=\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72\" /><path d=\"m14 7 3 3\" /><path d=\"M5 6v4\" /><path d=\"M19 14v4\" /><path d=\"M10 2v2\" /><path d=\"M7 8H3\" /><path d=\"M21 16h-4\" /><path d=\"M11 3H9\" />","x":"<path d=\"M18 6 6 18\" /><path d=\"m6 6 12 12\" />","unlink":"<path d=\"m18.84 12.25 1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71\" /><path d=\"m5.17 11.75-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71\" /><line x1=\"8\" x2=\"8\" y1=\"2\" y2=\"5\" /><line x1=\"2\" x2=\"5\" y1=\"8\" y2=\"8\" /><line x1=\"16\" x2=\"16\" y1=\"19\" y2=\"22\" /><line x1=\"19\" x2=\"22\" y1=\"16\" y2=\"16\" />","mouse-pointer-click":"<path d=\"M14 4.1 12 6\" /><path d=\"m5.1 8-2.9-.8\" /><path d=\"m6 12-1.9 2\" /><path d=\"M7.2 2.2 8 5.1\" /><path d=\"M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z\" />","zap":"<path d=\"M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z\" />","history":"<path d=\"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8\" /><path d=\"M3 3v5h5\" /><path d=\"M12 7v5l4 2\" />"};
     function ic(name, size) {
       return h('svg', {
         viewBox: '0 0 24 24', width: size || 14, height: size || 14, fill: 'none',
@@ -1213,6 +1213,15 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-qi-act:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--dsw-alias-label-primary,#f9fafb)}
 .snx-qi-act.danger{color:var(--snx-error);border-color:color-mix(in srgb,var(--snx-error) 30%,transparent)}
 .snx-qi-act.danger:hover{background:color-mix(in srgb,var(--snx-error) 12%,transparent);color:var(--snx-error)}
+/* SPEC-18 二：重排按钮 disabled（队首上移/队尾下移不可用）与并发上限选择器 */
+.snx-qi-act:disabled{opacity:.35;cursor:default}
+.snx-qi-act:disabled:hover{background:transparent;color:inherit}
+.snx-queue-conc{display:flex;align-items:center;gap:6px;color:var(--dsw-alias-label-caption,#81858c);font-size:12px}
+.snx-queue-conc select{
+  background:var(--dsw-alias-bg-layer-2,#2c2c2e);color:var(--dsw-alias-label-primary,#f9fafb);
+  border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:6px;
+  padding:4px 6px;font-size:12px;cursor:pointer;
+}
 /* ── v12：行展开详情（SPEC ⑤：审讯队列——模型/尺寸/种子/负面词/错误全文/耗时两段）─── */
 .snx-qi-chev{
   flex:none;display:inline-flex;align-items:center;justify-content:center;
@@ -1360,6 +1369,31 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
   font-family:inherit;font-weight:500;backdrop-filter:blur(4px);
 }
 .snx-canvas-fs:hover{background:color-mix(in srgb,var(--snx-accent) 15%,transparent);color:var(--snx-accent);border-color:var(--snx-accent)}
+
+/* SPEC-18 四：画布 minimap（右下角，避让底部状态栏 28px 与左下缩放控件） */
+.snx-minimap{
+  position:absolute;right:12px;bottom:36px;z-index:9;
+  background:var(--dsw-alias-button-floating-fill,#2c2c2ecc);backdrop-filter:blur(4px);
+  border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:8px;
+  padding:3px;line-height:0;
+}
+.snx-minimap-cv{display:block;border-radius:5px;cursor:crosshair;touch-action:none}
+.snx-minimap-x{
+  position:absolute;top:3px;right:3px;width:16px;height:16px;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--dsw-alias-button-floating-fill,#2c2c2e);color:var(--dsw-alias-label-secondary,#cfd3d6);
+  border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:50%;
+  cursor:pointer;font-family:inherit;
+}
+.snx-minimap-x:hover{color:var(--snx-accent);border-color:var(--snx-accent)}
+.snx-minimap-reopen{
+  position:absolute;right:12px;bottom:36px;z-index:9;width:28px;height:28px;padding:0;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--dsw-alias-button-floating-fill,#2c2c2ecc);backdrop-filter:blur(4px);
+  color:var(--dsw-alias-label-secondary,#cfd3d6);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);
+  border-radius:8px;cursor:pointer;font-family:inherit;
+}
+.snx-minimap-reopen:hover{color:var(--snx-accent);border-color:var(--snx-accent)}
 
 /* 全屏画布 overlay */
 .snx-fs{
@@ -2603,6 +2637,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     function cancelJob(nodeId) {
       const ac = inflightJobs.get(nodeId)
       if (ac) { try { ac.abort() } catch { } }
+      genQueueRemove(nodeId)   // SPEC-18 二：等待并发槽位中的任务出队放行（醒来命中取消检查还槽）
       const n = store.node(nodeId)
       if (n && (n.status === 'pending' || n.status === 'running')) {
         n.status = 'error'; n.errMsg = '用户取消'; n._endedAt = Date.now()   // v12：运行段停表（队列详情耗时两段）
@@ -2623,6 +2658,147 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       queuePaused = v
       if (!v) { queueWaiters.forEach((r) => r()); queueWaiters.clear() }
       try { window.dispatchEvent(new CustomEvent('snx:queuePaused', { detail: v })) } catch { }
+    }
+
+    // ——— SPEC-18 二：全局并发闸 + 队列重排/插队 ———
+    // 此前 runOne 全部即发并行（Promise.allSettled），「队列」只是状态视图，重排无处着力。
+    // 现在生成先过并发闸：最多 N 个同时在跑（localStorage snxGenConcurrency，1–4，默认 2），
+    // 其余进 FIFO 等待表；等待表可重排（↑↓ 上/下移、置顶=插队），队列 tab 可视重排结果。
+    // 边界：批量变体自串行（不入闸）；增强/蒙版/扩图/重抽走 runOne 全部入闸。
+    const genWaitQueue = []   // [{ nodeId, res }] — FIFO，等待并发槽位的 runOne
+    function genConcLimit() {
+      try {
+        const v = parseInt(localStorage.getItem('snxGenConcurrency') || '', 10)
+        return Number.isFinite(v) && v >= 1 && v <= 4 ? v : 2
+      } catch { return 2 }
+    }
+    function genConcSet(v) {
+      try { localStorage.setItem('snxGenConcurrency', String(Math.min(4, Math.max(1, v | 0)))) } catch { }
+      genTryNext()
+    }
+    let genActive = 0
+    function genAcquire(nodeId) {
+      // 队头公平：等待表非空时后来者不得越队（上限调大后的补跑统一由 genTryNext 放行）
+      if (!genWaitQueue.length && genActive < genConcLimit()) { genActive++; return Promise.resolve() }
+      return new Promise((res) => { genWaitQueue.push({ nodeId, res }); genTryNext() })
+    }
+    function genTryNext() {
+      while (genWaitQueue.length && genActive < genConcLimit()) {
+        const nxt = genWaitQueue.shift()
+        genActive++
+        try { nxt.res() } catch { }
+      }
+    }
+    function genRelease() {
+      genActive = Math.max(0, genActive - 1)
+      genTryNext()
+    }
+    function genQueuePos(nodeId) { return genWaitQueue.findIndex((w) => w.nodeId === nodeId) }
+    function genQueueMove(nodeId, dir) {
+      const i = genQueuePos(nodeId)
+      if (i < 0) return false
+      const j = dir === 'top' ? 0 : (dir === 'up' ? Math.max(0, i - 1) : Math.min(genWaitQueue.length - 1, i + 1))
+      if (i === j) return false
+      const [w] = genWaitQueue.splice(i, 1)
+      genWaitQueue.splice(j, 0, w)
+      try { window.dispatchEvent(new CustomEvent('snx:queueOrderChanged')) } catch { }
+      return true
+    }
+    function genQueueRemove(nodeId) {
+      const i = genQueuePos(nodeId)
+      if (i >= 0) {
+        const [w] = genWaitQueue.splice(i, 1)
+        try { w.res() } catch { }   // 放行：runOne 醒来命中取消检查，走 finally 的 genRelease 正常还槽
+      }
+    }
+
+    // ——— SPEC-18 五：tiled 放大 2×（分块重绘 + 羽化缝合）———
+    // 上游无专用放大模型（PRODUCT 边界注明后端不可能），用 images/generations 的 i2i 管线做
+    // 2×2 分块超分重绘：每块带 12% 重叠发 /api/sensenova/generate(reference=块图)，应答贴回
+    // 2× 输出画布，重叠侧线性羽化消缝（图像外边界不渐隐）。质量依赖上游重绘保真，非专用放大
+    // 模型——如实标注。（初版走 chat/completions，真测 404 model is not found 后改 i2i。）
+    const TILE_UPSCALE_PROMPT = '超分辨率重绘：将这张图片放大为 2 倍分辨率的清晰版本。严格保持画面内容、构图、颜色、光影与原图完全一致，只提升细节与清晰度、重建锐利边缘与纹理；不要改变、添加或删除任何内容。'
+    async function tiledUpscale2x(node, onProgress, notify) {
+      if (!node || !node.src) throw new Error('没有源图')
+      const im = await loadImg(node.src)
+      const W = im.naturalWidth, H = im.naturalHeight
+      if (!W || !H) throw new Error('源图未加载')
+      const outW = W * 2, outH = H * 2
+      const ovX = Math.max(8, Math.round(W * 0.12)), ovY = Math.max(8, Math.round(H * 0.12))
+      const hx = Math.round(W / 2), hy = Math.round(H / 2)
+      const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Math.round(v)))
+      // 四块：[sx,sy,ex,ey] 源图坐标 + 重叠侧羽化标记（外边界侧不羽化）
+      const tiles = [
+        { sx: 0, sy: 0, ex: clamp(hx + ovX, 1, W), ey: clamp(hy + ovY, 1, H), fL: false, fT: false, fR: true, fB: true },
+        { sx: clamp(hx - ovX, 0, W - 1), sy: 0, ex: W, ey: clamp(hy + ovY, 1, H), fL: true, fT: false, fR: false, fB: true },
+        { sx: 0, sy: clamp(hy - ovY, 0, H - 1), ex: clamp(hx + ovX, 1, W), ey: H, fL: false, fT: true, fR: true, fB: false },
+        { sx: clamp(hx - ovX, 0, W - 1), sy: clamp(hy - ovY, 0, H - 1), ex: W, ey: H, fL: true, fT: true, fR: false, fB: false },
+      ]
+      const out = document.createElement('canvas')
+      out.width = outW; out.height = outH
+      const octx = out.getContext('2d')
+      const FEATHER = 24
+      for (let i = 0; i < tiles.length; i++) {
+        const t = tiles[i]
+        const tw = t.ex - t.sx, th = t.ey - t.sy
+        if (onProgress) onProgress((i + 1) + '/4')
+        // 切块 → 编辑管线
+        const tc = document.createElement('canvas')
+        tc.width = tw; tc.height = th
+        tc.getContext('2d').drawImage(im, t.sx, t.sy, tw, th, 0, 0, tw, th)
+        // SPEC-18 五真测修正：编辑管线走 /generate 的 i2i 通道（chat/completions 对生图模型 404，
+        // 真上游实测 model is not found）；尺寸先请求精确 2× 块尺寸,上游不认该尺寸桶时退 1024 标准方图
+        const tileRef = tc.toDataURL('image/png')
+        const tileModel = (node.params && node.params.model) || undefined
+        let r = await post('/api/sensenova/generate', { prompt: TILE_UPSCALE_PROMPT, size: (tw * 2) + 'x' + (th * 2), reference: tileRef, model: tileModel })
+        let imgUrl = r && r.ok && r.image ? (r.image.kind === 'url' ? r.image.value : 'data:image/png;base64,' + r.image.value) : null
+        if (!imgUrl) {
+          r = await post('/api/sensenova/generate', { prompt: TILE_UPSCALE_PROMPT, size: '1024x1024', reference: tileRef, model: tileModel })
+          imgUrl = r && r.ok && r.image ? (r.image.kind === 'url' ? r.image.value : 'data:image/png;base64,' + r.image.value) : null
+        }
+        if (!imgUrl) throw new Error('第 ' + (i + 1) + ' 块重绘失败' + (r && r.error ? ('：' + String(r.error).slice(0, 120)) : '（无图返回）'))
+        const rim = await loadImg(imgUrl)
+        const dw = tw * 2, dh = th * 2
+        // 贴回 + 重叠侧羽化：destination-in 纵横两遍线性渐变（依次相乘）
+        const ft = document.createElement('canvas')
+        ft.width = dw; ft.height = dh
+        const fc = ft.getContext('2d')
+        fc.drawImage(rim, 0, 0, rim.naturalWidth || rim.width, rim.naturalHeight || rim.height, 0, 0, dw, dh)
+        fc.globalCompositeOperation = 'destination-in'
+        const maskAxis = (horizontal, fLo, fHi) => {
+          const len = horizontal ? dw : dh
+          const g = horizontal ? fc.createLinearGradient(0, 0, dw, 0) : fc.createLinearGradient(0, 0, 0, dh)
+          const fstop = Math.min(0.5, FEATHER / len)
+          if (fLo) { g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(fstop, 'rgba(0,0,0,1)') } else g.addColorStop(0, 'rgba(0,0,0,1)')
+          if (fHi) { g.addColorStop(Math.max(0.5, 1 - fstop), 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)') } else g.addColorStop(1, 'rgba(0,0,0,1)')
+          fc.fillStyle = g
+          fc.fillRect(0, 0, dw, dh)
+        }
+        if (t.fL || t.fR) maskAxis(true, t.fL, t.fR)
+        if (t.fT || t.fB) maskAxis(false, t.fT, t.fB)
+        octx.drawImage(ft, t.sx * 2, t.sy * 2)
+      }
+      // 缝合完成 → 落盘（JPEG 0.92：4K 输出的 PNG dataURL 可达 20MB+，JPEG 控制在几 MB）
+      if (onProgress) onProgress('落盘')
+      const dataUrl = out.toDataURL('image/jpeg', 0.92)
+      const url = await persistRef(dataUrl)
+      if (!url) throw new Error('放大结果落盘失败')
+      // 新 done 节点挂源图右侧，同画板（刷新最近使用）；undo 快照覆盖
+      store.pushUndo()
+      const id = nid()
+      const fit = nodeFit(out, 480 * 2)
+      store.doc.nodes.push({
+        id, type: 'image', status: 'done', src: url, parentId: node.id,
+        boardId: node.boardId,
+        x: Math.round(node.x + node.w + 60), y: node.y, w: fit.w, h: fit.h,
+        prompt: String(node.prompt || '') + '（放大 2×）',
+        params: Object.assign({}, node.params, { tiled2x: true, srcSize: W + 'x' + H }),
+        ts: Date.now(), _endedAt: Date.now(),
+      })
+      if (node.boardId) touchBoard(node.boardId)
+      store.emit(); autosave()
+      notify && notify('已放大 2×：' + W + '×' + H + ' 变为 ' + outW + '×' + outH + '，已落到源图右侧')
+      return id
     }
 
     // ——— SPEC-16 一：生成耗时样本与「预计 ~Xs」———
@@ -2665,6 +2841,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       await waitIfPaused()
       // v11.2：暂停苏醒后先查取消——等待期间被用户取消（error/用户取消）的任务不再复活成 running，不发请求
       if (isCancelled(nodeId)) return
+      // SPEC-18 二：并发闸——排队等待期间被取消的由 genQueueRemove 唤醒，醒来即命中下方取消检查
+      await genAcquire(nodeId)
+      if (isCancelled(nodeId)) { genRelease(); return }
       const { prompt, size = '2048x2048', model = '', reference, refs, upscale, negative, seed } = o
       store.updateNode(nodeId, { status: 'running', _startedAt: Date.now(), errMsg: '' })
       const ac = new AbortController()
@@ -2699,7 +2878,11 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         // upscale 倍数 → 节点初始尺寸放大（与原图一致便于构图）
         const baseSize = upscale ? 480 * (upscale === 4 ? 2 : 1.5) : 480
         const fit = nodeFit(im, baseSize)
-        store.updateNode(nodeId, { status: 'done', src: value, w: fit.w, h: fit.h, error: '', errMsg: '', ts: Date.now(), _endedAt: Date.now() })   // v12：_endedAt 供队列详情耗时两段
+        // SPEC-18 五前置：服务端透传的上游 seed 写进 params——真实生成的图从此有种子，
+        // 灯箱「同种子重生成」对真图可用（此前 seed 在服务端 {ok,image} 包装时被丢弃）
+        const donePatch = { status: 'done', src: value, w: fit.w, h: fit.h, error: '', errMsg: '', ts: Date.now(), _endedAt: Date.now() }
+        if (typeof r.seed === 'number' && r.seed >= 0) donePatch.params = Object.assign({}, store.node(nodeId).params, { seed: r.seed })
+        store.updateNode(nodeId, donePatch)   // v12：_endedAt 供队列详情耗时两段
       } catch (e) {
         const aborted = !!(e && (e.name === 'AbortError' || /abort/i.test(String((e && e.message) || e))))
         if (aborted || isCancelled(nodeId)) {
@@ -2709,6 +2892,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         }
       } finally {
         if (inflightJobs.get(nodeId) === ac) inflightJobs.delete(nodeId)
+        genRelease()   // SPEC-18 二：还并发槽位并放行等待表队首
       }
     }
     // 无引擎兜底：按整窗视口 + 当前相机估算世界中心（生图 tab 落图时画布 DOM 未挂载、engineRef 为 null）
@@ -3911,19 +4095,121 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     // ——— v10：pending 节点悬浮层（HTML 转圈，跟随相机变换）———
     // P1-11：覆盖 pending+running 两态；ETA 不再拍脑袋写"20-60 秒"，显示真实已耗时秒数
     // （_startedAt=真正开跑时刻，排队等待一并计入 ts 起算），每秒自更新。
+    // ——— SPEC-18 四：画布 minimap（右下角 2D canvas，有意不用第二 Konva stage）———
+    // 按状态着色画节点矩形 + 视口矩形；点击/拖拽 = 把该点带到视口中心。重绘双通道：
+    // store.subscribe（emit 与 emitLight 都通知，节点增删/移动）+ engine.onViewChange（相机/尺寸）。
+    // 隐藏态记忆在 localStorage snxMinimapOff（会话级偏好）。
+    function Minimap({ engineRef }) {
+      const ref = useRef(null)
+      const [hidden, setHidden] = useState(() => { try { return localStorage.getItem('snxMinimapOff') === '1' } catch { return false } })
+      const [narrow, setNarrow] = useState(false)   // 容器过窄时整个隐藏（宽度回归:窄面板不再出界）
+      const geoRef = useRef(null)   // 最近一次绘制的世界→小地图映射（导航换算用）
+      const roRef = useRef(null)
+      useEffect(() => {
+        let raf = 0
+        const draw = () => {
+          cancelAnimationFrame(raf)
+          raf = requestAnimationFrame(() => {
+            const cv = ref.current
+            const eng = engineRef.current
+            if (!cv || !eng || !eng.wrapEl) return
+            // 引擎晚于本组件挂载(React 子 effect 先跑)——首次拿到引擎时懒挂尺寸观察,narrow 检测才成立
+            if (!roRef.current) {
+              const wrap = eng.wrapEl
+              roRef.current = new ResizeObserver(() => { draw(); setNarrow(wrap.clientWidth < 560) })
+              roRef.current.observe(wrap)
+              setNarrow(wrap.clientWidth < 560)
+            }
+            const ctx = cv.getContext('2d')
+            if (!ctx) return
+            const W = cv.width, H = cv.height
+            ctx.clearRect(0, 0, W, H)
+            const ns = store.doc.nodes.filter((n) => !n.hidden && (n.status === 'done' || n.status === 'pending' || n.status === 'running' || n.status === 'error'))
+            if (!ns.length) { geoRef.current = null; return }
+            let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity
+            for (const n of ns) { bx0 = Math.min(bx0, n.x); by0 = Math.min(by0, n.y); bx1 = Math.max(bx1, n.x + n.w); by1 = Math.max(by1, n.y + n.h) }
+            const pad = Math.max(bx1 - bx0, by1 - by0, 1) * 0.08
+            bx0 -= pad; by0 -= pad; bx1 += pad; by1 += pad
+            const s = Math.min(W / (bx1 - bx0), H / (by1 - by0))
+            const ox = (W - (bx1 - bx0) * s) / 2, oy = (H - (by1 - by0) * s) / 2
+            geoRef.current = { bx0, by0, s, ox, oy }
+            for (const n of ns) {
+              ctx.fillStyle = n.status === 'done' ? 'rgba(255,255,255,.32)'
+                : n.status === 'error' ? 'rgba(240,80,80,.45)'
+                  : 'rgba(90,150,255,.45)'   // pending/running 同色：都是进行中
+              ctx.fillRect(ox + (n.x - bx0) * s, oy + (n.y - by0) * s, Math.max(2, n.w * s), Math.max(2, n.h * s))
+            }
+            // 视口矩形（相机反算 wrap 尺寸）
+            const c = store.doc.camera
+            const cs = c.scale || 1
+            const vw = eng.wrapEl.clientWidth / cs, vh = eng.wrapEl.clientHeight / cs
+            const vx = -(c.x || 0) / cs, vy = -(c.y || 0) / cs
+            ctx.strokeStyle = 'rgba(90,150,255,.9)'
+            ctx.lineWidth = 1.5
+            ctx.strokeRect(ox + (vx - bx0) * s, oy + (vy - by0) * s, vw * s, vh * s)
+          })
+        }
+        draw()
+        const unSub = store.subscribe(draw)
+        const eng0 = engineRef.current
+        const unView = eng0 && eng0.onViewChange ? eng0.onViewChange(draw) : null
+        return () => { cancelAnimationFrame(raf); unSub(); if (unView) unView(); if (roRef.current) { roRef.current.disconnect(); roRef.current = null } }
+      }, [hidden])
+      if (hidden || narrow) return narrow ? null : h('button', {
+        className: 'snx-minimap-reopen', type: 'button',
+        title: '显示小地图',
+        onClick: () => { setHidden(false); try { localStorage.removeItem('snxMinimapOff') } catch { } },
+      }, ic('map', 14))
+      const nav = (e) => {
+        const cv = ref.current
+        const eng = engineRef.current
+        const g = geoRef.current
+        if (!cv || !eng || !eng.wrapEl || !g) return
+        const r = cv.getBoundingClientRect()
+        const wx = (e.clientX - r.left - g.ox) / g.s + g.bx0
+        const wy = (e.clientY - r.top - g.oy) / g.s + g.by0
+        const c = store.doc.camera
+        const cs = c.scale || 1
+        c.x = eng.wrapEl.clientWidth / 2 - wx * cs
+        c.y = eng.wrapEl.clientHeight / 2 - wy * cs
+        eng.applyCamera(); eng.drawEdges(); autosave()
+      }
+      return h('div', { className: 'snx-minimap' },
+        h('canvas', {
+          ref, width: 168, height: 116, className: 'snx-minimap-cv',
+          onPointerDown: (e) => { try { e.currentTarget.setPointerCapture(e.pointerId) } catch { } nav(e) },
+          onPointerMove: (e) => { if (e.buttons & 1) nav(e) },
+        }),
+        h('button', {
+          className: 'snx-minimap-x', type: 'button', title: '隐藏小地图',
+          onClick: () => { setHidden(true); try { localStorage.setItem('snxMinimapOff', '1') } catch { } },
+        }, ic('x', 11)),
+      )
+    }
+
     function PendingOverlay({ engineRef }) {
       const wrapEl = engineRef.current ? engineRef.current.wrapEl : null
       const pend = store.doc.nodes.filter((n) => n.status === 'pending' || n.status === 'running')
       const [, tickT] = useState(0)
+      // SPEC-18 三：本地无样本时服务端统计兜底（与 SnxToolPending 同源）
+      const [srvEst, setSrvEst] = useState(0)
       useEffect(() => {
         if (!pend.length) return
         const t = setInterval(() => tickT((x) => x + 1), 1000)
         return () => clearInterval(t)
       }, [pend.length])
+      useEffect(() => {
+        if (snxAvgGenDurSec() > 0) return
+        let alive = true
+        fetch('/api/sensenova/stats').then((r) => r.json()).then((j) => {
+          if (alive && j && j.ok && Number(j.avgSec) > 0) setSrvEst(Math.round(Number(j.avgSec)))
+        }).catch(() => { })
+        return () => { alive = false }
+      }, [])
       if (!wrapEl || !pend.length) return null
       const c = store.doc.camera
       // SPEC-16 一（顺手项）：工作台 pending 悬浮层同加「预计 ~Xs」，数据源与对话卡同一份样本
-      const est = snxAvgGenDurSec()
+      const est = snxAvgGenDurSec() || srvEst
       return h('div', null, pend.map((n) => {
         const sx = n.x * c.scale + c.x
         const sy = n.y * c.scale + c.y
@@ -4526,14 +4812,26 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     // 独立小组件：工具一 settle 整卡被结果替换、本组件卸载，计时器随 useEffect 清理函数回收
     function SnxToolPending() {
       const [sec, setSec] = useState(0)
+      // SPEC-18 三：本地无样本时拉服务端统计兜底——对话工具路径在服务端 execute 直调上游、
+      // 不经客户端 POST，localStorage 永远没有该路径样本；服务端环形统计（generate 路由+两工具
+      // 成功应答墙钟）覆盖全链路。只在挂载时拉一次（生成期间样本不会变化）。
+      const [srvEst, setSrvEst] = useState(0)
       useEffect(() => {
         const t0 = Date.now()
         const timer = setInterval(() => setSec(Math.floor((Date.now() - t0) / 1000)), 500)
         return () => clearInterval(timer)
       }, [])
-      // SPEC-16 一：「预计 ~Xs」=历史生成均值（挂载时读一次即可，样本在生成期间不会变）；
-      // 无样本（首次使用）时不显示预计，只显示已耗时
-      const est = snxAvgGenDurSec()
+      useEffect(() => {
+        if (snxAvgGenDurSec() > 0) return
+        let alive = true
+        fetch('/api/sensenova/stats').then((r) => r.json()).then((j) => {
+          if (alive && j && j.ok && Number(j.avgSec) > 0) setSrvEst(Math.round(Number(j.avgSec)))
+        }).catch(() => { })
+        return () => { alive = false }
+      }, [])
+      // SPEC-16 一：「预计 ~Xs」=本地样本均值，缺则服务端统计兜底；两者皆无（全新安装且
+      // 服务端也没跑过一次）时不显示预计，只显示已耗时
+      const est = snxAvgGenDurSec() || srvEst
       return h('div', { className: 'snx-tv' },
         h('div', { className: 'snx-tv-run snx-tv-wait' },
           h('span', { className: 'ring', 'aria-hidden': true }),
@@ -5783,6 +6081,13 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         )
       }
 
+      // ── SPEC-18 五：tiled 放大 2×（灯箱动作行）——点击=2×2 分块重绘+羽化缝合，结果落画布。
+      // onProgress(txt) 驱动按钮进度文案；四态防连点在 Lightbox 侧（与同种子重生成同一套词汇）
+      const onTiledUpscale = (n, onProgress) => {
+        if (!n || !n.src) return Promise.reject(new Error('没有图'))
+        return tiledUpscale2x(n, onProgress, notify)
+      }
+
       // ——— 整画布导出 PNG（全部可见 done 图按布局合成）———
       const onExportCanvas = async () => {
         setBusy(true)
@@ -5921,6 +6226,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           onRestoreParams,
           onRestoreField,
           onRegenSameSeed,   // SPEC-17 二：灯箱动作行「同种子重生成」（回填+直连重生成，seed=该图种子）
+          onTiledUpscale,   // SPEC-18 五：灯箱动作行「放大 2×」（分块重绘+羽化缝合，结果落画布）
           onDelete: async () => {
             // P1-14：原生 confirm → SnxConfirm；被其他节点作父图引用时给警告文案
             // v12：在对比选择中时也加引用警告行（删除后自动移出对比槽位）
@@ -6190,6 +6496,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             ) : null,
             // 蒙版工具条（P2-10：与全屏画布共用 renderMaskBar）
             maskId ? renderMaskBar() : null,
+            // SPEC-18 四：minimap（挂画布容器内=正确定位上下文;组件自订阅 store+viewHooks）
+            !maskId && ready && !loadErr ? h(Minimap, { engineRef }) : null,
             // 浮动操作条（v11.2.1：单选 done 图或多选 ≥2 时都渲染）
             (selDone || selMulti) && engineRef.current ? h(ActionBar, {
               engineRef, busy, setBusy, notify, multi: selMulti, viewTick: undefined,
@@ -6518,6 +6826,20 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               h('div', { className: 'lb' }, '失败'),
             ),
             h('div', { style: { flex: 1 } }),
+            // SPEC-18 二：并发上限选择器——闸值即「同时在跑的生成数」，等待表顺序=执行顺序
+            h('label', { className: 'snx-queue-conc', title: '全局并发生成上限。等待中的任务按等待表顺序补位，可在任务行用上移/下移/置顶（插队）按钮重排' },
+              ic('layers', 13),
+              h('select', {
+                value: String(genConcLimit()),
+                onChange: (e) => {
+                  genConcSet(parseInt(e.target.value, 10))
+                  force((x) => x + 1)
+                  try { notify && notify('并发上限已设为 ' + e.target.value + '（立即生效）') } catch { }
+                },
+              },
+                [1, 2, 3, 4].map((v) => h('option', { key: v, value: String(v) }, '并发 ' + v)),
+              ),
+            ),
             // SPEC-13 ②：队列「显示全部历史」toggle——关=现行为；开=全部 done/error 按时间倒序可展开审讯
             h('button', {
               className: 'snx-queue-hist' + (queueShowAllHist ? ' on' : ''),
@@ -6634,7 +6956,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                 },
               }),
             ),
-            h('div', { className: 'lbl' }, `${running} / ${allJobs.length} 并发 · ${finishedPct}% 完成`),
+            h('div', { className: 'lbl' }, `${running} 在跑 · ${pending} 等待 · 限并发 ${genConcLimit()} · ${finishedPct}% 完成`),
           ) : null,
           // 任务列表
           h('div', { className: 'snx-queue-list' },
@@ -6646,6 +6968,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               key: n.id,
               node: n,
               hist: queueShowAllHist,   // SPEC-13 ②：全历史态下旧 done 节点耗时如实显示「未运行(历史)」
+              onMove: (dir) => { genQueueMove(n.id, dir); force((x) => x + 1) },   // SPEC-18 二：等待表重排
               onCancel: () => {
                 cancelJob(n.id)
                 force((x) => x + 1)
@@ -6854,6 +7177,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               !maskId && ready && !loadErr ? h(GenBar, { engineRef, busy, setBusy, notify }) : null,
               h('div', { className: 'snx-fs-canvas', ref: wrapRef },
                 loadErr ? h('div', { className: 'snx-canvas-err' }, loadErr) : null,
+                // SPEC-18 四：minimap（全屏画布同挂,容器内=正确定位上下文）
+                !maskId && ready && !loadErr ? h(Minimap, { engineRef }) : null,
                 ready && !loadErr && store.doc.nodes.length === 0 && !maskId ? h('div', { className: 'snx-canvas-empty' },
                   h('div', { className: 'big' }, ic('wand-sparkles', 42)),
                   h('div', { className: 't1' }, '画布为空'),
@@ -8266,8 +8591,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     }
 
     // ── 队列单项 ──
-    function QueueItem({ node, onCancel, onOpen, onRetry, hist }) {
+    function QueueItem({ node, onCancel, onOpen, onRetry, onMove, hist }) {
       const st = node.status
+      // SPEC-18 二：并发闸等待表中的位次（>=0 = 正在排队可重排；-1 = 未在等待表——已占槽/未入队，无排可重）
+      const wpos = st === 'pending' ? genQueuePos(node.id) : -1
       // 运行中每秒自更新，让 elapsed 秒数跳动（否则渲染时算一次、刷新前冻结）
       const [, tickT] = useState(0)
       // v12：行展开详情（SPEC ⑤：审讯队列——模型/尺寸/种子/负面词/错误全文/耗时两段）
@@ -8330,6 +8657,26 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           ),
           h('div', { className: 'snx-qi-acts' },
             st === 'done' ? h('button', { className: 'snx-qi-act', onClick: onOpen, type: 'button' }, ic('maximize')) : null,
+            wpos >= 0 && onMove ? [
+              h('button', {
+                key: 'top', className: 'snx-qi-act', type: 'button',
+                disabled: wpos === 0,
+                title: wpos === 0 ? '已在队首' : '插队：移到等待表最前（下一个开跑）',
+                onClick: (e) => { e.stopPropagation(); onMove('top') },
+              }, ic('chevrons-up', 12)),
+              h('button', {
+                key: 'up', className: 'snx-qi-act', type: 'button',
+                disabled: wpos === 0,
+                title: '等待表第 ' + (wpos + 1) + ' 位 · 上移一位',
+                onClick: (e) => { e.stopPropagation(); onMove('up') },
+              }, ic('arrow-up', 12)),
+              h('button', {
+                key: 'down', className: 'snx-qi-act', type: 'button',
+                disabled: wpos >= genWaitQueue.length - 1,
+                title: '等待表第 ' + (wpos + 1) + ' 位 · 下移一位',
+                onClick: (e) => { e.stopPropagation(); onMove('down') },
+              }, ic('chevron-down', 12)),
+            ] : null,
             (st === 'pending' || st === 'running') ? h('button', {
               className: 'snx-qi-act danger',
               onClick: (e) => { e.stopPropagation(); onCancel() },
@@ -8538,7 +8885,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       ['原片', {}], ['黑白', { saturation: -100 }], ['复古', { saturation: -15, temp: 30, vignette: 35, contrast: -8 }],
       ['冷调', { temp: -45, saturation: 8 }], ['暖调', { temp: 45, saturation: 6 }], ['鲜艳', { saturation: 42, contrast: 12 }],
     ]
-    function Lightbox({ node, onClose, notify, onUseAsAnchor, onEdit, onDownload, onCopyParams, onRestoreParams, onRestoreField, onRegenSameSeed, onDelete, onUpscale, onAdjust, onExport, onToggleFavorite, onOpenVersion, onNav, nav, boards, onChangeBoard }) {
+    function Lightbox({ node, onClose, notify, onUseAsAnchor, onEdit, onDownload, onCopyParams, onRestoreParams, onRestoreField, onRegenSameSeed, onTiledUpscale, onDelete, onUpscale, onAdjust, onExport, onToggleFavorite, onOpenVersion, onNav, nav, boards, onChangeBoard }) {
       // P0-2：无 src 节点（生成中/失败）降级——不渲染破图，禁用导出/调整
       const hasImg = !!(node && node.src)
       const [scale, setScale] = useState(1)
@@ -8725,6 +9072,18 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         Promise.resolve(onRegenSameSeed(node))
           .then(() => setRegenSeed('ok'))
           .catch(() => setRegenSeed('err'))   // 失败态保留在按钮上，再点即重试
+      }
+      // SPEC-18 五：放大 2× 三态防连点（idle/busy/ok/err），busy 期进度文案（块 1/4…）
+      const [tiled2x, setTiled2x] = useState('idle')
+      const [tiledMsg, setTiledMsg] = useState('')
+      useEffect(() => { setTiled2x('idle'); setTiledMsg('') }, [node && node.id])
+      const canTiled = !!hasImg && typeof onTiledUpscale === 'function'
+      const doTiled2x = () => {
+        if (tiled2x === 'busy' || !onTiledUpscale) return
+        setTiled2x('busy'); setTiledMsg('1/4')
+        Promise.resolve(onTiledUpscale(node, (txt) => setTiledMsg(String(txt))))
+          .then(() => { setTiled2x('ok'); setTiledMsg('') })
+          .catch(() => { setTiled2x('err'); setTiledMsg('') })   // 失败态保留，再点即重试
       }
       // P2-3：标签编辑（输入+回车写 node.tags，删 tag 同步；画廊标签筛选读同一条链路）
       const [tagDraft, setTagDraft] = useState('')
@@ -8972,6 +9331,18 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
                     : regenSeed === 'ok' ? [ic('check', 12), ' 已重生成']
                       : regenSeed === 'err' ? [ic('triangle-alert', 12), ' 重试']
                         : [ic('lock'), ' 同种子重生成']) : null,
+                canTiled ? h('button', {
+                  type: 'button', className: 'snx-lb-act',
+                  disabled: tiled2x === 'busy',
+                  title: tiled2x === 'busy' ? '正在分块放大…'
+                    : tiled2x === 'err' ? '放大失败，点击重试'
+                    : '分块重绘放大 2×：把图切 4 块逐块超分重绘再缝合（质量依赖上游重绘保真，非专用放大模型），结果落到源图右侧',
+                  onClick: doTiled2x,
+                },
+                  tiled2x === 'busy' ? [h('span', { className: 'snx-spinring', key: 'r' }), ' 放大中 ' + tiledMsg]
+                    : tiled2x === 'ok' ? [ic('check', 12), ' 已放大 2×']
+                      : tiled2x === 'err' ? [ic('triangle-alert', 12), ' 重试']
+                        : [ic('expand'), ' 放大 2×']) : null,
                 hasImg ? h('button', { className: 'snx-lb-act go', type: 'button', onClick: onUseAsAnchor }, ic('image-plus'), ' 作为参考图') : null,
                 h('button', { className: 'snx-lb-act', type: 'button', onClick: onEdit }, ic('pen-tool'), ' 画布编辑'),
                 h('button', { className: 'snx-lb-act', type: 'button', onClick: onCopyParams }, ic('clipboard-copy'), ' 复制参数'),

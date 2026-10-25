@@ -275,6 +275,17 @@ export function apply(ctx: Context, rawConfig: Config) {
     })()
   })
 
+  // ——— SPEC-18 三：生成耗时统计（服务端环形 5 条）———
+  // 三条链路统一记录：POST /generate 路由、sensenova_generate_image 工具、sensenova_edit_image 工具。
+  // 对话轴（工具）耗时客户端采不到样本（不经客户端 POST），SnxToolPending 无本地样本时拉
+  // GET /api/sensenova/stats 兜底显示「预计 ~Xs」。只在成功应答后记录（4xx/超时会拉失真）。
+  const genDurRing: number[] = []
+  function recordGenDur(ms: number) {
+    if (!Number.isFinite(ms) || ms <= 0) return
+    genDurRing.push(Math.round(ms))
+    while (genDurRing.length > 5) genDurRing.shift()
+  }
+
   reg('/api/sensenova/generate', async (req, res) => {
     if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
     // 同源校验：带 Origin 的跨源请求拒绝（无 Origin 的同源 fetch 放行）
@@ -320,6 +331,7 @@ export function apply(ctx: Context, rawConfig: Config) {
       }
       let data: any
       let degraded = false
+      const genT0 = Date.now()
       try {
         data = await callImagesGenerations({ ...baseCall, ...extraOpts })
       } catch (e) {
@@ -350,7 +362,15 @@ export function apply(ctx: Context, rawConfig: Config) {
           saveHistory(items.slice(0, HISTORY_CAP))
         }
       }
-      sendJson(res, 200, degraded ? { ok: true, image: out, degraded: ['negative_prompt/seed'] } : { ok: true, image: out })
+      // SPEC-18 三：成功应答记一次服务端时长（重试 degraded 也算成功）
+      recordGenDur(Date.now() - genT0)
+      // SPEC-18 五前置：上游 seed 透传——此前 {ok,image} 把 seed 丢了，真实生成的节点永远没有
+      // params.seed，灯箱「同种子重生成」对真图不可用。item.seed 缺失/非法时该键为 undefined（JSON 序列化时丢弃）
+      const upSeedNum = Number(item.seed)
+      const seedOut = Number.isFinite(upSeedNum) && upSeedNum >= 0 ? Math.floor(upSeedNum) : undefined
+      sendJson(res, 200, degraded
+        ? { ok: true, image: out, seed: seedOut, degraded: ['negative_prompt/seed'] }
+        : { ok: true, image: out, seed: seedOut })
     } catch (e) {
       sendJson(res, 502, { ok: false, error: e instanceof Error ? e.message : String(e) })
     }
@@ -373,18 +393,16 @@ export function apply(ctx: Context, rawConfig: Config) {
         const prompt = String(body.prompt || '').trim() ||
           'Enhance this image to ultra-clear 4K quality, increase sharpness and detail, remove any watermark text without leaving artifacts, keep all original elements, composition, colors, lighting and style exactly unchanged.'
         const model = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : config.model
-        const data: any = await callChatCompletions({
+        // SPEC-18 五真测修正：chat/completions 对 u1.5 生图模型 404（真上游实测 model is not found）——
+        // U1.5 的图像增强/编辑走 images/generations 的 i2i 通道（带 image 输入），与工作台参考图同链路
+        const size = typeof body.size === 'string' && body.size.trim() ? body.size.trim() : '2048x2048'
+        const data: any = await callImagesGenerations({
           baseUrl: config.baseUrl, apiKey: key, model, timeoutMs: config.timeoutMs,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image_url', image_url: { url: resolveRefToImageInput(image) } },
-              { type: 'text', text: prompt },
-            ],
-          }],
+          prompt, size, n: 1, image: resolveRefToImageInput(image),
         })
-        const imageOut = extractImageFromChat(data)
-        if (!imageOut) { sendJson(res, 502, { ok: false, error: 'response had no image（确认模型支持图像编辑，或换 sensenova-u1.5-lite）' }); return }
+        const enhItem = data?.data?.[0] ?? {}
+        const imageOut = enhItem.url ? String(enhItem.url) : enhItem.b64_json ? String(enhItem.b64_json) : ''
+        if (!imageOut) { sendJson(res, 502, { ok: false, error: 'response had no image' }); return }
         const saved = await persistImage(imageOut.startsWith('http') ? 'url' : 'base64', imageOut)
         if (saved) { sendJson(res, 200, { ok: true, image: { kind: 'url', value: saved.url, id: saved.id } }); return }
         sendJson(res, 200, { ok: true, image: { kind: imageOut.startsWith('http') ? 'url' : 'base64', value: imageOut } })
@@ -679,6 +697,62 @@ export function apply(ctx: Context, rawConfig: Config) {
     sendJson(res, 200, { ok: true, keyConfigured: Boolean(resolveKey(config)) })
   })
 
+  // SPEC-18 三：生成耗时统计——客户端无本地样本（对话轴首用）时的「预计 ~Xs」兜底数据源。
+  // 样本来自 generate 路由 + 两个工具 execute 的成功应答墙钟（环形 5 条）。
+  reg('/api/sensenova/stats', (req, res) => {
+    if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: 'GET only' }); return }
+    const nums = genDurRing.filter((n) => n > 0)
+    sendJson(res, 200, {
+      ok: true,
+      avgSec: nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length / 1000) : 0,
+      samples: nums.length,
+    })
+  })
+
+  // SPEC-18 五：通用图像编辑 HTTP 路由——与 sensenova_edit_image 工具同管线（chat/completions
+  // 多模态：图+文进、图出），客户端 tiled 放大 2× 逐块调用。落盘成功返回文件 URL。
+  reg('/api/sensenova/edit', async (req, res) => {
+    if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
+    const origin = String(req.headers?.origin ?? '')
+    if (origin) {
+      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
+    }
+    const key = resolveKey(config)
+    if (!key) { sendJson(res, 400, { ok: false, error: 'SENSENOVA_API_KEY 未配置（设置页填 apiKey 或设 SENSENOVA_API_KEY 环境变量）' }); return }
+    try {
+      const body = JSON.parse((await readBody(req)) || '{}')
+      const prompt = String(body.prompt ?? '').trim()
+      const imgIn = body.image ? String(body.image) : ''
+      if (!prompt || !imgIn) { sendJson(res, 400, { ok: false, error: 'prompt and image required' }); return }
+      const model = typeof body.model === 'string' && body.model.trim() ? body.model.trim() : config.model
+      // SPEC-18 五真测修正：同 edit 工具——走 images/generations i2i（chat/completions 对生图模型 404）
+      const size = typeof body.size === 'string' && body.size.trim() ? body.size.trim() : '2048x2048'
+      const editT0 = Date.now()
+      const data: any = await callImagesGenerations({
+        baseUrl: config.baseUrl,
+        apiKey: key,
+        model,
+        timeoutMs: config.timeoutMs,
+        prompt,
+        size,
+        n: 1,
+        image: toDataUrl(imgIn),
+      })
+      recordGenDur(Date.now() - editT0)
+      const eItem = data?.data?.[0] ?? {}
+      const imageOut = eItem.url ? String(eItem.url) : eItem.b64_json ? String(eItem.b64_json) : ''
+      if (!imageOut) { sendJson(res, 502, { ok: false, error: 'response had no image' }); return }
+      const isUrl = imageOut.startsWith('http')
+      const saved = await persistImage(isUrl ? 'url' : 'base64', imageOut)
+      // 落盘成功用本地文件 URL；落盘失败时 http 图仍可直接用，data URL 则不回传（太大）
+      const url = saved ? saved.url : (isUrl ? imageOut : null)
+      if (!url) { sendJson(res, 502, { ok: false, error: 'edit ok but persist failed and payload was inline' }); return }
+      sendJson(res, 200, { ok: true, url, persisted: Boolean(saved) })
+    } catch (e) {
+      sendJson(res, 502, { ok: false, error: e instanceof Error ? e.message : String(e) })
+    }
+  })
+
   // 真连接测试：实际访问 SenseNova /models，返回可用模型清单（工作台设置页"测试连接"用）
   reg('/api/sensenova/ping', (req, res) => {
     if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: 'GET only' }); return }
@@ -870,6 +944,7 @@ export function apply(ctx: Context, rawConfig: Config) {
             }
             // prompt 拼参考图说明（角色 + 强度滑块 0~1 → 语言化权重；取代原死变量 roleOrder 与模糊角色前缀）
             const enrichedPrompt = args.prompt + describeRefs(imageMeta)
+            const toolGenT0 = Date.now()
             const data: any = await callImagesGenerations({
               baseUrl: config.baseUrl,
               apiKey: key,
@@ -881,6 +956,7 @@ export function apply(ctx: Context, rawConfig: Config) {
               images: images.length ? images : undefined,
               image: args.reference,
             })
+            recordGenDur(Date.now() - toolGenT0)
             const item = data?.data?.[0] ?? {}
             let resultImage: string | null = null
             if (item.url || item.b64_json) {
@@ -946,25 +1022,32 @@ export function apply(ctx: Context, rawConfig: Config) {
           },
           prompt: { type: 'string', required: true, description: '编辑指令，例如 "将外套改为藏青色，保留人脸姿态背景"' },
           model: { type: 'string', description: '覆盖默认模型' },
+          size: { type: 'string', description: '输出尺寸 WxH（默认 2048x2048）' },
         },
         output: { schema: { type: 'string' }, render: (a, v) => [{ type: 'text', text: String(v) }] },
         async execute(args: { images: string[]; prompt: string; model?: string }) {
           const key = resolveKey(config)
           if (!key) return missingKeyHint()
           const model = args.model || config.model
-          const content: any[] = []
-          for (const img of args.images) content.push({ type: 'image_url', image_url: { url: toDataUrl(img) } })
-          content.push({ type: 'text', text: args.prompt })
+          // SPEC-18 五真测修正：chat/completions 对 u1.5 生图模型 404（真上游实测）——编辑走
+          // images/generations i2i（图+指令进、图出），与工作台参考图生成同一条已验证链路
+          const imgs: string[] = (args.images || []).map((u: string) => toDataUrl(u))
           try {
-            const data: any = await callChatCompletions({
+            const toolEditT0 = Date.now()
+            const data: any = await callImagesGenerations({
               baseUrl: config.baseUrl,
               apiKey: key,
               model,
               timeoutMs: config.timeoutMs,
-              messages: [{ role: 'user', content }],
+              prompt: String(args.prompt || ''),
+              size: (args as { size?: string }).size || '2048x2048',
+              n: 1,
+              image: imgs[0],
+              images: imgs.length > 1 ? imgs : undefined,
             })
-            // 提取结果图 → persistImage 落盘 → appendCanvasNode 落画布（与 generate/enhance 管线对齐）
-            const imageOut = extractImageFromChat(data)
+            recordGenDur(Date.now() - toolEditT0)
+            const editItem = data?.data?.[0] ?? {}
+            const imageOut = editItem.url ? String(editItem.url) : editItem.b64_json ? String(editItem.b64_json) : undefined
             let resultImage: string | null = null
             if (imageOut) {
               const isUrl = imageOut.startsWith('http')
