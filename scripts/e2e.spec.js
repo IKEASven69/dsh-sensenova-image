@@ -29,6 +29,9 @@
 //     「后缀只有一段」断言为「风格芯片 .on 态唯一」,textarea 断言不含任何风格后缀残段
 // v12(2026-10-15 验收员校准):
 //   - 新增 t14-t21 共 8 条(行级回填/决策面板/对比三模式/删除引用警告/历史翻阅/画布双击/多选操作条/画布 toast)
+//   - v18.2(2026-10-25):终局净清场——对话轴工件(prompt 前缀 AUDIT-V)测试循环结束统一过滤删除,
+//     终局报告改净变化口径;此前只报告不清,每轮在用户画布累积 5 个工件(t23 回填复制×3/t29 多图×2/
+//     v14 折叠×1,均服务端工具与重抽的真实落盘)
 //   - 截图目录改 shots/v12/;实例为本验收员自起 dsh web --port 5189(测毕即杀,不碰 5181)
 // v13(2026-10-17 验收员校准,SPEC-13 两轴并行轮):
 //   - 新增 t23-t32 共 10 条:对话轴 5(等待生命感/回填参数/设为参考图/同参数重抽/复制提示词)
@@ -3499,7 +3502,33 @@ async function main() {
       process.stderr.write(`${n} ${name}: ${results[results.length - 1].pass ? 'PASS' : 'FAIL'}\n`)
       if (!results[results.length - 1].pass) process.stderr.write(`  └ ${results[results.length - 1].evidence.slice(0, 700)}\n`)
     }
-    // 终局数据状态(如实报告)
+    // ── v18.2 终局净清场:对话轴工件按 prompt 前缀过滤删除 ──
+    // t23/t24-v14/t26/t29 的对话回合与重抽副本是服务端工具/直连的真实落盘产物,此前套件只
+    // "如实报告"不清,长期跑会把 AUDIT-V 工件累积进用户画布。现在自清(409 重试 3 次),清完
+    // 再出终局报告=净变化口径;清不动时如实标注,不假装干净。
+    try {
+      const pre = await page.evaluate(async () => (await (await fetch('/api/sensenova/canvas')).json()))
+      const staleIds = new Set(pre.doc.nodes.filter((n) => /AUDIT-V/.test(n.prompt || '')).map((n) => n.id))   // 子串匹配:fromChat 工件带 💬 前缀,锚定开头匹配不上(v1 踩坑)
+      if (staleIds.size) {
+        let cleaned = false
+        for (let i = 0; i < 3 && !cleaned; i++) {
+          const cur = await page.evaluate(async () => (await (await fetch('/api/sensenova/canvas')).json()))
+          const doc = JSON.parse(JSON.stringify(cur.doc))
+          doc.nodes = doc.nodes.filter((n) => !staleIds.has(n.id))
+          const st = await page.evaluate(({ doc, rev }) => fetch('/api/sensenova/canvas', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doc, rev })
+          }).then((x) => x.status), { doc, rev: cur.rev })
+          if (st === 200 || st === 204) cleaned = true
+          else await page.waitForTimeout(1000)
+        }
+        process.stderr.write(`终局净清场:AUDIT-V 工件 ${staleIds.size} 个 → ${cleaned ? '已清' : '清场失败(如实保留,勿假装干净)'}
+`)
+      }
+    } catch (e) {
+      process.stderr.write(`终局净清场异常:${String(e).slice(0, 120)}
+`)
+    }
+    // 终局数据状态(如实报告,净清场之后=净变化口径)
     const fin = await docInfo(page)
     process.stderr.write(`final canvas nodes: total=${fin.total} done=${fin.done} pending=${fin.pending} error=${fin.error}\n`)
   } finally {
