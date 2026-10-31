@@ -888,6 +888,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 .snx-lb-zoom{display:flex;align-items:center;gap:4px;background:var(--dsw-alias-bg-module-platform,#353638);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);border-radius:6px;padding:2px}
 .snx-lb-zoom button{width:26px;height:26px;background:none;border:none;color:var(--dsw-alias-label-secondary,#cfd3d6);cursor:pointer;border-radius:4px;font-family:inherit;font-size:14px}
 .snx-lb-zoom button:hover{background:var(--dsw-alias-interactive-bg-hover,#ffffff14);color:var(--dsw-alias-label-primary,#f9fafb)}
+.snx-lb-zoom button.snx-lb-zoom-txt{width:auto;min-width:0;padding:0 8px;font-size:11.5px;white-space:nowrap}
 .snx-lb-zoom span{display:inline-flex;align-items:center;justify-content:center;min-width:46px;font-size:11px;color:var(--dsw-alias-label-tertiary,#adb2b8);font-variant-numeric:tabular-nums}
 .snx-lb-close{
   width:32px;height:32px;background:var(--dsw-alias-bg-layer-3,#353638);color:var(--dsw-alias-label-secondary,#cfd3d6);border:1px solid var(--dsw-alias-border-l2,#ffffff1f);
@@ -2669,8 +2670,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     function genConcLimit() {
       try {
         const v = parseInt(localStorage.getItem('snxGenConcurrency') || '', 10)
-        return Number.isFinite(v) && v >= 1 && v <= 4 ? v : 2
-      } catch { return 2 }
+        // 默认 1:SenseNova 个人 key 有 RPS 限流,并发 2 实测第二个请求即 429 rps exhausted
+        // (2026-10-31 真机复核实证);>1 留给不限流的兼容上游,失败任务可「重跑失败」一键恢复
+        return Number.isFinite(v) && v >= 1 && v <= 4 ? v : 1
+      } catch { return 1 }
     }
     function genConcSet(v) {
       try { localStorage.setItem('snxGenConcurrency', String(Math.min(4, Math.max(1, v | 0)))) } catch { }
@@ -2835,6 +2838,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         if (r && r.ok) snxRecordGenDur(Date.now() - t0)
         return r
       })
+        .catch((e) => { clearTimeout(tm); throw e })
     }
 
     async function runOne(nodeId, o) {
@@ -4134,9 +4138,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             const ox = (W - (bx1 - bx0) * s) / 2, oy = (H - (by1 - by0) * s) / 2
             geoRef.current = { bx0, by0, s, ox, oy }
             for (const n of ns) {
-              ctx.fillStyle = n.status === 'done' ? 'rgba(255,255,255,.32)'
-                : n.status === 'error' ? 'rgba(240,80,80,.45)'
-                  : 'rgba(90,150,255,.45)'   // pending/running 同色：都是进行中
+              // v18.3:中性灰填充——白色在浅色主题下与底同色隐形(用户复核实抓);蓝/红状态色深浅底均可见
+              ctx.fillStyle = n.status === 'done' ? 'rgba(127,127,128,.55)'
+                : n.status === 'error' ? 'rgba(220,70,70,.6)'
+                  : 'rgba(59,130,246,.55)'   // pending/running 同色：都是进行中
               ctx.fillRect(ox + (n.x - bx0) * s, oy + (n.y - by0) * s, Math.max(2, n.w * s), Math.max(2, n.h * s))
             }
             // 视口矩形（相机反算 wrap 尺寸）
@@ -4144,7 +4149,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             const cs = c.scale || 1
             const vw = eng.wrapEl.clientWidth / cs, vh = eng.wrapEl.clientHeight / cs
             const vx = -(c.x || 0) / cs, vy = -(c.y || 0) / cs
-            ctx.strokeStyle = 'rgba(90,150,255,.9)'
+            ctx.strokeStyle = 'rgba(37,99,235,.9)'   // v18.3:加深,浅底可辨
             ctx.lineWidth = 1.5
             ctx.strokeRect(ox + (vx - bx0) * s, oy + (vy - by0) * s, vw * s, vh * s)
           })
@@ -5616,7 +5621,21 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           store.doc = doc && Array.isArray(doc.nodes) ? doc : emptyDoc()
           if (!store.doc.camera) store.doc.camera = { x: 0, y: 0, scale: 1 }
           if (!Array.isArray(store.doc.nodes)) store.doc.nodes = []
-          store.sel = new Set()
+          // v18.3:孤儿 running 清扫——客户端会话中断(关页签/浏览器关闭)后,running 节点无人认领
+          // 会永远卡「生成中」(真机复核实证:脚本中途关浏览器留下 2 个永久 running)。打开画布时把
+          // startedAt 超 3 分钟的 running 标为可重跑;阈值>单次生成实际耗时(≤90s)+看门狗 90s,
+          // 不误伤其他活会话正在跑的任务。
+          const orphanNow = Date.now()
+          let orphanSwept = false
+          for (const n of store.doc.nodes) {
+            if (n.status === 'running' && orphanNow - (n._startedAt || n.ts || 0) > 180000) {
+              n.status = 'error'
+              n.errMsg = '上次会话中断，任务没有跑完——可重跑'
+              n._endedAt = orphanNow
+              orphanSwept = true
+            }
+          }
+          if (orphanSwept) autosave()   // v18.3:清扫要落盘,否则服务端仍是 running、跨会话可见不一致
           store.undoStack = [store.snapshot()]; store.redoStack = []   // P1-9：载入即重建 undo 基线
           if (activeEngine) { activeEngine.renderAll(); activeEngine.applyCamera() }
           force((n) => n + 1)
@@ -6827,7 +6846,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             ),
             h('div', { style: { flex: 1 } }),
             // SPEC-18 二：并发上限选择器——闸值即「同时在跑的生成数」，等待表顺序=执行顺序
-            h('label', { className: 'snx-queue-conc', title: '全局并发生成上限。等待中的任务按等待表顺序补位，可在任务行用上移/下移/置顶（插队）按钮重排' },
+            h('label', { className: 'snx-queue-conc', title: '全局并发生成上限。等待中的任务按等待表顺序补位，可在任务行用上移/下移/置顶（插队）按钮重排。注意：SenseNova 官方上游有 RPS 限流，并发 >1 可能撞 429（rps exhausted），失败任务可「重跑失败」恢复' },
               ic('layers', 13),
               h('select', {
                 value: String(genConcLimit()),
@@ -9187,7 +9206,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               h('button', { type: 'button', onClick: () => setZoom((s) => s / 1.25), title: '缩小 (-)' }, ic('minus', 13)),
               h('span', null, Math.round(scale * 100) + '%'),
               h('button', { type: 'button', onClick: () => setZoom((s) => s * 1.25), title: '放大 (+)' }, ic('plus', 13)),
-              h('button', { type: 'button', onClick: () => setScale(1), title: '复位到适应窗口 (0)' }, '复位'),
+              h('button', { type: 'button', className: 'snx-lb-zoom-txt', onClick: () => setScale(1), title: '复位到适应窗口 (0)' }, '复位')   // v18.3:独立 text 类,原 26px 方钮把「复位」挤成竖排,
             ) : null,
             h('button', { className: 'snx-lb-close', type: 'button', onClick: onClose, title: '关闭 (Esc)' }, ic('x', 14)),
           ),
