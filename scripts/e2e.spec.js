@@ -72,11 +72,19 @@
 //     批量导出(多选 2 张→「批量导出」→2 次 download,逐文件验 PNG 签名/sensenova tEXt chunk/全 chunk CRC)×asset
 //   - 截图目录改 shots/v16/;实例为本验收员自起 dsh web --no-open --port 5245(测毕即杀,不碰 5181);
 //     共享画布起测前 GET 备份(canvas-5245-before.json),测毕 PUT 恢复并 GET 核验(历任审计纪律)
+// v19.2(2026-11-01,SPEC-18/ROADMAP P0-3 审批门 e2e 补录):
+//   - 新增 t49-t53 共 5 条(审批门轴 ×tools):默认关/拒绝路径/超时路径/决定协议(404/400/幂等 200)/
+//     工作台生成不受门控
+//   - 审批门纪律:POST /api/sensenova/config 只带 {approvalGateEnabled}(增量合并,绝不动 baseUrl
+//     ——对话轴 mock 上游环境保护,已读 src/index.ts POST 分支确认逐字段 patch);approvals 状态文件
+//     ~/.dsh/storages/dsh-sensenova-image-approvals.json 每条用例开头清空、finally 关闸+清空还原;
+//     手工 pending 用 pid=4(Windows System,探活 EPERM 视为活着)避免 host-restart 误扫
 
 'use strict'
 const fs = require('fs')
 const path = require('path')
 const http = require('http')
+const os = require('os')
 const zlib = require('zlib')
 const { chromium } = require('playwright')
 
@@ -3393,6 +3401,240 @@ async function t48_batch_export(page) {
   return { pass: dlOk && pngOk && progOk && sumOk, steps }
 }
 
+// ══════════════ v19.2:审批门轴 5(默认关/拒绝/超时/决定协议/工作台生成不受门控 ×tools)══════════════
+// 纪律:审批门开关在服务端内存 config,POST /api/sensenova/config 是增量合并(src/index.ts POST
+// 分支逐字段 patch,只动 body 里出现的字段),故此处只 POST {approvalGateEnabled},绝不带 baseUrl
+// ——mock 上游环境(chatEnv)在整个套件期生效,重写 baseUrl 会毁掉对话轴 mock。
+// approvals 状态文件与画布同目录(~/.dsh/storages/dsh-sensenova-image-approvals.json),测试直接
+// fs 写入构造 pending;每条用例 finally 关闸还原 + 清空文件,不把审批门状态泄漏到测后。
+const APPR_FILE = path.join(os.homedir(), '.dsh', 'storages', 'dsh-sensenova-image-approvals.json')
+function apprRead() {
+  try {
+    const j = JSON.parse(fs.readFileSync(APPR_FILE, 'utf8'))
+    return { v: 1, items: Array.isArray(j.items) ? j.items : [] }
+  } catch (e) { return { v: 1, items: [] } }
+}
+function apprWrite(items) {
+  fs.mkdirSync(path.dirname(APPR_FILE), { recursive: true })
+  fs.writeFileSync(APPR_FILE, JSON.stringify({ v: 1, items: items || [] }))
+}
+async function gateSet(origin, on) {
+  const r = await fetch(origin + '/api/sensenova/config', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ approvalGateEnabled: !!on }) })
+  const j = await r.json().catch(() => null)
+  return `${r.status}:${j && j.ok ? 'ok' : '?'}(enabled=${j ? j.approvalGateEnabled : '?'})`
+}
+// 手工构造一条 pending(id 须匹配服务端白名单 ^[0-9a-z]{8,20}$;pid=4 在 Windows 是 System 进程,
+// normalize 探活 EPERM 视为活着→记录不被 host-restart 误扫;boot='e2e' 与服务端不同仅走探活分支)
+function seedPending(id, summary, ttlMs) {
+  const now = Date.now()
+  return {
+    id, tool: 'sensenova_generate_image', summary,
+    meta: { prompt: summary, size: '2048x2048', model: 'audit-e2e-model', refCount: 0, images: [] },
+    callId: null, status: 'pending', reason: null,
+    createdAt: now, expiresAt: now + ttlMs, decidedAt: null,
+    boot: 'e2e', pid: 4,
+  }
+}
+
+// 49. 审批门默认关:不开闸时队列页无 .snx-appr 面板(domain tools)
+async function t49_gate_default_off(page, url) {
+  const steps = []
+  const origin = new URL(url).origin
+  try {
+    const st = await gateSet(origin, false)   // 显式关闸(防御:确保前一用例未泄漏开态)
+    apprWrite([])
+    if (!(await page.$('.snx-pro'))) await openWorkbench(page)
+    await switchTab(page, '队列')
+    await page.waitForTimeout(3500)   // ≥1 个 2s 客户端轮询周期(首订阅者已强刷过 /config)
+    const ui = await page.evaluate(() => ({ panel: !!document.querySelector('.snx-appr'), items: document.querySelectorAll('.snx-appr-item').length }))
+    await shot(page, '49', 'off')
+    steps.push(`POST /config 关闸→${st},切队列页等 3.5s`, `面板 .snx-appr=${ui.panel},条目=${ui.items}(期望 false/0)`)
+    return { pass: !ui.panel && ui.items === 0, steps }
+  } finally {
+    await gateSet(origin, false).catch(() => { })
+    try { apprWrite([]) } catch (e) { }
+  }
+}
+
+// 50. 审批门拒绝路径:开闸→写 pending→队列页条目出现→点「拒绝」→状态文件 status=denied reason=user(domain tools)
+async function t50_gate_deny(page, url) {
+  const steps = []
+  const origin = new URL(url).origin
+  try {
+    apprWrite([])
+    const st = await gateSet(origin, true)
+    if (!(await page.$('.snx-pro'))) await openWorkbench(page)
+    await switchTab(page, '队列')
+    apprWrite([seedPending('e2edeny01', 'e2e 拒绝路径', 120000)])
+    // 客户端 /config 缓存 ≤10s + 2s 轮询,条目最迟 ~12s 出现
+    let itemTxt = ''
+    const dl = Date.now() + 16000
+    while (Date.now() < dl) {
+      await page.waitForTimeout(700)
+      itemTxt = await page.evaluate(() => {
+        const it = [...document.querySelectorAll('.snx-appr-item')].find((x) => /e2e 拒绝路径/.test(x.textContent || ''))
+        return it ? it.textContent.replace(/\s+/g, ' ').trim().slice(0, 140) : ''
+      })
+      if (itemTxt) break
+    }
+    await shot(page, '50', 'item')
+    steps.push(`开闸→${st},写 pending(id=e2edeny01,ttl=120s)`, `队列页条目出现=${!!itemTxt}${itemTxt ? ':' + JSON.stringify(itemTxt) : ''}`)
+    if (!itemTxt) return { pass: false, steps }
+    await page.evaluate(() => {
+      const it = [...document.querySelectorAll('.snx-appr-item')].find((x) => /e2e 拒绝路径/.test(x.textContent || ''))
+      const no = it && it.querySelector('.snx-appr-no')
+      if (no) no.click()
+    })
+    let fin = null
+    const dl2 = Date.now() + 8000
+    while (Date.now() < dl2) {
+      await page.waitForTimeout(500)
+      fin = apprRead().items.find((x) => x.id === 'e2edeny01') || null
+      if (fin && fin.status === 'denied') break
+    }
+    await shot(page, '50', 'denied')
+    const ok = !!fin && fin.status === 'denied' && fin.reason === 'user'
+    steps.push(`点「拒绝」后状态文件:e2edeny01 status=${fin ? fin.status : '(缺失)'} reason=${fin ? fin.reason : '-'}(期望 denied/user)`)
+    return { pass: ok, steps }
+  } finally {
+    await gateSet(origin, false).catch(() => { })
+    try { apprWrite([]) } catch (e) { }
+  }
+}
+
+// 51. 审批门超时路径:开闸→写 expiresAt=+11s 的 pending→等 ~13.5s(>expiresAt+2s)→服务端
+//     normalize 置 expired(timeout),GET ?all=1 与文件一致,面板条目消失(domain tools)
+async function t51_gate_timeout(page, url) {
+  const steps = []
+  const origin = new URL(url).origin
+  try {
+    apprWrite([])
+    const st = await gateSet(origin, true)
+    if (!(await page.$('.snx-pro'))) await openWorkbench(page)
+    await switchTab(page, '队列')
+    apprWrite([seedPending('e2etimeout1', 'e2e 超时路径', 11000)])
+    let appeared = false
+    const dl = Date.now() + 16000
+    while (Date.now() < dl) {
+      await page.waitForTimeout(700)
+      appeared = await page.evaluate(() => !![...document.querySelectorAll('.snx-appr-item')].find((x) => /e2e 超时路径/.test(x.textContent || '')))
+      if (appeared) break
+    }
+    steps.push(`开闸→${st},写 pending(id=e2etimeout1,expiresAt=+11s)`, `队列页条目出现=${appeared}`)
+    if (!appeared) { await shot(page, '51', 'noitem'); return { pass: false, steps } }
+    await shot(page, '51', 'item')
+    await page.waitForTimeout(13500)   // 11s 到期 + 2s 服务端 normalize 余量
+    let apiItems = null
+    let fileIt = null
+    const dl2 = Date.now() + 8000
+    while (Date.now() < dl2) {
+      try {
+        const r = await fetch(origin + '/api/sensenova/approvals?all=1')
+        const j = await r.json()
+        if (j && j.ok) apiItems = j.items
+      } catch (e) { /* 下一轮再试 */ }
+      fileIt = apprRead().items.find((x) => x.id === 'e2etimeout1') || null
+      if (fileIt && fileIt.status === 'expired') break
+      await page.waitForTimeout(800)
+    }
+    const apiIt = (apiItems || []).find((x) => x.id === 'e2etimeout1') || null
+    await shot(page, '51', 'expired')
+    steps.push(`等 13.5s 后:文件 status=${fileIt ? fileIt.status : '(缺失)'} reason=${fileIt ? fileIt.reason : '-'},GET ?all=1 status=${apiIt ? apiIt.status : '(缺失)'} reason=${apiIt ? apiIt.reason : '-'}(期望双 expired/timeout)`)
+    let gone = false
+    const dl3 = Date.now() + 8000
+    while (Date.now() < dl3) {
+      await page.waitForTimeout(700)
+      gone = await page.evaluate(() => !document.querySelector('.snx-appr-item'))
+      if (gone) break
+    }
+    const panelTxt = await page.evaluate(() => { const p = document.querySelector('.snx-appr'); return p ? p.textContent.replace(/\s+/g, ' ').trim().slice(0, 90) : '(无面板)' })
+    steps.push(`面板条目消失=${gone}(2s pending-only 轮询刷新后),面板文案=${JSON.stringify(panelTxt)}`)
+    const pass = !!fileIt && fileIt.status === 'expired' && fileIt.reason === 'timeout' && !!apiIt && apiIt.status === 'expired' && gone
+    return { pass, steps }
+  } finally {
+    await gateSet(origin, false).catch(() => { })
+    try { apprWrite([]) } catch (e) { }
+  }
+}
+
+// 52. 审批门决定协议:不存在 id→404;非法 id(特殊字符/过短)→400;同决定重复提交→200 幂等(domain tools)
+async function t52_gate_protocol(page, url) {
+  const steps = []
+  const origin = new URL(url).origin
+  try {
+    apprWrite([])
+    const st = await gateSet(origin, true)
+    const postDecide = async (idRaw, body) => {
+      const r = await fetch(origin + '/api/sensenova/approvals/' + encodeURIComponent(idRaw), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      const j = await r.json().catch(() => null)
+      return { code: r.status, body: j }
+    }
+    const r404 = await postDecide('e2enotexst', { decision: 'deny' })
+    steps.push(`① POST 不存在 id(e2enotexst)→${r404.code} ${JSON.stringify((r404.body || {}).error || '')}(期望 404)`)
+    const r400a = await postDecide('x/y/z', { decision: 'deny' })   // 解码后含 / → 过不了白名单
+    const r400b = await postDecide('short!', { decision: 'approve' })   // 特殊字符 + 过短(<8)
+    steps.push(`② POST 非法 id("x/y/z")→${r400a.code},"short!"→${r400b.code}(期望 400/400)`)
+    const r400c = await postDecide('e2enotexst', {})
+    steps.push(`② 补充:合法 id 但缺 decision→${r400c.code}(期望 400)`)
+    // ③ 幂等:预置 approved 再重复 approve → 200 + idempotent,文件保持 approved
+    const seeded = Object.assign(seedPending('e2eidem01', 'e2e 幂等重放', 120000), { status: 'approved', reason: 'user', decidedAt: Date.now() })
+    apprWrite([seeded])
+    const r200a = await postDecide('e2eidem01', { decision: 'approve' })
+    const idemFlag = !!(r200a.body && r200a.body.idempotent)
+    const r409 = await postDecide('e2eidem01', { decision: 'deny' })   // 反向决定(证据,不进门禁)
+    const still = apprRead().items.find((x) => x.id === 'e2eidem01') || null
+    steps.push(`③ 预置 approved 重复 approve→${r200a.code} idempotent=${idemFlag};反向 deny→${r409.code}(期望 200 true / 409);文件 status=${still ? still.status : '(缺失)'}`)
+    await shot(page, '52', 'protocol')
+    const pass = r404.code === 404 && r400a.code === 400 && r400b.code === 400 && r200a.code === 200 && idemFlag && !!still && still.status === 'approved'
+    return { pass, steps }
+  } finally {
+    await gateSet(origin, false).catch(() => { })
+    try { apprWrite([]) } catch (e) { }
+  }
+}
+
+// 53. 工作台生成不受门控:开闸下经 GenBar 提交,浏览器层拦截 generate 返 mock png,节点 done 且全程无审批条目(domain tools)
+async function t53_workbench_not_gated(page, url) {
+  const steps = []
+  const origin = new URL(url).origin
+  try {
+    apprWrite([])
+    const st = await gateSet(origin, true)
+    if (!(await page.$('.snx-pro'))) await openWorkbench(page)
+    await switchTab(page, '生图')
+    const P = 'AUDIT-V 审批门直连不受门控 ' + Date.now()   // AUDIT-V 前缀:套件终局净清场按前缀删该工件
+    const ta = await page.$('.snx-gen-ta')
+    if (!ta) return { pass: false, steps: steps.concat('找不到提示词输入框 .snx-gen-ta') }
+    await ta.click(); await ta.fill(''); await page.keyboard.type(P, { delay: 5 })
+    await page.waitForTimeout(300)
+    const goEnabled = await page.evaluate(() => { const b = document.querySelector('.snx-gen-go'); return !!b && !b.className.includes('disabled') })
+    if (!goEnabled) return { pass: false, steps: steps.concat('生成按钮未随输入启用') }
+    const png1 = pngB64(1, 1, [10, 200, 90])
+    await page.route('**/api/sensenova/generate', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, image: { kind: 'base64', value: png1 } }) }))
+    let apprSeen = 0
+    let node = null
+    try {
+      await page.evaluate(() => { const b = document.querySelector('.snx-gen-go'); if (b) b.click() })
+      const dl = Date.now() + 20000
+      while (Date.now() < dl) {
+        await page.waitForTimeout(700)
+        apprSeen += await page.evaluate(() => document.querySelectorAll('.snx-appr-item').length)
+        node = (await fetchNodes(page)).find((n) => n.prompt === P) || null
+        if (node && node.status === 'done') break
+      }
+    } finally { await page.unroute('**/api/sensenova/generate') }
+    await shot(page, '53', 'done')
+    const fin = apprRead().items
+    const pend = fin.filter((x) => x.status === 'pending').length
+    steps.push(`开闸→${st},拦截 generate 200(mock 1×1 png):节点=${node ? node.id.slice(0, 8) + '/status=' + node.status : '(未创建)'},等待期审批条目采样累计=${apprSeen},审批文件 items=${fin.length}(pending=${pend})`)
+    const pass = !!node && node.status === 'done' && apprSeen === 0 && pend === 0
+    return { pass, steps }
+  } finally {
+    await gateSet(origin, false).catch(() => { })
+    try { apprWrite([]) } catch (e) { }
+  }
+}
+
 // ══════════════ 主流程 ══════════════
 async function main() {
   const argv = process.argv.slice(2)
@@ -3475,6 +3717,14 @@ async function main() {
     ['乱码清理核验', t46_garbled_clean, 'wait'],
     ['画板最近使用排序', t47_board_recent_sort, 'asset'],
     ['批量导出元数据', t48_batch_export, 'asset'],
+    // ── v19.2:审批门轴 5(默认关/拒绝路径/超时路径/决定协议/工作台生成不受门控 ×tools)──
+    // 每条开头 POST /config {approvalGateEnabled}(增量合并,不动 baseUrl——mock 上游环境保护)
+    // + 清空审批文件;finally 关闸还原 + 清空文件
+    ['审批门默认关', t49_gate_default_off, 'tools'],
+    ['审批门拒绝路径', t50_gate_deny, 'tools'],
+    ['审批门超时路径', t51_gate_timeout, 'tools'],
+    ['审批门决定协议', t52_gate_protocol, 'tools'],
+    ['工作台生成不受门控', t53_workbench_not_gated, 'tools'],
   ]
 
   // v13:对话轴环境(mock 上游 + config 原位换/还)——整个测试期生效;finally 保证还原
