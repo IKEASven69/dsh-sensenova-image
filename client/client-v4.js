@@ -211,6 +211,80 @@ window.__ModuleLoader__.load({
     const CONFIG_ROUTE = '/api/sensenova/config'
     const STATUS_ROUTE = '/api/sensenova/status'
 
+    // ─── v19：agent 生成审批门（客户端数据层）───
+    // 面板数据模块级共享：Workbench（队列 tab 待批角标 + 新待批 toast）与 SnxApprovalPanel 都订阅它。
+    // 有订阅者时每 2s 轮询一次，页面隐藏（document.hidden）时跳过；inflight 防请求叠加。
+    // 列表只在开关开启时拉取（要求：工作台打开且开关开启时每 2s 轮询列表）。
+    // 开关是服务端配置、客户端只读展示：从 GET /api/sensenova/config 的 config.approvalGateEnabled
+    // 读取（与列表分频，10s 拉一次），客户端不做开关 UI。
+    const APPROVALS_ROUTE = '/api/sensenova/approvals'
+    const apprState = {
+      enabled: false,   // 审批门开关（/config 的 config.approvalGateEnabled）
+      timeoutMs: 0,     // 生效超时毫秒（面板状态行展示用）
+      items: [],        // pending 列表（服务端按最早到期在前；开关关闭后保留最后一份展示）
+      skew: 0,          // 服务端时钟 - 本地时钟（毫秒），倒计时统一按服务端时间
+      err: false,       // 最近一次轮询失败（面板显示同步失败提示）
+      sig: '',          // 上次广播订阅者时的签名（enabled + 各条 id:status），变化才通知
+      subs: new Set(),
+      timer: 0,
+      inflight: false,
+      cfgAt: 0,         // 上次拉 /config 的时间戳（分频节流）
+    }
+    function apprNotify() {
+      const sig = (apprState.enabled ? 'E' : 'e') + '|' + apprState.items.map((it) => (it && it.id) + ':' + (it && it.status)).join(',')
+      if (sig === apprState.sig) return
+      apprState.sig = sig
+      for (const fn of [...apprState.subs]) { try { fn() } catch { } }
+    }
+    function apprPullConfig() {
+      apprState.cfgAt = Date.now()
+      return get(CONFIG_ROUTE).then((r) => {
+        if (r && r.config) {
+          apprState.enabled = !!r.config.approvalGateEnabled
+          apprState.timeoutMs = Math.max(0, Number(r.config.approvalTimeoutMs) || 0)
+          apprState.err = false
+        }
+      }).catch(() => { apprState.err = true })
+    }
+    function apprPoll(forceCfg) {
+      if (apprState.inflight) return Promise.resolve()
+      apprState.inflight = true
+      const needCfg = forceCfg || Date.now() - apprState.cfgAt >= 10000
+      return (needCfg ? apprPullConfig() : Promise.resolve())
+        .then(() => {
+          if (!apprState.enabled) return   // 开关关闭：不拉列表，已有条目保留展示
+          return get(APPROVALS_ROUTE).then((r) => {
+            if (r && r.ok) {
+              apprState.skew = (Number(r.now) || Date.now()) - Date.now()
+              if (Number(r.timeoutMs) > 0) apprState.timeoutMs = Number(r.timeoutMs)
+              apprState.items = Array.isArray(r.items) ? r.items : []
+              apprState.err = false
+            } else { apprState.err = true }
+          }).catch(() => { apprState.err = true })
+        })
+        .catch(() => { apprState.err = true })
+        .then(() => { apprState.inflight = false; apprNotify() })
+    }
+    function apprSubscribe(fn) {
+      apprState.subs.add(fn)
+      if (apprState.subs.size === 1) {
+        apprPoll(true)   // 首个订阅者：立即拉一次（顺带强刷 /config 拿开关与超时）
+        apprState.timer = setInterval(() => { if (!document.hidden) apprPoll(false) }, 2000)
+      }
+      return () => {
+        apprState.subs.delete(fn)
+        if (!apprState.subs.size && apprState.timer) { clearInterval(apprState.timer); apprState.timer = 0 }
+      }
+    }
+    // 提交审批决定：POST /api/sensenova/approvals/<id>（post 已带 application/json 头），
+    // 完成后立即再拉一次列表，不等下个 2s tick
+    function apprDecide(id, decision) {
+      return post(APPROVALS_ROUTE + '/' + encodeURIComponent(id), { decision }).then((r) => {
+        apprPoll(false)
+        return r
+      })
+    }
+
     // ——— Phase 2：会话桥（deck 同款三级降级：sendSession → session.prompt → scoped send）———
     let bridge = null
     function initBridge(ctx) {
@@ -1249,6 +1323,62 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
   animation:snx-pulse 1.4s infinite;
 }
 
+/* ─── v19：agent 审批门（「队列」视图顶部「待审批」区 + 队列 tab 琥珀色待批角标）───
+   颜色只用具名 token（--snx-warn/--snx-ok/--snx-error/--snx-accent）与带 fallback 的 --dsw-alias-* */
+.snx-appr{
+  display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:10px;
+  border:1px solid color-mix(in srgb,var(--snx-warn) 45%,transparent);
+  background:color-mix(in srgb,var(--snx-warn) 6%,transparent);
+}
+.snx-appr-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.snx-appr-title{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--snx-warn)}
+.snx-appr-cnt{
+  min-width:20px;height:18px;padding:0 6px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--snx-warn) 22%,transparent);color:var(--snx-warn);
+  font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;
+}
+.snx-appr-state{flex:1;min-width:0;font-size:11px;color:var(--dsw-alias-label-tertiary,#adb2b8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.snx-appr-all{
+  flex:none;display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:7px;cursor:pointer;
+  background:transparent;border:1px solid color-mix(in srgb,var(--snx-error) 45%,transparent);
+  color:var(--snx-error);font-size:11px;font-weight:700;font-family:inherit;
+}
+.snx-appr-all:hover{background:color-mix(in srgb,var(--snx-error) 12%,transparent)}
+.snx-appr-empty{padding:6px 2px 2px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-tertiary,#adb2b8)}
+.snx-appr-list{display:flex;flex-direction:column;gap:6px}
+.snx-appr-item{
+  display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;
+  background:var(--dsw-alias-bg-layer-2,#2a2a2c);
+  border:1px solid color-mix(in srgb,var(--snx-warn) 35%,transparent);
+}
+.snx-appr-item.snx-appr-urgent{border-color:color-mix(in srgb,var(--snx-error) 55%,transparent)}
+.snx-appr-tool{
+  flex:none;margin-top:1px;padding:2px 8px;border-radius:6px;letter-spacing:.04em;
+  background:color-mix(in srgb,var(--snx-warn) 16%,transparent);color:var(--snx-warn);
+  font-size:11px;font-weight:800;
+}
+.snx-appr-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.snx-appr-sum{
+  font-size:12px;line-height:1.5;color:var(--dsw-alias-label-primary,#f9fafb);word-break:break-word;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.snx-appr-meta{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--dsw-alias-label-tertiary,#adb2b8);font-variant-numeric:tabular-nums}
+.snx-appr-urgent .snx-appr-meta{color:var(--snx-error)}
+.snx-appr-bar{height:3px;border-radius:2px;background:color-mix(in srgb,var(--snx-warn) 18%,transparent);overflow:hidden}
+.snx-appr-bar .fill{height:100%;border-radius:2px;background:var(--snx-warn);transition:width 1s linear}
+.snx-appr-acts{flex:none;display:flex;gap:6px;margin-top:1px}
+.snx-appr-ok,.snx-appr-no{
+  display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:7px;
+  border:1px solid transparent;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+}
+.snx-appr-ok{background:color-mix(in srgb,var(--snx-ok) 16%,transparent);border-color:color-mix(in srgb,var(--snx-ok) 45%,transparent);color:var(--snx-ok)}
+.snx-appr-ok:hover:not(:disabled){background:color-mix(in srgb,var(--snx-ok) 26%,transparent)}
+.snx-appr-no{background:color-mix(in srgb,var(--snx-error) 14%,transparent);border-color:color-mix(in srgb,var(--snx-error) 45%,transparent);color:var(--snx-error)}
+.snx-appr-no:hover:not(:disabled){background:color-mix(in srgb,var(--snx-error) 22%,transparent)}
+.snx-appr-ok:disabled,.snx-appr-no:disabled{opacity:.45;cursor:default}
+/* 队列 tab 琥珀色待批角标（与 .cnt.pulse 同级；.on 态下也保持琥珀） */
+.snx-pro-tabs button .cnt.snx-appr-badge{background:color-mix(in srgb,var(--snx-warn) 22%,transparent);color:var(--snx-warn)}
+
 /* ═══════ COMPARE 对比视图 ═══════ */
 .snx-cmp{display:flex;flex-direction:column;gap:12px;padding:14px;min-height:100%}
 .snx-cmp-bar{display:flex;align-items:center;gap:8px}
@@ -2239,6 +2369,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           store.doc.camera = { x: cam.x || 0, y: cam.y || 0, scale: cam.scale || 1 }
           store.sel = new Set([...store.sel].filter((id) => store.node(id)))
           store.undoStack = [store.snapshot()]; store.redoStack = []   // 重建 undo 基线（旧栈全是外部写入前的文档）
+          // v18.5 评审补口：409 冲回的远端基线可能还带着死会话遗留 running（本会话先前的
+          // 清扫结果刚被这次 409 静默吞掉）——重扫一次并落盘，不让清扫被冲回后无人认领。
+          // 并发写窗口收敛到 GET→PUT 之间的毫秒级，仍非强一致；残余靠下次打开重扫自愈
+          if (sweepOrphanRunning() > 0) autosave()
           store.emit()
           toastBus('检测到其他会话修改,已加载最新画布', 'info')
         }
@@ -2256,6 +2390,31 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         if (r.status === 409) reloadRemoteBaseline()
       } catch { }
       return false
+    }
+
+    // ——— v18.4：孤儿 running 清扫（画布载入 applyDoc 与「队列」视图打开共用）———
+    // 客户端会话中断(关页签/浏览器关闭)后,running 节点无人认领,会永远卡「生成中」(真机复核实证:
+    // 脚本中途关浏览器留下 2 个永久 running)。把 startedAt 超 3 分钟的 running 标为可重跑。
+    // 阈值论证(v18.5 评审修正,原「≤90s 生成+90s 看门狗」已失效——看门狗定时器已删):上游单次
+    // 生成受服务端 timeoutMs 上限 120s 封顶,再加网络余量,180s 仍留足不误伤余量;默认配置
+    // (节流 2000ms)下合法任务远小于 180s。本会话在途(inflightJobs 注册)的 running 一律不扫——
+    // 那是活任务(含节流排队中),清扫只针对死会话遗留;其他标签页在极端配置(节流拉满 60s×并发 4,
+    // 排队可超 180s)下仍可能误扫,该残余窗口如实保留。
+    // 原地改 store.doc.nodes,返回清扫条数(0=无);落盘由调用方走 autosave/saveNow——
+    // 本函数定义在 factory 作用域,与 autosave(上方)同闭包,词法可达(曾疑闭包不可达致静默失效,
+    // 经 AST 作用域链分析证伪:applyDoc→Workbench→factory 链上无同名遮蔽,autosave 解析无歧义)。
+    function sweepOrphanRunning() {
+      const now = Date.now()
+      let swept = 0
+      for (const n of store.doc.nodes) {
+        if (n.status === 'running' && !inflightJobs.has(n.id) && now - (n._startedAt || n.ts || 0) > 180000) {
+          n.status = 'error'
+          n.errMsg = '上次会话中断，任务没有跑完——可重跑'
+          n._endedAt = now
+          swept++
+        }
+      }
+      return swept
     }
 
     // ——— 画布文档 store（vanilla，单一事实源）———
@@ -2750,13 +2909,15 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         tc.width = tw; tc.height = th
         tc.getContext('2d').drawImage(im, t.sx, t.sy, tw, th, 0, 0, tw, th)
         // SPEC-18 五真测修正：编辑管线走 /generate 的 i2i 通道（chat/completions 对生图模型 404，
-        // 真上游实测 model is not found）；尺寸先请求精确 2× 块尺寸,上游不认该尺寸桶时退 1024 标准方图
+        // 真上游实测 model is not found）；尺寸先请求精确 2× 块尺寸,上游不认该尺寸桶时退 1024 标准方图。
+        // v18.5 评审修正：走 snxGenPost 而非裸 post——4 块顺序连发、且某块失败(如 429)快返回后
+        // 立即补发退路请求，正是 RPS 预限流要防的「紧凑连发」，此前直连绕过了发起间隔节流
         const tileRef = tc.toDataURL('image/png')
         const tileModel = (node.params && node.params.model) || undefined
-        let r = await post('/api/sensenova/generate', { prompt: TILE_UPSCALE_PROMPT, size: (tw * 2) + 'x' + (th * 2), reference: tileRef, model: tileModel })
+        let r = await snxGenPost({ prompt: TILE_UPSCALE_PROMPT, size: (tw * 2) + 'x' + (th * 2), reference: tileRef, model: tileModel })
         let imgUrl = r && r.ok && r.image ? (r.image.kind === 'url' ? r.image.value : 'data:image/png;base64,' + r.image.value) : null
         if (!imgUrl) {
-          r = await post('/api/sensenova/generate', { prompt: TILE_UPSCALE_PROMPT, size: '1024x1024', reference: tileRef, model: tileModel })
+          r = await snxGenPost({ prompt: TILE_UPSCALE_PROMPT, size: '1024x1024', reference: tileRef, model: tileModel })
           imgUrl = r && r.ok && r.image ? (r.image.kind === 'url' ? r.image.value : 'data:image/png;base64,' + r.image.value) : null
         }
         if (!imgUrl) throw new Error('第 ' + (i + 1) + ' 块重绘失败' + (r && r.error ? ('：' + String(r.error).slice(0, 120)) : '（无图返回）'))
@@ -2806,7 +2967,8 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
 
     // ——— SPEC-16 一：生成耗时样本与「预计 ~Xs」———
     // snxGenPost = 客户端直连 POST /api/sensenova/generate 的唯一收口（工作台生成 runOne、
-    // 卡片同参数重抽 snxRerollDirect、画廊批量变体 batchVariantNodes 三处共用）：计一次墙钟
+    // 卡片同参数重抽 snxRerollDirect、画廊批量变体 batchVariantNodes、tiled 分块放大
+    // tiledUpscale2x 四处共用——评审修正后 tiled 也走这里，含 RPS 发起间隔节流）：计一次墙钟
     // 时长，HTTP ok（=服务端已落盘、节点将落 done）才计样本。错误/取消不计——SPEC-16 §一
     // 定义「样本=最近 5 次 done 的 POST 墙钟时长」，秒回的 4xx 与用户中途取消会把均值拉到失真。
     // 注意：对话工具路径（sensenova_generate_image）在服务端 execute 直调上游、不经任何客户端
@@ -2832,13 +2994,55 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length / 1000)
       } catch { return 0 }
     }
-    function snxGenPost(body, signal) {
+    // ─── v18.5：RPS 预限流——生成请求「发起最小间隔」───
+    // 并发闸只限「同时在跑」的数量，限不住紧凑连发：即使并发 1，用户快速「重跑失败」多个
+    // 任务时相邻两次 POST 的发起间隔仍可能小于上游 RPS 窗口（实测即 429 rps exhausted）。
+    // 在 snxGenPost 唯一收口处加发起间隔：记录上次实际发起时刻，间隔不足就推迟到满足才发。
+    // 多个并发调用的等待用一条模块级 promise 链串行化——每个等待者排到链头才计时放行，
+    // 避免多个等待者各自独立计时把间隔击穿；放行顺序=到达顺序（FIFO）。
+    // 配置 snxGenMinIntervalMs：localStorage 读取，默认 2000ms，范围 0–60000，非法回退默认。
+    function snxGenIntervalLimit() {
+      try {
+        const v = parseInt(localStorage.getItem('snxGenMinIntervalMs') || '', 10)
+        return Number.isFinite(v) && v >= 0 && v <= 60000 ? v : 2000
+      } catch { return 2000 }   // localStorage 不可用（隐私模式等）→ 默认值，不影响生成主流程
+    }
+    let snxGenLastStart = 0            // 上次 POST 实际发起时刻（0=本会话尚未发起过，首个请求不等待）
+    let snxGenGate = Promise.resolve() // 间隔等待串行链
+    function snxGenThrottleWait(signal) {
+      const next = snxGenGate.then(() => {
+        // 排到链头时已被取消：直接放行且不占发起名额——调用方随后的 fetch 收到已 abort 的
+        // signal 会立即以 AbortError 拒绝，不必再为一次发不出去的请求占用间隔
+        if (signal && signal.aborted) return
+        const interval = snxGenIntervalLimit()   // 链头放行时现读，改配置对下一个请求即生效
+        if (!(interval > 0)) { snxGenLastStart = Date.now(); return }
+        const wait = snxGenLastStart + interval - Date.now()
+        if (wait <= 0) { snxGenLastStart = Date.now(); return }
+        return new Promise((res) => {
+          const tid = setTimeout(() => { detach(); snxGenLastStart = Date.now(); res() }, wait)
+          // 等待中被取消：清定时器立刻让路（不更新 lastStart——没发出的请求不消耗间隔），链放行下一个
+          const onAbort = () => { clearTimeout(tid); detach(); res() }
+          function detach() { if (signal) { try { signal.removeEventListener('abort', onAbort) } catch { } } }
+          if (signal) { try { signal.addEventListener('abort', onAbort, { once: true }) } catch { } }
+        })
+      })
+      snxGenGate = next.catch(() => { })   // 链保活：单个等待者异常不堵后续请求的间隔排队
+      return next
+    }
+    async function snxGenPost(body, signal, onStart) {
+      // v18.5 RPS 预限流：距上次发起不足最小间隔则在此等待（取消即让路）；计时从真正发起起算，
+      // 节流排队时长不计入 snxRecordGenDur 的 POST 墙钟样本（该样本语义=单次 POST 耗时）。
+      // onStart：节流放行、请求真正发起前一刻回调（runOne 用它在发起时重置 _startedAt，
+      // 使节流等待不计入「运行段」计时——见 sweepOrphanRunning 的阈值论证）。
+      // 注：曾在此挂 90s 看门狗定时器，现工作副本已无该定时器，仅残留一句引用未声明变量 tm 的
+      // .catch（请求失败时抛 ReferenceError 掩盖真实错误），本次重写一并移除。
+      await snxGenThrottleWait(signal)
+      if (onStart) { try { onStart() } catch { } }
       const t0 = Date.now()
       return post('/api/sensenova/generate', body, signal).then((r) => {
         if (r && r.ok) snxRecordGenDur(Date.now() - t0)
         return r
       })
-        .catch((e) => { clearTimeout(tm); throw e })
     }
 
     async function runOne(nodeId, o) {
@@ -2855,6 +3059,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
       try {
         // 构造要发送的 refs：dataURL/内联直接传，远程 URL 简化只传 refs 数组（服务端会解析）
         const refsPayload = (refs || []).map((r) => ({ src: r.src, role: r.role || 'reference', strength: r.strength ?? 0.7 }))
+        // v18.5 评审修正：上方 updateNode 的 _startedAt 是过闸（并发闸）时刻，RPS 节流的排队
+        // 等待不应当作「已开跑」——在 snxGenPost 真正发起前一刻经 onStart 重置 _startedAt，
+        // 与「_startedAt=真正开跑时刻」的既有语义对齐（排队段=_queuedAt→_startedAt 一并覆盖节流等待）
         const r = await snxGenPost({
           prompt, size, model: model || undefined,
           negative: negative || undefined,
@@ -2862,7 +3069,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           reference: reference || undefined,
           refs: refsPayload.length ? refsPayload : undefined,
           persist: true,
-        }, ac.signal)
+        }, ac.signal, () => { store.updateNode(nodeId, { _startedAt: Date.now() }) })
         if (!r.ok || !r.image) throw new Error(r.error || '生成失败')
         const value = r.image.kind === 'base64' ? 'data:image/png;base64,' + r.image.value : r.image.value
         // P2-9：落盘失败且返回图过大 → 拒收，不把巨型 dataURL 塞进文档（autosave 会超 8MB 上限 413）
@@ -5621,21 +5828,10 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           store.doc = doc && Array.isArray(doc.nodes) ? doc : emptyDoc()
           if (!store.doc.camera) store.doc.camera = { x: 0, y: 0, scale: 1 }
           if (!Array.isArray(store.doc.nodes)) store.doc.nodes = []
-          // v18.3:孤儿 running 清扫——客户端会话中断(关页签/浏览器关闭)后,running 节点无人认领
-          // 会永远卡「生成中」(真机复核实证:脚本中途关浏览器留下 2 个永久 running)。打开画布时把
-          // startedAt 超 3 分钟的 running 标为可重跑;阈值>单次生成实际耗时(≤90s)+看门狗 90s,
-          // 不误伤其他活会话正在跑的任务。
-          const orphanNow = Date.now()
-          let orphanSwept = false
-          for (const n of store.doc.nodes) {
-            if (n.status === 'running' && orphanNow - (n._startedAt || n.ts || 0) > 180000) {
-              n.status = 'error'
-              n.errMsg = '上次会话中断，任务没有跑完——可重跑'
-              n._endedAt = orphanNow
-              orphanSwept = true
-            }
-          }
-          if (orphanSwept) autosave()   // v18.3:清扫要落盘,否则服务端仍是 running、跨会话可见不一致
+          // v18.4:孤儿 running 清扫提取为共用 sweepOrphanRunning(定义在 saveNow 之后;
+          // 「队列」视图打开时走同一函数)。清扫数>0 才落盘——autosave 在本词法作用域可达
+          // (factory 同闭包),清扫要落盘,否则服务端仍是 running、跨会话可见不一致。
+          if (sweepOrphanRunning() > 0) autosave()
           store.undoStack = [store.snapshot()]; store.redoStack = []   // P1-9：载入即重建 undo 基线
           if (activeEngine) { activeEngine.renderAll(); activeEngine.applyCamera() }
           force((n) => n + 1)
@@ -5663,12 +5859,41 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               store.doc.boards = r.doc.boards || store.doc.boards   // v11.2：画板列表一并跟随外部写入
               store.sel = new Set([...store.sel].filter((id) => store.node(id)))
               store.undoStack = [store.snapshot()]; store.redoStack = []
+              // v18.5 评审补口：外部替换后重扫孤儿 running——此前画布/队列保持打开期间
+              // 该分支只换 nodes 不清扫,死会话遗留 running 无人认领;清扫数>0 走 autosave 落盘
+              // （本会话自身在途任务已由 sweepOrphanRunning 的 inflightJobs 检查排除,不会被误扫）
+              if (sweepOrphanRunning() > 0) autosave()
               if (activeEngine) activeEngine.renderAll()
               force((n) => n + 1)
             }).catch(() => { })
           }
         }
         return () => { dead = true; try { es.close() } catch { } }
+      }, [open])
+
+      // v18.4:打开「队列」视图时执行同一孤儿 running 清扫——画布走上方 applyDoc,队列视图此前
+      // 没有清扫入口;共用 sweepOrphanRunning,清扫数>0 才落盘并刷新队列列表/等待数角标
+      useEffect(() => {
+        if (mode !== 'queue') return
+        if (sweepOrphanRunning() > 0) { store.emit(); autosave(); force((n) => n + 1) }
+      }, [mode])
+
+      // ── v19：审批门订阅——工作台打开期间轮询 apprState（数据层内部 2s 节流、隐藏页跳过），
+      // 供「队列」tab 琥珀色待批角标与本 toast 使用。本会话第一次见到的待批 id（开关开启时）
+      // 弹一次 toast，把用户引到「队列」页审批
+      const apprSeenRef = useRef(null)
+      useEffect(() => {
+        if (!open) return
+        if (!apprSeenRef.current) apprSeenRef.current = new Set()
+        return apprSubscribe(() => {
+          const seen = apprSeenRef.current
+          const fresh = apprState.enabled
+            ? apprState.items.filter((it) => it && it.id && !seen.has(it.id))
+            : []
+          for (const it of apprState.items) if (it && it.id) seen.add(it.id)
+          if (fresh.length) notify('agent 请求生图，等待你在「队列」页审批')
+          force((x) => x + 1)
+        })
       }, [open])
 
       // 画布容器挂载时（画布 tab 或全屏画布）：建引擎 + 快捷键 + 拖放/粘贴；卸载时销毁
@@ -6168,7 +6393,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             title: '生成队列',
           },
             h('span', { className: 'ti' }, ic('list-ordered')), '队列',
-            queueLen > 0 ? h('span', { className: 'cnt pulse' }, queueLen) : null),
+            queueLen > 0 ? h('span', { className: 'cnt pulse' }, queueLen) : null,
+            // v19：审批门待批数角标（琥珀色；与队列运行角标并列）
+            apprState.items.length > 0 ? h('span', { className: 'cnt snx-appr-badge', title: '待审批 ' + apprState.items.length + ' 条' }, apprState.items.length) : null),
           h('button', { className: mode === 'canvas' ? 'on' : '', onClick: () => setMode('canvas') },
             h('span', { className: 'ti' }, ic('frame')), '画布'),
           h('button', { className: mode === 'gallery' ? 'on' : '', onClick: () => setMode('gallery') },
@@ -6846,7 +7073,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
             ),
             h('div', { style: { flex: 1 } }),
             // SPEC-18 二：并发上限选择器——闸值即「同时在跑的生成数」，等待表顺序=执行顺序
-            h('label', { className: 'snx-queue-conc', title: '全局并发生成上限。等待中的任务按等待表顺序补位，可在任务行用上移/下移/置顶（插队）按钮重排。注意：SenseNova 官方上游有 RPS 限流，并发 >1 可能撞 429（rps exhausted），失败任务可「重跑失败」恢复' },
+            h('label', { className: 'snx-queue-conc', title: '全局并发生成上限。等待中的任务按等待表顺序补位，可在任务行用上移/下移/置顶（插队）按钮重排。注意：SenseNova 官方上游有 RPS 限流，并发 >1 可能撞 429（rps exhausted），失败任务可「重跑失败」恢复。另有发起间隔节流：相邻两次生成请求的发起间隔不小于最小间隔（localStorage snxGenMinIntervalMs，默认 2000 毫秒，可设 0–60000），紧凑连发时后发的请求自动延迟错峰' },
               ic('layers', 13),
               h('select', {
                 value: String(genConcLimit()),
@@ -6965,6 +7192,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               },
             }, ic('circle-x'), ' 取消其他') : null,
           ),
+          // v19：agent 审批门面板——「队列」视图顶部，队列汇总与任务列表之间。
+          // 列 pending 审批（工具/摘要/已等待与剩余倒计时），每条「批准」「拒绝」POST 决定路由
+          h(SnxApprovalPanel, { notify, askConfirm }),
           // 进度条（全局）
           allJobs.length > 0 ? h('div', { className: 'snx-queue-progress' },
             h('div', { className: 'bar' },
@@ -7537,6 +7767,115 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           h(PromptLibSection, { notify, confirm: askConfirm }),
         )
       }
+    }
+
+    // ─── v19：agent 审批门面板（「队列」视图顶部，队列汇总与任务列表之间）───
+    // 开关是服务端配置：只读展示（apprState.enabled 来自 GET /config 的 config.approvalGateEnabled），
+    // 客户端不做开关 UI。条目来自 apprState（数据层有订阅者时每 2s 轮询）；有条目时本地 1s tick
+    // 只重渲染本组件刷倒计时/进度条，不牵连整个 Workbench。开关关闭且无遗留条目时返回 null，
+    // 默认关闭时队列视图完全不变。
+    function SnxApprovalPanel({ notify, askConfirm }) {
+      const [, force] = useState(0)
+      const [busy, setBusy] = useState(() => new Set())   // 提交中的 id：该条两个按钮都禁用防连点
+      useEffect(() => apprSubscribe(() => force((x) => x + 1)), [])
+      const n = apprState.items.length
+      useEffect(() => {
+        if (!n) return
+        const t = setInterval(() => force((x) => x + 1), 1000)
+        return () => clearInterval(t)
+      }, [n])
+      const decide = async (id, decision) => {
+        if (busy.has(id)) return
+        setBusy((s) => { const next = new Set(s); next.add(id); return next })
+        try {
+          const r = await apprDecide(id, decision)
+          if (r && r.ok) notify(decision === 'approve' ? '已批准，agent 将继续生成' : '已拒绝，本次不会调用上游', 'ok')
+          else if (r && r.error) notify(String(r.error), 'err')   // 409 等直接显示服务端 error
+          else notify('提交失败，请重试', 'err')
+        } catch { notify('提交失败，请重试', 'err') }
+        finally { setBusy((s) => { const next = new Set(s); next.delete(id); return next }) }
+      }
+      // 全部拒绝：2 条及以上出现，先走应用内确认，再逐条 POST（不新增接口）。
+      // v18.5 评审修正：不走单条 decide（每条成功/失败各发一条 toast，N 条连发 N 条噪音；
+      // 且确认弹窗期间列表可能已被处置/过期 → 逐条吃 409 错误 toast）——这里静默聚合逐条
+      // 提交（服务端幂等/409 兜底），结束只发一条汇总；已处置/过期/不存在按「跳过」计
+      const denyAll = async () => {
+        const list = apprState.items
+        if (list.length < 2) return
+        const ok = await askConfirm({
+          title: '拒绝全部 ' + list.length + ' 条待审批请求？',
+          confirmLabel: '全部拒绝', confirmIcon: 'x',
+          desc: '这些 agent 调用将按被拒绝处理：不调用 SenseNova 上游、不计费；对应会话会立即收到未执行说明。',
+        })
+        if (!ok) return
+        let denied = 0, skipped = 0, failed = 0
+        for (const it of [...list]) {
+          try {
+            const r = await apprDecide(it.id, 'deny')
+            if (r && r.ok) denied++
+            else if (r && r.error && /已超时|已处置|不存在/.test(String(r.error))) skipped++
+            else failed++
+          } catch { failed++ }
+        }
+        const bits = []
+        if (denied) bits.push('已拒绝 ' + denied + ' 条')
+        if (skipped) bits.push(skipped + ' 条已处置或过期，跳过')
+        if (failed) bits.push(failed + ' 条提交失败')
+        notify(bits.join('；') || '没有可拒绝的条目', failed ? 'err' : 'ok')
+      }
+      if (!apprState.enabled && !n) return null
+      const nowSrv = Date.now() + apprState.skew
+      const TOOL_LB = { sensenova_generate_image: '生成', sensenova_edit_image: '编辑', sensenova_enhance_image: '增强' }
+      const stateText = apprState.err
+        ? '状态同步失败，正在自动重试'
+        : apprState.enabled
+          ? '审批门已开启 · 超时 ' + Math.max(1, Math.round((apprState.timeoutMs || 120000) / 1000)) + ' 秒'
+          : '审批门已关闭，以下为关闭前挂起的请求'
+      return h('div', { className: 'snx-appr' },
+        h('div', { className: 'snx-appr-head' },
+          h('span', { className: 'snx-appr-title' }, ic('lock'), '待审批'),
+          h('span', { className: 'snx-appr-cnt', 'aria-live': 'polite' }, String(n)),
+          h('span', { className: 'snx-appr-state' }, stateText),
+          n >= 2 ? h('button', {
+            className: 'snx-appr-all', type: 'button', onClick: denyAll,
+            title: '逐条提交拒绝：全部不调上游、不计费',
+          }, ic('x'), ' 全部拒绝') : null,
+        ),
+        n === 0 ? h('div', { className: 'snx-appr-empty' },
+          '暂无待审批请求。agent 调用生图 / 编辑 / 增强时会先停在这里，批准后才会调用 SenseNova。') : null,
+        n > 0 ? h('div', { className: 'snx-appr-list' }, apprState.items.map((it) => {
+          const created = Number(it.createdAt) || nowSrv
+          const expires = Number(it.expiresAt) || created
+          const total = Math.max(1, expires - created)
+          const leftMs = Math.max(0, expires - nowSrv)
+          const waited = Math.max(0, Math.floor((nowSrv - created) / 1000))
+          const leftS = Math.ceil(leftMs / 1000)
+          const urgent = leftS <= 15
+          const pct = Math.max(0, Math.min(100, Math.round(100 * leftMs / total)))
+          const lock = busy.has(it.id)
+          return h('div', { key: it.id, className: 'snx-appr-item' + (urgent ? ' snx-appr-urgent' : '') },
+            h('span', { className: 'snx-appr-tool', title: it.tool || '' }, TOOL_LB[it.tool] || '审批'),
+            h('div', { className: 'snx-appr-body' },
+              h('div', { className: 'snx-appr-sum', title: (it.meta && it.meta.prompt) || it.summary || '' }, it.summary || ''),
+              h('div', { className: 'snx-appr-meta' }, ic('clock', 12), '已等待 ' + waited + 's · 剩 ' + leftS + 's'),
+              h('div', { className: 'snx-appr-bar' },
+                h('div', { className: 'fill', style: { width: pct + '%' } })),
+            ),
+            h('div', { className: 'snx-appr-acts' },
+              h('button', {
+                className: 'snx-appr-ok', type: 'button', disabled: lock,
+                onClick: () => decide(it.id, 'approve'),
+                title: '批准后 agent 才会调用 SenseNova 上游',
+              }, ic('check'), ' 批准'),
+              h('button', {
+                className: 'snx-appr-no', type: 'button', disabled: lock,
+                onClick: () => decide(it.id, 'deny'),
+                title: '拒绝后 agent 收到未执行说明：不调上游、不计费',
+              }, ic('x'), ' 拒绝'),
+            ),
+          )
+        })) : null,
+      )
     }
 
     // ─── v8：提示词库 section（设置页）───

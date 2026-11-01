@@ -18,7 +18,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -41,9 +41,12 @@ export const Config = schemastery.object({
   baseUrl: live(schemastery.string().default('https://token.sensenova.cn/v1').description('OpenAI-compatible baseUrl（固定 https://token.sensenova.cn/v1）')),
   model: live(schemastery.string().default('sensenova-u1.5-lite').description('模型 id（控制台模型广场确认，U1.5 可填 sensenova-u1.5 / sensenova-u1.5-lite）')),
   timeoutMs: live(schemastery.number().min(3000).max(120000).default(60000).description('单次请求超时 ms')),
+  // v19 审批门：agent 三工具调上游前须在工作台「队列」页人工批准；拒绝/超时不调上游、不计费
+  approvalGateEnabled: live(schemastery.boolean().default(false).description('agent 生成审批门：开启后 sensenova_generate_image / sensenova_edit_image / sensenova_enhance_image 调上游前须在工作台「队列」页「待审批」区人工批准；拒绝或超时不调上游、不计费')),
+  approvalTimeoutMs: live(schemastery.number().min(10000).max(600000).default(120000).description('审批等待上限（毫秒），超时自动拒绝；10000–600000')),
 })
 
-export type Config = { apiKey?: string; baseUrl: string; model: string; timeoutMs: number }
+export type Config = { apiKey?: string; baseUrl: string; model: string; timeoutMs: number; approvalGateEnabled: boolean; approvalTimeoutMs: number }
 
 // ——— 内部：OpenAI-compatible 调用 ———
 async function callChatCompletions(opts: {
@@ -211,6 +214,19 @@ function describeRefs(metas: Array<{ role?: string; strength?: number } | null>)
   return parts.length ? `。参考图说明：${parts.join('；')}。` : ''
 }
 
+// v19 审批门：增强默认指令——工具 execute 与审批摘要共用同一份文本，避免两处漂移
+function enhanceDefaultPrompt(rm: boolean): string {
+  return rm
+    ? 'Enhance this image to ultra-clear 4K quality, increase sharpness and detail, remove the watermark text "豆包" at the bottom right corner without leaving artifacts, keep the original Kool graffiti typography, colors (white/pink/cyan/purple), grunge splatter background and torn paper corners exactly unchanged. Preserve composition, lighting and style.'
+    : 'Enhance this image to ultra-clear 4K quality, increase sharpness and detail, keep all original elements including Kool typography, colors, splatter background and torn paper corners exactly unchanged.'
+}
+
+// v19：同步短暂休眠（原子写 rename 重试退避用）。Atomics.wait 在 Node 主线程可用；
+// 环境不支持时静默跳过——只损失一点重试成功率，不影响正确性
+const syncSleepMs = (ms: number): void => {
+  try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms) } catch { /* ignore */ }
+}
+
 // ——— 插件 ———
 export function apply(ctx: Context, rawConfig: Config) {
   const config = (Config as unknown as (v: unknown) => Config)(rawConfig ?? {})
@@ -245,14 +261,28 @@ export function apply(ctx: Context, rawConfig: Config) {
       req.on('end', () => resolve(b))
     })
 
-  const reg = (path: string, handler: (req: { headers: Record<string, string | undefined>; method?: string; on: (ev: string, cb: (c: string) => void) => void }, res: { writeHead: (c: number, h?: Record<string, string>) => void; end: (b?: string) => void }) => void | Promise<void>): void => {
+  // 同源校验（全部敏感路由共用）：无 Origin 头放行（同源 GET / EventSource / 非浏览器客户端不带）；
+  // 带 Origin 的必须能解析且 host 与请求 Host 一致。字符串 'null'（沙箱 iframe / file:// 场景）
+  // 与解析失败的 Origin 一律拒绝——旧写法 new URL('null') 抛错进空 catch 反而放行（评审 low 修正；
+  // 浏览器侧本就被 content-type:application/json 强制 + 无 CORS preflight 应答双重挡住，此为纵深防御收紧）
+  const sameOrigin = (req: { headers?: Record<string, string | undefined> }): boolean => {
+    const origin = String(req.headers?.origin ?? '')
+    if (!origin) return true
+    if (origin === 'null') return false
+    try { return new URL(origin).host === String(req.headers?.host ?? '') } catch { return false }
+  }
+
+  // v19：req 类型补 url?: string——审批列表路由要读 ?all=1，history DELETE 的 ?id= 也靠它
+  // （此前 :431 处 req.url 是一条存量 TS2339）
+  const reg = (path: string, handler: (req: { headers: Record<string, string | undefined>; method?: string; url?: string; on: (ev: string, cb: (c: string) => void) => void }, res: { writeHead: (c: number, h?: Record<string, string>) => void; end: (b?: string) => void }) => void | Promise<void>): void => {
     ctx.effect(() => (ctx as { webServer?: { register?: (r: { kind: string; path: string; handler: unknown }) => void } }).webServer?.register?.({ kind: 'exact', path, handler }), `dsh-sensenova-image: ${path}`)
   }
 
   reg('/api/sensenova/config', (req, res) => {
     void (async () => {
       if (req.method === 'GET') {
-        sendJson(res, 200, { ok: true, config: { apiKey: config.apiKey ?? '', baseUrl: config.baseUrl, model: config.model } })
+        // v19：审批门两字段随配置返回（timeoutMs 回生效值，内存里可能被 POST /config 写成越界数）
+        sendJson(res, 200, { ok: true, config: { apiKey: config.apiKey ?? '', baseUrl: config.baseUrl, model: config.model, approvalGateEnabled: Boolean(config.approvalGateEnabled), approvalTimeoutMs: effTimeout() } })
         return
       }
       if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
@@ -262,13 +292,25 @@ export function apply(ctx: Context, rawConfig: Config) {
         if (typeof body.apiKey === 'string' && body.apiKey.trim()) { config.apiKey = body.apiKey.trim(); patch.apiKey = body.apiKey.trim() }
         if (typeof body.baseUrl === 'string' && body.baseUrl.trim()) { config.baseUrl = body.baseUrl.trim(); patch.baseUrl = body.baseUrl.trim() }
         if (typeof body.model === 'string' && body.model.trim()) { config.model = body.model.trim(); patch.model = body.model.trim() }
+        // v19 审批门配置：布尔严格 typeof 校验；超时 Number() 取整后钳到 [10000,600000]
+        //（POST /config 直接写内存 config，不经过 schema 校验，所以这里必须再钳一次）
+        if (typeof body.approvalGateEnabled === 'boolean') { config.approvalGateEnabled = body.approvalGateEnabled; patch.approvalGateEnabled = body.approvalGateEnabled }
+        if (body.approvalTimeoutMs !== undefined && body.approvalTimeoutMs !== null && body.approvalTimeoutMs !== '') {
+          const n = Math.round(Number(body.approvalTimeoutMs))
+          if (Number.isFinite(n)) {
+            const clamped = Math.min(600000, Math.max(10000, n))
+            config.approvalTimeoutMs = clamped
+            patch.approvalTimeoutMs = clamped
+          }
+        }
         // v16.1：settingsUpdate 可用时写 profile 真持久化(cordis 热重载回 apply());不可用时降级为内存
         for (const [k, v] of Object.entries(patch)) (config as Record<string, unknown>)[k] = v
         let persisted = false
         if (settingsUpdate) {
           try { await settingsUpdate(patch); persisted = true } catch (e) { console.warn('[sensenova-image] settings update:', String(e).slice(0, 120)) }
         }
-        sendJson(res, 200, { ok: true, persisted, note: persisted ? undefined : '已对本会话生效;持久化暂不可用' })
+        // v19：响应回显审批门两字段（persisted=false 时 UI 须提示「仅本会话生效」）
+        sendJson(res, 200, { ok: true, persisted, note: persisted ? undefined : '已对本会话生效;持久化暂不可用', approvalGateEnabled: Boolean(config.approvalGateEnabled), approvalTimeoutMs: effTimeout() })
       } catch (e) {
         sendJson(res, 400, { ok: false, error: e instanceof Error ? e.message : String(e) })
       }
@@ -288,11 +330,8 @@ export function apply(ctx: Context, rawConfig: Config) {
 
   reg('/api/sensenova/generate', async (req, res) => {
     if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
-    // 同源校验：带 Origin 的跨源请求拒绝（无 Origin 的同源 fetch 放行）
-    const origin = String(req.headers?.origin ?? '')
-    if (origin) {
-      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
-    }
+    // 同源校验：带 Origin 的跨源请求拒绝（无 Origin 的同源 fetch 放行；sameOrigin 见上方定义）
+    if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return }
     const key = resolveKey(config)
     if (!key) { sendJson(res, 400, { ok: false, error: 'SENSENOVA_API_KEY 未配置（设置页填 apiKey 或设 SENSENOVA_API_KEY 环境变量）' }); return }
     try {
@@ -379,10 +418,7 @@ export function apply(ctx: Context, rawConfig: Config) {
   // 增强放大：U1.5 chat/completions 清晰化（画布操作条入口），结果同样落盘
   reg('/api/sensenova/enhance', (req, res) => {
     if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
-    const origin = String(req.headers?.origin ?? '')
-    if (origin) {
-      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
-    }
+    if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return }
     const key = resolveKey(config)
     if (!key) { sendJson(res, 400, { ok: false, error: 'SENSENOVA_API_KEY 未配置' }); return }
     void (async () => {
@@ -497,10 +533,7 @@ export function apply(ctx: Context, rawConfig: Config) {
   }
   reg('/api/sensenova/events', (req, res) => {
     if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: 'GET only' }); return }
-    const origin = String(req.headers?.origin ?? '')
-    if (origin) {
-      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
-    }
+    if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return }
     res.writeHead(200, {
       'content-type': 'text/event-stream; charset=utf-8',
       'cache-control': 'no-cache, no-transform',
@@ -521,10 +554,7 @@ export function apply(ctx: Context, rawConfig: Config) {
   // agent / 聊天卡片把图追加到画布（打开中的画布经 SSE canvas:update 实时刷新）
   reg('/api/sensenova/canvas/nodes', (req, res) => {
     if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
-    const origin = String(req.headers?.origin ?? '')
-    if (origin) {
-      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
-    }
+    if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return }
     void (async () => {
       try {
         const body = JSON.parse((await readBody(req)) || '{}')
@@ -566,10 +596,7 @@ export function apply(ctx: Context, rawConfig: Config) {
   // 先换成本文件 URL，失败重试才有图可带（否则静默变文生图）
   reg('/api/sensenova/upload', (req, res) => {
     if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
-    const origin = String(req.headers?.origin ?? '')
-    if (origin) {
-      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
-    }
+    if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return }
     void (async () => {
       try {
         const body = JSON.parse((await readBody(req)) || '{}')
@@ -587,11 +614,435 @@ export function apply(ctx: Context, rawConfig: Config) {
     })()
   })
 
+  // v19 跨进程加固（多个 dsh 实例共享 ~/.dsh/storages，e2e 会并行起 5189/5193/5197 等端口实例）：
+  // (a) 临时文件名带 pid+随机后缀——旧写法 `${file}.${Date.now()}.tmp` 两进程同毫秒写会撞名；
+  // (b) rename 遇 EPERM/EBUSY/EACCES（Windows 上目标正被另一实例读/写）退避重试 3 次；
+  // (c) 仍失败清掉临时文件再抛出，绝不留垃圾 tmp。原子 rename 保证读者只看到完整新旧版本之一
   function atomicWriteFile(file: string, data: string | Buffer): void {
     mkdirSync(dirname(file), { recursive: true })
-    const tmp = `${file}.${Date.now()}.tmp`
+    const tmp = `${file}.${process.pid}.${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}.tmp`
     writeFileSync(tmp, data)
-    renameSync(tmp, file)
+    for (let attempt = 0; ; attempt++) {
+      try {
+        renameSync(tmp, file)
+        return
+      } catch (e) {
+        const code = (e as NodeJS.ErrnoException | null)?.code
+        if (attempt < 3 && (code === 'EPERM' || code === 'EBUSY' || code === 'EACCES')) {
+          syncSleepMs(5 * (attempt + 1))
+          continue
+        }
+        try { unlinkSync(tmp) } catch { /* 清理失败就算了 */ }
+        throw e
+      }
+    }
+  }
+
+  // ——— v19：agent 生成审批门（服务端）———
+  // 设计：三工具调上游前须用户在工作台「队列」页人工批准；拒绝/超时不调上游、不计费。
+  // 状态文件与画布同目录：~/.dsh/storages/dsh-sensenova-image-approvals.json
+  type ApprovalTool = 'sensenova_generate_image' | 'sensenova_edit_image' | 'sensenova_enhance_image'
+  type ApprovalStatus = 'pending' | 'approved' | 'denied' | 'expired'
+  type ApprovalReason = 'user' | 'timeout' | 'aborted' | 'host-restart' | null
+  type ApprovalRecord = {
+    id: string
+    tool: ApprovalTool
+    summary: string
+    // inputCount=输入图张数（generate=参考图数 / edit=输入图数 / enhance=1），非出图张数
+    // （评审 low 修正：原字段名 imageCount 易被理解为出图张数）
+    meta: { prompt: string; size?: string; model: string; inputCount: number; images: string[] }
+    callId: string | null
+    status: ApprovalStatus
+    reason: ApprovalReason
+    createdAt: number
+    expiresAt: number
+    decidedAt: number | null
+    boot: string
+    pid: number
+  }
+  const APPROVALS_FILE = (): string => join(storDir(), 'dsh-sensenova-image-approvals.json')
+  const APPROVAL_PENDING_CAP = 20
+  const APPROVAL_ID_RE = /^[0-9a-z]{8,20}$/
+  // boot 令牌与唤醒表挂 globalThis：插件热重载（不换进程）时 boot 不变，旧闭包里的等待者
+  // 仍能被新路由实例写入的决定唤醒；进程真重启后 boot 必变，遗留 pending 会被 normalize 清扫
+  type SnxApprovalGlobals = { __snxApprovalBoot?: string; __snxApprovalWakers?: Map<string, Set<() => void>> }
+  const snxG = globalThis as typeof globalThis & SnxApprovalGlobals
+  const BOOT: string = (snxG.__snxApprovalBoot ||= `${process.pid}-${Date.now().toString(36)}`)
+  const WAKERS: Map<string, Set<() => void>> = (snxG.__snxApprovalWakers ||= new Map())
+  // 运行时再钳一次：POST /config 直接写内存 config，不经过 schema 校验
+  const effTimeout = (): number => Math.min(600000, Math.max(10000, Math.round(Number(config.approvalTimeoutMs) || 120000)))
+
+  // id 与画布节点同款生成器（Date.now().toString(36)+随机尾巴），满足 POST 路由白名单
+  function genApprovalId(): string {
+    let id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+    while (!APPROVAL_ID_RE.test(id)) id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+    return id
+  }
+
+  // 属主进程探活：ESRCH=已退出；EPERM=存在但无权发信号（视为活着，可能是另一 dsh 实例）
+  function pidAlive(pid: number): boolean {
+    try { process.kill(pid, 0); return true } catch (e) { return (e as NodeJS.ErrnoException | null)?.code === 'EPERM' }
+  }
+
+  // 图片只存标签：绝不把 base64 / 带签名完整 URL 落盘
+  function imgLabel(src: string): string {
+    const s = String(src || '')
+    const canvas = s.match(/^\/api\/sensenova\/image\/(.+)$/)
+    if (canvas) return `画布图 ${canvas[1]}`
+    if (s.startsWith('data:')) return `dataURL 约 ${Math.max(1, Math.round((s.length * 3) / 4 / 1024))}KB`
+    if (/^https?:\/\//.test(s)) {
+      try {
+        const u = new URL(s)
+        const last = u.pathname.split('/').filter(Boolean).pop()
+        return last ? `${u.host}/${last}` : u.host
+      } catch { return s.slice(0, 48) }
+    }
+    return s.split(/[\\/]/).filter(Boolean).pop() || s.slice(0, 48) // 本地路径只留 basename
+  }
+
+  // 给人看的参数摘要（≤160 字）+ 结构化 meta（prompt ≤300 字、图片标签 ≤4 个）
+  function summarizeArgs(tool: ApprovalTool, args: Record<string, unknown>): { summary: string; meta: ApprovalRecord['meta'] } {
+    const a = args || {}
+    const model = typeof a.model === 'string' && a.model.trim() ? a.model.trim() : config.model
+    const cut = (v: unknown, n: number): string => String(v ?? '').trim().slice(0, n)
+    if (tool === 'sensenova_generate_image') {
+      const refs: string[] = []
+      if (a.reference) refs.push(String(a.reference))
+      for (const r of (Array.isArray(a.refs) ? a.refs : []) as Array<{ src?: string }>) { if (r && r.src) refs.push(String(r.src)) }
+      const size = typeof a.size === 'string' && a.size.trim() ? a.size.trim() : '2048x2048'
+      const parts = [`「${cut(a.prompt, 80)}」`, size, model]
+      if (refs.length) parts.push(`参考图 ${refs.length} 张`)
+      return { summary: parts.join(' · ').slice(0, 160), meta: { prompt: cut(a.prompt, 300), size, model, inputCount: refs.length, images: refs.slice(0, 4).map(imgLabel) } }
+    }
+    if (tool === 'sensenova_edit_image') {
+      const imgs: string[] = ((Array.isArray(a.images) ? a.images : []) as unknown[]).map((u) => String(u)).filter(Boolean)
+      const rawSize = (a as { size?: string }).size
+      const size = typeof rawSize === 'string' && rawSize.trim() ? rawSize.trim() : '2048x2048'
+      const parts = [`「${cut(a.prompt, 80)}」`, `输入图 ${imgs.length} 张`, size, model]
+      return { summary: parts.join(' · ').slice(0, 160), meta: { prompt: cut(a.prompt, 300), size, model, inputCount: imgs.length, images: imgs.slice(0, 4).map(imgLabel) } }
+    }
+    // sensenova_enhance_image：清晰化(+去水印) · 默认/自定义指令 · 原图标签 · 模型（无 size，走 chat 通道）
+    const rm = (a as { removeWatermark?: boolean }).removeWatermark ?? true
+    const custom = String(a.prompt ?? '').trim()
+    const parts = [rm ? '清晰化（去水印）' : '清晰化', custom ? `自定义指令「${custom.slice(0, 80)}」` : '默认指令', imgLabel(String(a.image ?? '')), model]
+    return { summary: parts.join(' · ').slice(0, 160), meta: { prompt: (custom || enhanceDefaultPrompt(rm)).slice(0, 300), model, inputCount: 1, images: [imgLabel(String(a.image ?? ''))] } }
+  }
+
+  // 返回给模型的拒绝 JSON（沿用现有字符串写法，不抛异常）；文本不写审批 id 与接口路径，
+  // 降低 agent 自己去调决定接口的诱因
+  function gateDenyText(tool: ApprovalTool, status: ApprovalStatus, reason: ApprovalReason, error: string, hint?: string): string {
+    return JSON.stringify({ ok: false, approval: { status, reason }, error, ...(hint ? { hint } : {}) }, null, 2)
+  }
+  function gateResultText(tool: ApprovalTool, it: { status: ApprovalStatus; reason: ApprovalReason; createdAt?: number; expiresAt?: number }): string {
+    if (it.status === 'denied') {
+      return gateDenyText(tool, 'denied', 'user', `已被用户拒绝：本次 ${tool} 调用未执行，未调用 SenseNova 上游、未产生计费。`, '不要自动重试；如需继续，先向用户说明意图并征得同意。')
+    }
+    if (it.status === 'expired' && it.reason === 'aborted') {
+      return gateDenyText(tool, 'expired', 'aborted', '调用已取消（审批等待期间会话中止）：未调用上游、未计费。')
+    }
+    if (it.status === 'expired' && it.reason === 'host-restart') {
+      return gateDenyText(tool, 'expired', 'host-restart', '审批请求因宿主重启失效，已按过期处理：未调用上游、未计费。')
+    }
+    const secs = it.createdAt && it.expiresAt ? Math.max(1, Math.round((it.expiresAt - it.createdAt) / 1000)) : Math.round(effTimeout() / 1000)
+    return gateDenyText(tool, 'expired', 'timeout', `审批超时（${secs} 秒内无人处理），已自动拒绝：未调用上游、未计费。`, '请提醒用户在 SenseNova 生图工作台「队列」页顶部的「待审批」区处理后再重试。')
+  }
+
+  // 接口返回剥掉 boot/pid（内部字段不外泄）
+  const publicApproval = (it: ApprovalRecord) => ({
+    id: it.id, tool: it.tool, summary: it.summary, meta: it.meta, callId: it.callId,
+    status: it.status, reason: it.reason, createdAt: it.createdAt, expiresAt: it.expiresAt, decidedAt: it.decidedAt,
+  })
+
+  // 读盘：文件不存在视为 {v:1,items:[]}（不写盘）；JSON 损坏按空处理并告警——等待者发现自己的
+  // 记录丢了会重新插入
+  function readApprovalsRaw(): { v: number; items: ApprovalRecord[] } {
+    try {
+      const parsed = JSON.parse(readFileSync(APPROVALS_FILE(), 'utf8')) as { v?: number; items?: ApprovalRecord[] }
+      if (!parsed || !Array.isArray(parsed.items)) return { v: 1, items: [] }
+      return { v: typeof parsed.v === 'number' ? parsed.v : 1, items: parsed.items }
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException | null)?.code !== 'ENOENT') {
+        console.warn('[sensenova-image] 审批文件读取失败，按空处理（等待者会重插自己的记录）:', e instanceof Error ? e.message : String(e))
+      }
+      return { v: 1, items: [] }
+    }
+  }
+
+  // pending 清扫（每次 mutate 和 GET 都跑）：now > expiresAt+2s 兜底置 timeout；boot 变了且
+  // 属主进程已不在置 host-restart（pid 复用与 ESRCH 同归）；boot 相同（热重载）或进程仍在
+  // （可能是另一 dsh 实例）的保留，由属主按截止时间自行处置
+  function normalizeApprovals(items: ApprovalRecord[]): number {
+    const now = Date.now()
+    let swept = 0
+    for (const it of items) {
+      if (it.status !== 'pending') continue
+      let expired: Exclude<ApprovalReason, null | 'user'> | undefined
+      if (now > it.expiresAt + 2000) expired = 'timeout'
+      else if (it.boot !== BOOT) {
+        if (it.pid === process.pid) expired = 'host-restart'
+        else if (!pidAlive(it.pid)) expired = 'host-restart'
+      }
+      if (expired) { it.status = 'expired'; it.reason = expired; it.decidedAt = now; swept++ }
+    }
+    return swept
+  }
+
+  // 保留与裁剪（每次写盘时执行）：pending 一律保留；终态只留 decidedAt 24h 内最近 50 条；
+  // 总数不超过 100（超限时按 decidedAt 从最老的终态开始裁）。保持原有顺序，避免无谓的字节变化
+  function pruneApprovals(items: ApprovalRecord[]): ApprovalRecord[] {
+    const now = Date.now()
+    const keep = new Set(
+      items
+        .filter((it) => it.status !== 'pending' && typeof it.decidedAt === 'number' && now - (it.decidedAt as number) <= 86400000)
+        .sort((x, y) => (y.decidedAt as number) - (x.decidedAt as number))
+        .slice(0, 50)
+        .map((it) => it.id),
+    )
+    let out = items.filter((it) => it.status === 'pending' || keep.has(it.id))
+    if (out.length > 100) {
+      // 总量兜底按 decidedAt 取舍（评审 low 修正：原按文件插入序 slice，可能裁掉上一行
+      // 「终态保最近 50 条」承诺内的记录，如文件前部一条 pending 十分钟后才批准的）。
+      // pending 先占预算，剩余额度给最新终态；当前 pending≤20 + 终态≤50 实际到不了 100，
+      // 本分支是防御性兜底（手改文件/旧版本写入的超量记录才可达）
+      const terminalBudget = Math.max(0, 100 - out.filter((it) => it.status === 'pending').length)
+      const drop = new Set(
+        out.filter((it) => it.status !== 'pending')
+          .sort((x, y) => (y.decidedAt as number) - (x.decidedAt as number))
+          .slice(terminalBudget)
+          .map((it) => it.id),
+      )
+      out = out.filter((it) => it.status === 'pending' || !drop.has(it.id))
+    }
+    return out
+  }
+
+  // v19 并发核心：同进程所有读写都走这一个同步函数——readFileSync → normalize → fn 内做 CAS
+  // （只有 pending 才能改）→ 只在内容变化时 atomicWriteFile。fn 内没有任何 await，Node 单线程
+  // 整段跑完，天然互斥；跨进程靠原子 rename + 唯一临时名兜底（见 atomicWriteFile），丢更新的
+  // 最坏结果是丢一条新建 pending（等待者会重插）或丢一次人工决定（表现为仍待批），过期快照
+  // 不可能凭空写出 approved——竞态只会偏向「不调上游」，不会误放行。写盘失败时抛给调用方
+  function mutateApprovals<T>(fn: (items: ApprovalRecord[]) => T): { result: T; changed: boolean; swept: number } {
+    const items = readApprovalsRaw().items
+    const before = JSON.stringify(items)
+    const swept = normalizeApprovals(items)
+    const result = fn(items)
+    const pruned = pruneApprovals(items)
+    const after = JSON.stringify(pruned)
+    if (after !== before) atomicWriteFile(APPROVALS_FILE(), JSON.stringify({ v: 1, items: pruned }))
+    return { result, changed: after !== before, swept }
+  }
+
+  // 唤醒同进程等待者（决定路由 200 后调用）；热重载后新旧闭包共用一张表，跨进程靠 1s 文件轮询兜底
+  function wake(id: string): void {
+    const set = WAKERS.get(id)
+    if (!set) return
+    WAKERS.delete(id)
+    for (const fn of set) { try { fn() } catch { /* 忽略 */ } }
+    set.clear()
+  }
+
+  // 等待 = wake 即时唤醒 ∪ ≤1s 文件轮询（发现其他进程写入的决定）∪ abort 监听，谁先到用谁；
+  // 结束时清理定时器、监听器和唤醒表
+  function sleepOrWake(id: string, ms: number, signal?: AbortSignal): Promise<void> {
+    return new Promise<void>((resolve) => {
+      let done = false
+      let timer: ReturnType<typeof setTimeout> | undefined
+      let wakers: Set<() => void> | undefined
+      const finish = (): void => {
+        if (done) return
+        done = true
+        if (timer) clearTimeout(timer)
+        signal?.removeEventListener('abort', onAbort)
+        if (wakers) { wakers.delete(fn); if (!wakers.size) WAKERS.delete(id) }
+        resolve()
+      }
+      const fn = (): void => finish()
+      const onAbort = (): void => finish()
+      if (signal?.aborted) { finish(); return }
+      timer = setTimeout(finish, Math.max(1, ms))
+      if (signal) signal.addEventListener('abort', onAbort)
+      wakers = WAKERS.get(id)
+      if (!wakers) { wakers = new Set(); WAKERS.set(id, wakers) }
+      wakers.add(fn)
+    })
+  }
+
+  // v19 审批闸门：返回 null=放行；返回 string=把这段 JSON 直接交给模型（不调上游、不抛异常）。
+  // 插入位置在 resolveKey 之后、任何上游调用与耗时计时起点（T0）之前，审批等待不计入 genDurRing
+  async function approvalGate(tool: ApprovalTool, args: Record<string, unknown>, exec?: { signal?: AbortSignal; callId?: string }): Promise<string | null> {
+    // 1) 开关关闭：零开销直通（不读盘、不写盘、无额外系统调用）
+    if (!config.approvalGateEnabled) return null
+    const { summary, meta } = summarizeArgs(tool, args)
+    const rec: ApprovalRecord = {
+      id: genApprovalId(), tool, summary, meta,
+      callId: typeof exec?.callId === 'string' ? exec.callId : null,
+      status: 'pending', reason: null,
+      createdAt: Date.now(), expiresAt: Date.now() + effTimeout(), // expiresAt 创建时固定，之后改配置不影响在等请求
+      decidedAt: null, boot: BOOT, pid: process.pid,
+    }
+    // 2)+3) 同步建记录：待批 ≥20 条不建记录直接拒（防循环调用刷满）；写盘失败 fail-closed
+    try {
+      let overLimit = false
+      mutateApprovals((items) => {
+        let pending = 0
+        for (const it of items) { if (it.status === 'pending') pending++ }
+        if (pending >= APPROVAL_PENDING_CAP) { overLimit = true; return }
+        while (items.some((it) => it.id === rec.id)) rec.id = genApprovalId() // 撞 id 重生成
+        items.push(rec)
+      })
+      if (overLimit) {
+        return gateDenyText(tool, 'denied', null, `待审批请求已达 ${APPROVAL_PENDING_CAP} 条上限，本次自动拒绝：未调用上游、未计费。`, '疑似循环调用，请停止批量生成并询问用户。')
+      }
+    } catch (e) {
+      const msg = (e instanceof Error ? e.message : String(e)).slice(0, 120)
+      return gateDenyText(tool, 'denied', null, `审批门已开启但审批记录写入失败（${msg}），为避免未经批准的计费已拒绝本次调用：未调用上游。`)
+    }
+    // 4) 等待循环：状态机只在同步 CAS 里推进，终态不可逆；任何路径都不能回到 pending
+    for (;;) {
+      if (exec?.signal?.aborted) {
+        // 中止：CAS pending→expired/aborted（批准在先仍放行，按最终状态处理）
+        let fin: ApprovalRecord | undefined
+        try {
+          mutateApprovals((items) => {
+            const it = items.find((x) => x.id === rec.id)
+            if (it && it.status === 'pending') { it.status = 'expired'; it.reason = 'aborted'; it.decidedAt = Date.now() }
+            fin = it
+          })
+        } catch { /* 读不到就按取消返回 */ }
+        if (fin && fin.status === 'approved') return null
+        if (fin && (fin.status === 'denied' || fin.status === 'expired')) return gateResultText(tool, fin)
+        return gateDenyText(tool, 'expired', 'aborted', '调用已取消（审批等待期间会话中止）：未调用上游、未计费。')
+      }
+      let cur: ApprovalRecord | undefined
+      try { mutateApprovals((items) => { cur = items.find((x) => x.id === rec.id) }) } catch { cur = undefined }
+      const now = Date.now()
+      if (!cur) {
+        // 记录缺失（跨进程丢更新/文件损坏）：未到期重插自己的记录，已到期按超时收尾
+        if (now < rec.expiresAt) {
+          try { mutateApprovals((items) => { if (!items.some((x) => x.id === rec.id)) items.push(rec) }) } catch { /* 下一轮再试 */ }
+          await sleepOrWake(rec.id, Math.min(1000, rec.expiresAt - Date.now()), exec?.signal)
+          continue
+        }
+        return gateResultText(tool, { status: 'expired', reason: 'timeout', createdAt: rec.createdAt, expiresAt: rec.expiresAt })
+      }
+      if (cur.status !== 'pending') {
+        if (cur.status === 'approved') return null // 放行：去调上游
+        return gateResultText(tool, cur)
+      }
+      if (now >= cur.expiresAt) {
+        // 到点：CAS pending→expired/timeout；CAS 没落定说明刚好已被人工决定，按最终状态处理
+        let fin: ApprovalRecord | undefined
+        try {
+          mutateApprovals((items) => {
+            const it = items.find((x) => x.id === rec.id)
+            if (!it) return
+            if (it.status === 'pending') { it.status = 'expired'; it.reason = 'timeout'; it.decidedAt = Date.now() }
+            fin = it
+          })
+        } catch { /* 写盘失败下一轮再试 */ }
+        if (fin && fin.status !== 'pending') {
+          if (fin.status === 'approved') return null
+          return gateResultText(tool, fin)
+        }
+        await sleepOrWake(rec.id, Math.min(1000, Math.max(50, rec.expiresAt - Date.now())), exec?.signal)
+        continue
+      }
+      // 未到期：等 wake（同进程决定）或 ≤1s 轮询（跨进程决定）或 abort
+      await sleepOrWake(rec.id, Math.min(1000, cur.expiresAt - Date.now()), exec?.signal)
+    }
+  }
+
+  // A. 审批列表（exact 路由）：先 normalize 清扫（没变化不写盘），再返回。
+  // 默认只含 pending，最早到期在前（expiresAt=createdAt+超时，同时创建的记录两者等价）；
+  // ?all=1 返回全部保留记录（新到旧），用于审计和 e2e
+  reg('/api/sensenova/approvals', (req, res) => {
+    if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: 'GET only' }); return }
+    if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return }
+    try { mutateApprovals(() => undefined) } catch { /* 清扫写盘失败不影响读 */ }
+    let raw: ApprovalRecord[] = []
+    try { raw = readApprovalsRaw().items } catch { raw = [] }
+    let wantAll = false
+    try { wantAll = new URL(req.url ?? '/', 'http://x').searchParams.get('all') === '1' } catch { /* 无 url 视为默认 */ }
+    const items = wantAll
+      ? [...raw].sort((x, y) => (y.decidedAt ?? y.createdAt) - (x.decidedAt ?? x.createdAt)).map(publicApproval)
+      : raw.filter((it) => it.status === 'pending')
+        .sort((x, y) => x.expiresAt - y.expiresAt || x.createdAt - y.createdAt)
+        .map(publicApproval)
+    sendJson(res, 200, { ok: true, enabled: Boolean(config.approvalGateEnabled), timeoutMs: effTimeout(), now: Date.now(), items })
+  })
+
+  // B. 审批决定 POST /api/sensenova/approvals/<id>：reg() 只支持 exact，故内联注册 prefix 路由。
+  // path 不带尾斜杠（webserver 的前缀匹配是 startsWith(path + '/')）；exact 与 prefix 是两张表，
+  // 裸路径归上面 GET 处理，带 /<id> 的归这里，互不冲突。effect 回调返回 register 的 disposer
+  //（类型写成 () => void，匹配 cordis 的 SyncEffect，不再制造 TS2769）
+  ctx.effect(() => {
+    const ws = (ctx as { webServer?: { register?: (r: { kind: string; path: string; handler: unknown }) => unknown } }).webServer
+    if (!ws || typeof ws.register !== 'function') return () => { }
+    const ret = ws.register({
+      kind: 'prefix',
+      path: '/api/sensenova/approvals',
+      handler: (req: { headers?: Record<string, string | undefined>; method?: string; url?: string; on: (ev: string, cb: (c: string) => void) => void }, res: { writeHead: (c: number, h?: Record<string, string>) => void; end: (b?: string) => void }) => {
+        void (async () => {
+          // 校验顺序：Origin → 方法 → content-type（挡浏览器表单类 CSRF）→ id 白名单 → decision
+          if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return }
+          if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
+          if (!String(req.headers?.['content-type'] ?? '').includes('application/json')) {
+            sendJson(res, 415, { ok: false, error: 'content-type must be application/json' }); return
+          }
+          const rawPath = decodeURIComponent(String(req.url ?? '')).split('?')[0]
+          const cut = rawPath.indexOf('/approvals/')
+          const id = cut >= 0 ? rawPath.slice(cut + '/approvals/'.length).replace(/^\/+/, '').replace(/\/+$/, '') : ''
+          if (!APPROVAL_ID_RE.test(id)) { sendJson(res, 400, { ok: false, error: 'bad approval id' }); return }
+          let decision: 'approve' | 'deny' | '' = ''
+          try {
+            const body = JSON.parse((await readBody(req)) || '{}') as { decision?: unknown }
+            if (body.decision === 'approve' || body.decision === 'deny') decision = body.decision
+          } catch { /* body 解析失败按缺 decision 处理 */ }
+          if (!decision) { sendJson(res, 400, { ok: false, error: 'decision must be "approve" or "deny"' }); return }
+          // 一次同步 CAS 里处置：404 不存在 / 200 决定或幂等 / 409 超时或终态冲突 / 500 写盘失败
+          let code = 500
+          let payload: unknown = { ok: false, error: '审批状态写入失败' }
+          try {
+            mutateApprovals((items) => {
+              const it = items.find((x) => x.id === id)
+              if (!it) { code = 404; payload = { ok: false, error: '审批请求不存在或已清理' }; return }
+              const now = Date.now()
+              if (it.status === 'pending') {
+                if (now > it.expiresAt) { // 以服务端时钟为准：决定接口先过期后决定
+                  it.status = 'expired'; it.reason = 'timeout'; it.decidedAt = now
+                  code = 409; payload = { ok: false, error: '已超时，已自动拒绝', item: publicApproval(it) }
+                  return
+                }
+                it.status = decision === 'approve' ? 'approved' : 'denied'
+                it.reason = 'user'; it.decidedAt = now
+                code = 200; payload = { ok: true, item: publicApproval(it) }
+                return
+              }
+              if ((decision === 'approve' && it.status === 'approved') || (decision === 'deny' && it.status === 'denied')) {
+                code = 200; payload = { ok: true, item: publicApproval(it), idempotent: true } // 同一决定重复提交幂等
+                return
+              }
+              const label = it.status === 'approved' ? '已批准' : it.status === 'denied' ? '已拒绝' : '已过期'
+              code = 409; payload = { ok: false, error: `该请求已处置为「${label}」，不能更改`, item: publicApproval(it) }
+            })
+            if (code === 200) wake(id) // 成功后唤醒同进程等待者；跨进程等待者靠 1s 文件轮询
+            sendJson(res, code, payload)
+          } catch (e) {
+            sendJson(res, 500, { ok: false, error: e instanceof Error ? e.message : String(e) })
+          }
+        })()
+      },
+    })
+    return typeof ret === 'function' ? (ret as () => void) : () => { }
+  }, 'dsh-sensenova-image: /api/sensenova/approvals/')
+
+  // 启动清扫：上一进程遗留的 pending 按 normalize 规则归档（host-restart / timeout 兜底），
+  // 对应的工具调用已随进程中断，不会有人拿到 approved 去调上游
+  try {
+    const sweep = mutateApprovals(() => undefined)
+    if (sweep.swept > 0) console.log(`[sensenova-image] 审批门启动清扫：${sweep.swept} 条遗留待批已按过期归档`)
+  } catch (e) {
+    console.warn('[sensenova-image] 审批门启动清扫失败:', e instanceof Error ? e.message : String(e))
   }
 
   // 生成结果落盘为本地文件，返回 /api/sensenova/image/<id><ext> 引用；远程 url 下载失败则回退原样返回
@@ -713,10 +1164,7 @@ export function apply(ctx: Context, rawConfig: Config) {
   // 多模态：图+文进、图出），客户端 tiled 放大 2× 逐块调用。落盘成功返回文件 URL。
   reg('/api/sensenova/edit', async (req, res) => {
     if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
-    const origin = String(req.headers?.origin ?? '')
-    if (origin) {
-      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
-    }
+    if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return }
     const key = resolveKey(config)
     if (!key) { sendJson(res, 400, { ok: false, error: 'SENSENOVA_API_KEY 未配置（设置页填 apiKey 或设 SENSENOVA_API_KEY 环境变量）' }); return }
     try {
@@ -756,10 +1204,7 @@ export function apply(ctx: Context, rawConfig: Config) {
   // 真连接测试：实际访问 SenseNova /models，返回可用模型清单（工作台设置页"测试连接"用）
   reg('/api/sensenova/ping', (req, res) => {
     if (req.method !== 'GET') { sendJson(res, 405, { ok: false, error: 'GET only' }); return }
-    const origin = String(req.headers?.origin ?? '')
-    if (origin) {
-      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
-    }
+    if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return }
     const key = resolveKey(config)
     if (!key) { sendJson(res, 200, { ok: false, error: '未配置 API Key（先保存或设置 SENSENOVA_API_KEY）' }); return }
     fetch(`${config.baseUrl.replace(/\/$/, '')}/models`, {
@@ -778,10 +1223,7 @@ export function apply(ctx: Context, rawConfig: Config) {
   // 测试连接：调 sensenova /v1/models 验证 key（不消耗配额）
   reg('/api/sensenova/test', async (req, res) => {
     if (req.method !== 'POST') { sendJson(res, 405, { ok: false, error: 'POST only' }); return }
-    const origin = String(req.headers?.origin ?? '')
-    if (origin) {
-      try { if (new URL(origin).host !== req.headers?.host) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return } } catch { }
-    }
+    if (!sameOrigin(req)) { sendJson(res, 403, { ok: false, error: 'origin rejected' }); return }
     const key = resolveKey(config)
     if (!key) { sendJson(res, 400, { ok: false, error: 'API Key 未配置（先在「保存设置」里填 key，或设置 SENSENOVA_API_KEY 环境变量）' }); return }
     try {
@@ -825,15 +1267,16 @@ export function apply(ctx: Context, rawConfig: Config) {
           model: { type: 'string', description: '覆盖默认模型，留空用配置项' },
         },
         output: { schema: { type: 'string' }, render: (a, v) => [{ type: 'text', text: String(v) }] },
-        async execute(args: { image: string; removeWatermark?: boolean; prompt?: string; model?: string }) {
+        async execute(args: { image: string; removeWatermark?: boolean; prompt?: string; model?: string }, exec?: { signal?: AbortSignal; callId?: string }) {
           const key = resolveKey(config)
           if (!key) return missingKeyHint()
           const model = args.model || config.model
           const rm = args.removeWatermark ?? true
+          // v19 审批门：调上游前挂起等待人工批准（开关关闭时零开销直通；等待不计入耗时统计）
+          const blocked = await approvalGate('sensenova_enhance_image', args, exec)
+          if (blocked) return blocked
 
-          const defaultPrompt = rm
-            ? 'Enhance this image to ultra-clear 4K quality, increase sharpness and detail, remove the watermark text "豆包" at the bottom right corner without leaving artifacts, keep the original Kool graffiti typography, colors (white/pink/cyan/purple), grunge splatter background and torn paper corners exactly unchanged. Preserve composition, lighting and style.'
-            : 'Enhance this image to ultra-clear 4K quality, increase sharpness and detail, keep all original elements including Kool typography, colors, splatter background and torn paper corners exactly unchanged.'
+          const defaultPrompt = enhanceDefaultPrompt(rm)
 
           const prompt = args.prompt?.trim() || defaultPrompt
           const imageUrl = toDataUrl(args.image)
@@ -926,10 +1369,13 @@ export function apply(ctx: Context, rawConfig: Config) {
           model: { type: 'string', description: '覆盖默认模型' },
         },
         output: { schema: { type: 'string' }, render: (a, v) => [{ type: 'text', text: String(v) }] },
-        async execute(args: { prompt: string; reference?: string; refs?: Array<{ src: string; role?: string; strength?: number }>; size?: string; model?: string }) {
+        async execute(args: { prompt: string; reference?: string; refs?: Array<{ src: string; role?: string; strength?: number }>; size?: string; model?: string }, exec?: { signal?: AbortSignal; callId?: string }) {
           const key = resolveKey(config)
           if (!key) return missingKeyHint()
           const model = args.model || config.model
+          // v19 审批门：调上游前挂起等待人工批准（开关关闭时零开销直通；toolGenT0 在闸门之后）
+          const blocked = await approvalGate('sensenova_generate_image', args, exec)
+          if (blocked) return blocked
           try {
             // 合并 reference + refs 为 images 数组（meta 与位置对齐：null=裸 reference 不描述）
             const images: string[] = []
@@ -1025,10 +1471,13 @@ export function apply(ctx: Context, rawConfig: Config) {
           size: { type: 'string', description: '输出尺寸 WxH（默认 2048x2048）' },
         },
         output: { schema: { type: 'string' }, render: (a, v) => [{ type: 'text', text: String(v) }] },
-        async execute(args: { images: string[]; prompt: string; model?: string }) {
+        async execute(args: { images: string[]; prompt: string; model?: string }, exec?: { signal?: AbortSignal; callId?: string }) {
           const key = resolveKey(config)
           if (!key) return missingKeyHint()
           const model = args.model || config.model
+          // v19 审批门：调上游前挂起等待人工批准（开关关闭时零开销直通；toolEditT0 在闸门之后）
+          const blocked = await approvalGate('sensenova_edit_image', args, exec)
+          if (blocked) return blocked
           // SPEC-18 五真测修正：chat/completions 对 u1.5 生图模型 404（真上游实测）——编辑走
           // images/generations i2i（图+指令进、图出），与工作台参考图生成同一条已验证链路
           const imgs: string[] = (args.images || []).map((u: string) => toDataUrl(u))
@@ -1182,6 +1631,8 @@ export function apply(ctx: Context, rawConfig: Config) {
           '- sensenova_canvas_place_image 可把本地图片/URL 摆到画布指定位置，适合批量排版、拼贴素材',
           '- 带【来自生图画布】前缀的消息 = 用户从画布发来的上下文，可能附画布选中图',
           '- 画布实时快照：' + summary,
+          // v19 审批门：text() 每次组装时重新求值，开关状态实时反映进系统提示
+          ...(config.approvalGateEnabled ? ['- 审批门已开启：生图/编辑/增强需用户在工作台批准；被拒绝或超时会返回未执行，不要自动重试。'] : []),
         ].join('\n')
       }
     })

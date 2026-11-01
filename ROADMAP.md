@@ -3,7 +3,9 @@
 > 2026-10-31 立项。来源：三竞品对照深挖（dsh-agnes-media / dsh-image-gen / dsh-ark9canvas）+ 历轮 deferred 清账 + v18 真机复核发现。
 > **定位不变式**：SenseNova 生图的「管理与编辑」工作台。接入层不做（Token Plan 登录/额度可视化/多 key 池交给 dsh-connect-sensenova-token-plan 与 dsh-sensenova-pool，兼容其注册的 provider）；非 SenseNova 模型不绑（无多 provider/订阅免 Key/本地 ComfyUI）。
 
-## P0 — 下轮工作流实施（2026-10-31 起）
+## P0 — 已完成（2026-10-31 工作流实施 + 2026-11-01 真机验证）
+
+> 全部三项落地并真机验证：①孤儿清扫——根因证伪（AST+动态复现台证明原实现本可达，真凶是 SSE 回放窗口冲回），改为共用 sweepOrphanRunning+队列视图触发点，活体验证服务端真翻转；②RPS 节流——snxGenPost 唯一收口处发起间隔 2000ms（可配），真机实测相邻 POST 间隔 2003ms（tiled 放大改走同收口，评审发现的绕过口已堵）；③审批门——server 审批文件 CAS 状态机+双路由+三工具挂起（fail-closed），客户端队列页审批区（倒计时/批准/拒绝/全部拒绝），插件级 harness 49/49（拒绝与超时上游 0 次调用），真机拒绝路径文件真翻转。独立评审 8 条（1 medium 已修=放大绕过节流；7 low 记录在案）。
 
 | # | 项 | 内容 | 来源 |
 |---|---|---|---|
