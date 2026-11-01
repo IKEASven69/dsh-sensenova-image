@@ -263,8 +263,9 @@ export function apply(ctx: Context, rawConfig: Config) {
 
   // 同源校验（全部敏感路由共用）：无 Origin 头放行（同源 GET / EventSource / 非浏览器客户端不带）；
   // 带 Origin 的必须能解析且 host 与请求 Host 一致。字符串 'null'（沙箱 iframe / file:// 场景）
-  // 与解析失败的 Origin 一律拒绝——旧写法 new URL('null') 抛错进空 catch 反而放行（评审 low 修正；
-  // 浏览器侧本就被 content-type:application/json 强制 + 无 CORS preflight 应答双重挡住，此为纵深防御收紧）
+  // 与解析失败的 Origin 一律拒绝——旧写法 new URL('null') 抛错进空 catch 反而放行（v19.1 评审 low 修正；
+  // 审批双路由在内全部敏感路由共用本函数；浏览器侧本就被 content-type:application/json 强制 +
+  // 无 CORS preflight 应答双重挡住，此为纵深防御收紧）
   const sameOrigin = (req: { headers?: Record<string, string | undefined> }): boolean => {
     const origin = String(req.headers?.origin ?? '')
     if (!origin) return true
@@ -648,9 +649,11 @@ export function apply(ctx: Context, rawConfig: Config) {
     id: string
     tool: ApprovalTool
     summary: string
-    // inputCount=输入图张数（generate=参考图数 / edit=输入图数 / enhance=1），非出图张数
-    // （评审 low 修正：原字段名 imageCount 易被理解为出图张数）
-    meta: { prompt: string; size?: string; model: string; inputCount: number; images: string[] }
+    // v19.1 评审 low 修正：meta 计数字段按分支语义命名，杜绝「出图张数」误读——
+    // generate 分支用 refCount=参考图数量；edit/enhance 分支保持 imageCount=输入图数量
+    // （enhance 恒为 1）。两字段互斥、按工具二选一（联合类型约束）；
+    // 下游只透传（publicApproval）或读 meta.prompt，不感知差异
+    meta: ({ prompt: string; size?: string; model: string; refCount: number; images: string[] } | { prompt: string; size?: string; model: string; imageCount: number; images: string[] })
     callId: string | null
     status: ApprovalStatus
     reason: ApprovalReason
@@ -712,20 +715,20 @@ export function apply(ctx: Context, rawConfig: Config) {
       const size = typeof a.size === 'string' && a.size.trim() ? a.size.trim() : '2048x2048'
       const parts = [`「${cut(a.prompt, 80)}」`, size, model]
       if (refs.length) parts.push(`参考图 ${refs.length} 张`)
-      return { summary: parts.join(' · ').slice(0, 160), meta: { prompt: cut(a.prompt, 300), size, model, inputCount: refs.length, images: refs.slice(0, 4).map(imgLabel) } }
+      return { summary: parts.join(' · ').slice(0, 160), meta: { prompt: cut(a.prompt, 300), size, model, refCount: refs.length, images: refs.slice(0, 4).map(imgLabel) } }
     }
     if (tool === 'sensenova_edit_image') {
       const imgs: string[] = ((Array.isArray(a.images) ? a.images : []) as unknown[]).map((u) => String(u)).filter(Boolean)
       const rawSize = (a as { size?: string }).size
       const size = typeof rawSize === 'string' && rawSize.trim() ? rawSize.trim() : '2048x2048'
       const parts = [`「${cut(a.prompt, 80)}」`, `输入图 ${imgs.length} 张`, size, model]
-      return { summary: parts.join(' · ').slice(0, 160), meta: { prompt: cut(a.prompt, 300), size, model, inputCount: imgs.length, images: imgs.slice(0, 4).map(imgLabel) } }
+      return { summary: parts.join(' · ').slice(0, 160), meta: { prompt: cut(a.prompt, 300), size, model, imageCount: imgs.length, images: imgs.slice(0, 4).map(imgLabel) } }
     }
     // sensenova_enhance_image：清晰化(+去水印) · 默认/自定义指令 · 原图标签 · 模型（无 size，走 chat 通道）
     const rm = (a as { removeWatermark?: boolean }).removeWatermark ?? true
     const custom = String(a.prompt ?? '').trim()
     const parts = [rm ? '清晰化（去水印）' : '清晰化', custom ? `自定义指令「${custom.slice(0, 80)}」` : '默认指令', imgLabel(String(a.image ?? '')), model]
-    return { summary: parts.join(' · ').slice(0, 160), meta: { prompt: (custom || enhanceDefaultPrompt(rm)).slice(0, 300), model, inputCount: 1, images: [imgLabel(String(a.image ?? ''))] } }
+    return { summary: parts.join(' · ').slice(0, 160), meta: { prompt: (custom || enhanceDefaultPrompt(rm)).slice(0, 300), model, imageCount: 1, images: [imgLabel(String(a.image ?? ''))] } }
   }
 
   // 返回给模型的拒绝 JSON（沿用现有字符串写法，不抛异常）；文本不写审批 id 与接口路径，
@@ -800,7 +803,7 @@ export function apply(ctx: Context, rawConfig: Config) {
     )
     let out = items.filter((it) => it.status === 'pending' || keep.has(it.id))
     if (out.length > 100) {
-      // 总量兜底按 decidedAt 取舍（评审 low 修正：原按文件插入序 slice，可能裁掉上一行
+      // 总量兜底按 decidedAt 取舍（v19.1 评审 low 修正：原按文件插入序 slice，可能裁掉上一行
       // 「终态保最近 50 条」承诺内的记录，如文件前部一条 pending 十分钟后才批准的）。
       // pending 先占预算，剩余额度给最新终态；当前 pending≤20 + 终态≤50 实际到不了 100，
       // 本分支是防御性兜底（手改文件/旧版本写入的超量记录才可达）
@@ -821,6 +824,9 @@ export function apply(ctx: Context, rawConfig: Config) {
   // 整段跑完，天然互斥；跨进程靠原子 rename + 唯一临时名兜底（见 atomicWriteFile），丢更新的
   // 最坏结果是丢一条新建 pending（等待者会重插）或丢一次人工决定（表现为仍待批），过期快照
   // 不可能凭空写出 approved——竞态只会偏向「不调上游」，不会误放行。写盘失败时抛给调用方
+  // v19.1 补注：读-改-写全程不持跨进程锁，多实例并行时后写者会覆盖前写者（丢更新）——
+  // 这是刻意的活跃性取舍：不加文件锁、不阻塞审批主链路，最坏退化为等待者重插/决定重提，
+  // 见独立评审。
   function mutateApprovals<T>(fn: (items: ApprovalRecord[]) => T): { result: T; changed: boolean; swept: number } {
     const items = readApprovalsRaw().items
     const before = JSON.stringify(items)

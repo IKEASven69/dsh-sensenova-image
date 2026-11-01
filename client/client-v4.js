@@ -2369,8 +2369,9 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
           store.doc.camera = { x: cam.x || 0, y: cam.y || 0, scale: cam.scale || 1 }
           store.sel = new Set([...store.sel].filter((id) => store.node(id)))
           store.undoStack = [store.snapshot()]; store.redoStack = []   // 重建 undo 基线（旧栈全是外部写入前的文档）
-          // v18.5 评审补口：409 冲回的远端基线可能还带着死会话遗留 running（本会话先前的
-          // 清扫结果刚被这次 409 静默吞掉）——重扫一次并落盘，不让清扫被冲回后无人认领。
+          // v19.1 评审补口：409 冲回的远端基线可能还带着死会话遗留 running（本会话先前的
+          // 清扫结果刚被这次 409 静默吞掉）——store.doc 换成远端基线之后、store.emit() 之前
+          // 重扫一次，清扫数>0 才落盘；任何文档重载路径都重扫，关闭「清扫被冲回」的窗口。
           // 并发写窗口收敛到 GET→PUT 之间的毫秒级，仍非强一致；残余靠下次打开重扫自愈
           if (sweepOrphanRunning() > 0) autosave()
           store.emit()
@@ -2395,9 +2396,12 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
     // ——— v18.4：孤儿 running 清扫（画布载入 applyDoc 与「队列」视图打开共用）———
     // 客户端会话中断(关页签/浏览器关闭)后,running 节点无人认领,会永远卡「生成中」(真机复核实证:
     // 脚本中途关浏览器留下 2 个永久 running)。把 startedAt 超 3 分钟的 running 标为可重跑。
-    // 阈值论证(v18.5 评审修正,原「≤90s 生成+90s 看门狗」已失效——看门狗定时器已删):上游单次
-    // 生成受服务端 timeoutMs 上限 120s 封顶,再加网络余量,180s 仍留足不误伤余量;默认配置
-    // (节流 2000ms)下合法任务远小于 180s。本会话在途(inflightJobs 注册)的 running 一律不扫——
+    // 阈值论证(v19.1 评审修正:原注释按已删除的 90s 看门狗推算,失实——看门狗定时器已删):
+    // 阈值 180s > 服务端单次生成 timeoutMs 上限 120s(src/index.ts schema .max(120000)),
+    // 再加 RPS 节流单次等待上限 60s(客户端 snxGenMinIntervalMs 范围 0–60000)作不误伤余量;
+    // 并核实 _startedAt 在节流等待之后、请求真正发起前一刻经 snxGenPost 的 onStart 重置
+    // (runOne 传入回调,见 snxGenPost 定义处),节流排队本就不计入运行段,默认配置(节流 2000ms)
+    // 下合法任务远小于 180s。本会话在途(inflightJobs 注册)的 running 一律不扫——
     // 那是活任务(含节流排队中),清扫只针对死会话遗留;其他标签页在极端配置(节流拉满 60s×并发 4,
     // 排队可超 180s)下仍可能误扫,该残余窗口如实保留。
     // 原地改 store.doc.nodes,返回清扫条数(0=无);落盘由调用方走 autosave/saveNow——
@@ -5859,7 +5863,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
               store.doc.boards = r.doc.boards || store.doc.boards   // v11.2：画板列表一并跟随外部写入
               store.sel = new Set([...store.sel].filter((id) => store.node(id)))
               store.undoStack = [store.snapshot()]; store.redoStack = []
-              // v18.5 评审补口：外部替换后重扫孤儿 running——此前画布/队列保持打开期间
+              // v19.1 评审补口：外部替换后重扫孤儿 running——此前画布/队列保持打开期间
               // 该分支只换 nodes 不清扫,死会话遗留 running 无人认领;清扫数>0 走 autosave 落盘
               // （本会话自身在途任务已由 sweepOrphanRunning 的 inflightJobs 检查排除,不会被误扫）
               if (sweepOrphanRunning() > 0) autosave()
@@ -7796,7 +7800,7 @@ canvas[data-snx-mask]{position:absolute;inset:0;z-index:8;cursor:crosshair}
         finally { setBusy((s) => { const next = new Set(s); next.delete(id); return next }) }
       }
       // 全部拒绝：2 条及以上出现，先走应用内确认，再逐条 POST（不新增接口）。
-      // v18.5 评审修正：不走单条 decide（每条成功/失败各发一条 toast，N 条连发 N 条噪音；
+      // v19.1 评审修正：不走单条 decide（每条成功/失败各发一条 toast，N 条连发 N 条噪音；
       // 且确认弹窗期间列表可能已被处置/过期 → 逐条吃 409 错误 toast）——这里静默聚合逐条
       // 提交（服务端幂等/409 兜底），结束只发一条汇总；已处置/过期/不存在按「跳过」计
       const denyAll = async () => {
